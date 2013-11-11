@@ -1,0 +1,150 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<center>
+	<h1>The Open Health Information Exchange Project</h1>
+</center>
+
+<div class="h2">
+	<h2>Overview of the OpenHIE Project</h2>
+	
+	<div style="padding: 3px;">
+	<p>
+	The Open Health Information Exchange (openHIE) project is creating an
+	accessible framework for the development of community health
+	information exchange solutions. These will improve the quality,
+	clinical efficiency, and safety of health care through making patient
+	medical data more available to health providers at the point of care.
+	</p>
+	
+	<p>
+	Currently the Open Health Information Exchange project consists of an
+	implementation of a standards-based Enterprise Master Patient Index (EMPI).
+	If you are not familiar with what an EMPI is, you can learn more about it
+	<a href="#WhatIsAnEMPI">here.</a>
+	</p>
+	
+	<p>
+	Developers, subject matter experts and clinical practioners are invited
+	to participate.
+	</p>
+	</div>
+	
+	<h2>Background</h2>
+	
+	<div style="padding: 3px;">
+	<p>
+	In November 2006, Jonah Frohlich of the California HealthCare Foundation (CHCF) 
+	proposed an open source road map for their Care Data Exchange (CDE) software. 
+	About the same time Stuart Turner and Will Ross launched an on-line
+	investigation to catalogue and evaluate open source identity matching software.
+	They formed a team that extracted the useful portions of the Care Data Exchange (CDE)
+	software resulting in the OpenEMPI software. The team consisted of Scott Duvall, 
+	Shaun Grannis, Richard Haley, Odysseas Pentakalos, Will Ross, Stuart Turner, and
+	Jeffrey Wallace. The extracted software was made free of proprietary components 
+	making it suitable for contribution to the open source community. 
+	</p>
+	
+	<p>
+	In August 2008 the California HealthCare Foundation contributed these software
+	components to the Open Health Tools community. In November 2008, <a href="www.sysnetint.com">
+	SYSNET International</a> with a small grant from the California HealthCare 
+	Foundation worked on enhancing the software that was initially contributed to
+	the Open Health Tools community. The software went through considerable redesign
+	and refactoring to resolve the limitations that were presented in the code that was
+	extracted from the CDE software. The current 2.0 release of the openhie software has
+	a number of improvements over the 1.0 release:
+	
+	<ul>
+		<li>The software has been re-architected using a SOA-based approached and now 
+		consists of a number of loosely coupled components.</li>
+		<li>The matching algorithm of the Master Patient Index service is utilized by the
+		rest of the software through a well-defined interface. This allows additional algorithms
+		to be implemented and plugged into the server without any changes to the rest of the
+		server.</li>
+		<li>The baseline 2.0 release includes both a deterministic and a probabilistic algorithm
+		for patient matching both of which are configurable through a file</li>
+		<li>The data model has been designed to both support a wide variety of environments while
+		at the same time to allow for efficient computations for identifying duplicate records.</li>
+		<li>The technologies used for implementation of the 2.0 release are the typical modern
+		technologies used to implement production level application and include J2EE 1.5, Spring
+		and Hibernate.</li>
+	</ul>
+	</p>
+	</div>
+	
+	<h2>Releases</h2>
+	
+	<div style="padding: 3px;">
+	
+	You may download any of the available releases from <a href="/releases.html">here</a>.
+	
+	</div>
+	
+	<h2>To Participate</h2>
+	
+	<div style="padding: 3px;">
+	<p>	
+	<a title="Join this project!"
+		href="https://openhie.projects.openhealthtools.org/servlets/ProjectMembershipRequest">Join
+		this project!</a>&nbsp;More on
+	<a title="joining a project..."
+		href="https://openhie.projects.openhealthtools.org/scdocs/ProjectMembershipRequest"
+		target="_blank">joining a project</a>...&nbsp;
+	<br />
+	Track progress via the
+	<a title="Announcements forum"
+		href="https://openhie.projects.openhealthtools.org/ds/viewForumSummary.do?dsForumId=207">Announcements
+		forum</a>.
+	<br />
+	Interact with developers in the
+	<a title="Developers forum"
+		href="https://openhie.projects.openhealthtools.org/ds/viewForumSummary.do?dsForumId=201">Developers
+		forum</a>.
+	<br />
+	Ask questions and make suggestions in the
+	<a title="Users forum"
+		href="https://openhie.projects.openhealthtools.org/ds/viewForumSummary.do?dsForumId=208">Users
+		forum</a>.
+	</p>
+	
+	<h2><a name="WhatIsAnEMPI">What is an Enterprise Master Patient Index?</a></h2>
+
+	<div style="padding: 3px;">
+
+	<p>Databases are used today to store and maintain data about various physical entities such as books, items
+	you may purchase from a store, orders, and patients. Very often the need arises to integrate data from
+	multiple sources. For example the Provider Access to Immunization Register Securely (PAiRS) system is a database
+	that contains records on more than 2 million children aged 0-18 years residing in the State of North
+	Carolina. This database was created by merging the data from the North Carolina Immunization Registry,
+	the Immunization system of Blue Cross and Blue Shield of North Carolina, and the immunization system of
+	Kaiser Permanente.</p>
+	  
+	<p>When the need arises to integrate the data about
+	an entity using information from multiple sources into one comprehensive view, the heterogeneity between
+	how information is stored at each individual source becomes apparent. This heterogeneity is usually the
+	result of multiple factors including the lack of consistent quality control when data is captured at each
+	of the individual data sources, differing data representations of the same entity by different sources,
+	and missing integrity constraints, normalization or de-normalization.
+	</p>
+	
+	<p>This heterogeneity is classified into one of two types: <em>structural</em> and <em>semantic</em>. 
+	Structural heterogeneity refers to the use of different attributes to represent a given entity whereas
+	semantic heterogeneity refers to the use of different values and semantics in association with the same
+	attributes of an entity. For example, one organization may choose to use a social security number to
+	uniquely identify a patient whereas another organization may use the patient's driver's license and make
+	the social security number an optional attribute. This would be an example of structural heterogeneity.
+	An example of semantic heterogeneity would be the treatment of the gender field. One database may use keep
+	track of a person's gender which can take on the value of "Male" or "Female". Another database may keep
+	track of a person's sex using the value set 'M', 'F', 'U' for male, female and unknown. Such discrepancies
+	are all too common when data from multiple sources needs to be integrated.
+	</p>
+
+	<p>Record linkage is the term used to refer to the process of linking together records of data from different sources
+	that refer to the same entity despite the presence of both structural and semantic heterogeneity between the
+	sources. A Master Patient Index (MPI) is a computer system that applies record linkage for the purpose of
+	building a unique index for every patient at a health care organization. An Enterprise Master Patient Index
+	extends the scope of the MPI across an enterprise integrating data from multiple individual data sources and
+	possibly multiple MPIs.
+	</p>
+
+	</div>	
+</div>
