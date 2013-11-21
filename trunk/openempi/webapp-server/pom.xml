@@ -69,11 +69,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-file-loader-map</artifactId>
-			<version>${release.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.openhie.openempi</groupId>
 			<artifactId>openpixpdq</artifactId>
 			<version>${release.version}</version>
 		</dependency>		
