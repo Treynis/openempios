@@ -36,7 +36,11 @@ public interface EntityDefinitionManagerService
 	
 	public Entity loadEntity(Integer id);
 	
-	public List<Entity> findEntitiesByName(String name);
+    public Entity loadEntityByName(String name);
+
+    public Entity getEntityByName(String name);
+
+    public List<Entity> findEntitiesByName(String name);
 	
 	public List<EntityAttributeDatatype> getEntityAttributeDatatypes();
 	
@@ -47,6 +51,8 @@ public interface EntityDefinitionManagerService
 	public void deleteEntity(Entity entity) throws ApplicationException;
 
 	public String exportEntity(Entity entity, String filename) throws ApplicationException;
+	
+	public String exportEntity(Integer entityVersionId) throws ApplicationException;
 	
 	public void importEntity(String filename) throws ApplicationException;
 

@@ -23,13 +23,13 @@ package org.openhie.openempi.service;
 import java.util.List;
 
 import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
 import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.PersonIdentifier;
 import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.ReviewRecordPair;
-
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -248,7 +248,7 @@ public interface PersonManagerService
 	 * 
 	 */
 	@Transactional(propagation=Propagation.REQUIRED, readOnly=false)
-	public void initializeRepository() throws ApplicationException;
+	public void initializeRepository(Entity entity) throws ApplicationException;
 	
 	/**
 	 * This method iterates over all records in the repository and generates the custom

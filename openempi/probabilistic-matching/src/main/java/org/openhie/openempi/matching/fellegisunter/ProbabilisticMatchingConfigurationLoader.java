@@ -36,7 +36,9 @@ import org.openhie.openempi.configuration.ComparatorFunction;
 import org.openhie.openempi.configuration.ConfigurationLoader;
 import org.openhie.openempi.configuration.ConfigurationRegistry;
 import org.openhie.openempi.configuration.MatchField;
+import org.openhie.openempi.configuration.Component.ComponentType;
 import org.openhie.openempi.configuration.xml.MatchingConfigurationType;
+import org.openhie.openempi.configuration.xml.MpiConfigDocument.MpiConfig;
 import org.openhie.openempi.configuration.xml.probabilisticmatching.Classification;
 import org.openhie.openempi.configuration.xml.probabilisticmatching.LogByVectors;
 import org.openhie.openempi.configuration.xml.probabilisticmatching.LogByWeight;
@@ -58,50 +60,114 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 	static final int DEFAULT_MAX_EM_ITERATIONS = 100;
 	static final double DEFAULT_CONVERGENCE_ERROR = 0.00001;
 	
+	private String entityName;
+	
 	public void loadAndRegisterComponentConfiguration(ConfigurationRegistry registry, Object configurationFragment) throws InitializationException {
 
 		// This loader only knows how to process configuration information specifically
 		// for the probabilistic matching service
 		//
 		if (!(configurationFragment instanceof ProbabilisticMatchingType)) {
-			log.error("Custom configuration loader " + getClass().getName() + " is unable to process the configuration fragment " + configurationFragment);
+			log.error("Custom configuration loader " + getClass().getName() + 
+			        " is unable to process the configuration fragment " + configurationFragment);
 			throw new InitializationException("Custom configuration loader is unable to load this configuration fragment.");
 		}
 		
+        ProbabilisticMatchingType matchConfigXml = (ProbabilisticMatchingType) configurationFragment;
+        entityName = matchConfigXml.getEntityName();
+        Context.getConfiguration().registerConfigurationLoader(ComponentType.MATCHING, entityName, this);
+
 		// Register the configuration information with the Configuration registry so that
 		// it is available for the matching service to use when needed.
 		//
 		ArrayList<MatchField> matchFields = new ArrayList<MatchField>();
 		Map<String,Object> configurationData = new java.util.HashMap<String,Object>();
-		configurationData.put(Constants.MATCHING_FIELDS_REGISTRY_KEY, matchFields);
-		registry.registerConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION, configurationData);
 		
-		ProbabilisticMatchingType matchConfigXml = (ProbabilisticMatchingType) configurationFragment;
 		log.debug("Received xml fragment to parse: " + matchConfigXml);
 		configurationData.put(ProbabilisticMatchingConstants.FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY,
 				matchConfigXml.getFalseNegativeProbability());
 		configurationData.put(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY, 
 				matchConfigXml.getFalsePositiveProbability());
 		for (int i=0; i < matchConfigXml.getMatchFields().sizeOfMatchFieldArray(); i++) {
-			org.openhie.openempi.configuration.xml.probabilisticmatching.MatchField field = matchConfigXml.getMatchFields().getMatchFieldArray(i);
+			org.openhie.openempi.configuration.xml.probabilisticmatching.MatchField field = 
+			        matchConfigXml.getMatchFields().getMatchFieldArray(i);
 			MatchField matchField = buildMatchFieldFromXml(field);
 			matchFields.add(matchField);
 		}
+        configurationData.put(Constants.MATCHING_FIELDS_REGISTRY_KEY, matchFields);
 		configurationData.put(ConfigurationRegistry.ENTITY_NAME, matchConfigXml.getEntityName());
 		configurationData.put(ProbabilisticMatchingConstants.CONFIGURATION_DIRECTORY_REGISTRY_KEY,
 				matchConfigXml.getConfigFileDirectory());
 		if (matchConfigXml.getLoggingConfiguration() != null) {
 			loadLoggingConfiguration(matchConfigXml.getLoggingConfiguration(), configurationData);
 		}
-		loadAdvancedParameters(matchConfigXml.getConfigFileDirectory(), configurationData, matchFields.size());
+		loadAdvancedParameters(matchConfigXml.getConfigFileDirectory(), matchConfigXml.getEntityName(),
+		        configurationData, matchFields.size());
 		
 		VectorConfigurationHelper.loadVectorConfiguration(configurationData, matchFields.size());		
 		if (matchConfigXml.getVectorClassifications() != null) {
 			loadVectorClassifications(matchConfigXml.getVectorClassifications(), configurationData);
 		}
-		registry.registerConfigurationEntry(ConfigurationRegistry.MATCHING_ALGORITHM_NAME_KEY, 
+        registry.registerConfigurationEntry(matchConfigXml.getEntityName(), ConfigurationRegistry.MATCH_CONFIGURATION,
+                configurationData);
+		registry.registerConfigurationEntry(matchConfigXml.getEntityName(),
+		        ConfigurationRegistry.MATCHING_ALGORITHM_NAME_KEY, 
 				ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_ALGORITHM_NAME);
 	}
+
+    public void saveAndRegisterComponentConfiguration(ConfigurationRegistry registry, Map<String,Object> configurationData)
+            throws InitializationException {
+        @SuppressWarnings("unchecked")
+        List<MatchField> matchFields = (List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
+        Float falseNegativeProbability = (Float) configurationData.get(ProbabilisticMatchingConstants.FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY);
+        Float falsePositiveProbability = (Float) configurationData.get(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY);
+        String configurationDirectory = (String) configurationData.get(ProbabilisticMatchingConstants.CONFIGURATION_DIRECTORY_REGISTRY_KEY);
+        String entityName = (String) configurationData.get(ConfigurationRegistry.ENTITY_NAME);
+        if (entityName == null) {
+            log.error("The entity name is not registered in the configuration data.");
+            throw new RuntimeException("The matching algorithm has not been properly configured.");
+        }
+        checkForFieldCountChange(registry, entityName, configurationData);
+        ProbabilisticMatchingType xmlConfigurationFragment = buildMatchingConfigurationFragment(matchFields, falseNegativeProbability,
+                falsePositiveProbability, configurationDirectory, configurationData);
+        log.debug("Saving matching info xml configuration fragment: " + xmlConfigurationFragment);
+        updateConfigurationInFile(entityName, xmlConfigurationFragment);
+        Context.getConfiguration().saveConfiguration();
+        saveAdvancedParameters(configurationDirectory, entityName, configurationData, matchFields);
+        log.debug("Storing updated matching configuration in configuration registry: " + configurationData);
+        registry.registerConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION, configurationData);
+
+        // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
+        Context.notifyObserver(ObservationEventType.MATCHING_CONFIGURATION_UPDATE_EVENT, configurationData);
+    }
+
+    private void updateConfigurationInFile(String thisEntityName, ProbabilisticMatchingType fragment) {
+        log.debug("Saving matching xml configuration fragment: " + fragment);
+        MpiConfig config = Context.getConfiguration().getMpiConfig();
+        int count = config.getMatchingConfigurationArray().length;
+        int index = -1;
+        for (int i = 0; i < count; i++) {
+            MatchingConfigurationType type = config.getMatchingConfigurationArray(i);
+            if (type instanceof ProbabilisticMatchingType) {
+                ProbabilisticMatchingType matchingType = (ProbabilisticMatchingType) type;
+                String entityName = matchingType.getEntityName();
+                if (entityName.equals(thisEntityName)) {
+                    index = i;
+                    break;
+                }
+            }
+        }
+        if (index >= 0) {
+            config.setMatchingConfigurationArray(index, fragment);
+        } else {
+            log.error("Unable to save the matching configuration since no such section currently "
+                    + "exists in the configuration file:\n" + fragment);
+        }
+    }
+    
+    public String getComponentEntity() {
+        return entityName;
+    }
 
 	private void loadLoggingConfiguration(LoggingConfiguration loggingConfiguration, Map<String, Object> configurationData) {
 		// Check and validate for logByVectors
@@ -181,51 +247,29 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_KEY, Boolean.TRUE);
 	}
 
-	public void saveAndRegisterComponentConfiguration(ConfigurationRegistry registry, Map<String,Object> configurationData)
-			throws InitializationException {
-		@SuppressWarnings("unchecked")
-		List<MatchField> matchFields = (List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
-		Float falseNegativeProbability = (Float) configurationData.get(ProbabilisticMatchingConstants.FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY);
-		Float falsePositiveProbability = (Float) configurationData.get(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY);
-		String configurationDirectory = (String) configurationData.get(ProbabilisticMatchingConstants.CONFIGURATION_DIRECTORY_REGISTRY_KEY);
-		checkForFieldCountChange(registry, configurationData);
-		MatchingConfigurationType xmlConfigurationFragment = buildMatchingConfigurationFragment(matchFields, falseNegativeProbability,
-				falsePositiveProbability, configurationDirectory, configurationData);
-		log.debug("Saving matching info xml configuration fragment: " + xmlConfigurationFragment);
-		Context.getConfiguration().saveMatchingConfiguration(xmlConfigurationFragment);
-		Context.getConfiguration().saveConfiguration();
-		saveAdvancedParameters(configurationDirectory, configurationData, matchFields);
-		log.debug("Storing updated matching configuration in configuration registry: " + configurationData);
-		registry.registerConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION, configurationData);
-
-		// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-		Context.notifyObserver(ObservationEventType.MATCHING_CONFIGURATION_UPDATED_EVENT, configurationData);
-	}
-
 	@SuppressWarnings("unchecked")
-	private void checkForFieldCountChange(ConfigurationRegistry registry, Map<String, Object> data) {
+	private void checkForFieldCountChange(ConfigurationRegistry registry, String entityName, Map<String, Object> data) {
 	    Map<String,Object> currConfig = (Map<String,Object>) registry
-		    .lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
+		    .lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
 	    if (currConfig == null || currConfig.size() == 0) {
-		return;
+	        return;
 	    }
 	    List<MatchField> matchFields = (List<MatchField>) data.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
 	    List<MatchField> currentMatchFields = (List<MatchField>) currConfig.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
 	    if (matchFields == null || currentMatchFields == null) {
-		return;
+	        return;
 	    }
 	    if (matchFields.size() != currentMatchFields.size()) {
-		VectorConfigurationHelper.loadVectorConfiguration(data, matchFields.size());
+	        VectorConfigurationHelper.loadVectorConfiguration(data, matchFields.size());
 	    }
 	}
 
-	private void saveAdvancedParameters(String configDirectory, Map<String, Object> data, List<MatchField> matchFields) {
+	private void saveAdvancedParameters(String configDirectory, String entityName, Map<String, Object> data, List<MatchField> matchFields) {
 		if (configDirectory == null || configDirectory.length() == 0) {
 			configDirectory = ".";
 		}
 		int count = matchFields.size();
-		FellegiSunterParameters params = loadParametersFromFile(configDirectory, count);
-		params.setFieldCount(count);
+		FellegiSunterParameters params = loadParametersFromFile(configDirectory, entityName, count);
 
 		double[] mValues = (double[]) data.get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_M_VALUES_KEY);
 		validateValueCount(count, mValues.length, "The number of m-values is " + mValues.length + " instead of " + count);
@@ -256,15 +300,16 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		    String[] fieldNames = new String[matchFields.size()];
 		    int i=0;
 		    for (MatchField field : matchFields) {
-			fieldNames[i] = field.getFieldName();
-			i++;
+		        fieldNames[i] = field.getFieldName();
+		        i++;
 		    }
-		    int vectorCount = (int)Math.pow(2,count);
+		    int vectorCount = (int) Math.pow(2,count);
+		    params.setFieldCount(count);
 		    params.setVectorCount(vectorCount);
 		    params.setVectorFrequencies(new int[vectorCount]);
 		}
 
-		saveParametersToFile(configDirectory, params);
+		saveParametersToFile(configDirectory, entityName, params);
 	}
 
 	private void validateValueCount(int count, int valueCount, String message) {
@@ -274,10 +319,10 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		}
 	}
 
-	private FellegiSunterParameters loadParametersFromFile(String configDirectory, int count) {
+	private FellegiSunterParameters loadParametersFromFile(String configDirectory, String entityName, int count) {
 		FellegiSunterParameters params=null;
 		try {
-			params = FellegiSunterConfigurationManager.loadParameters(configDirectory);
+			params = FellegiSunterConfigurationManager.loadParameters(configDirectory, entityName);
 		} catch (RuntimeException e) {
 			params = new FellegiSunterParameters(count);
 		}
@@ -285,19 +330,19 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		return params;
 	}
 	
-	private void saveParametersToFile(String configDirectory, FellegiSunterParameters params) {
+	private void saveParametersToFile(String configDirectory, String entityName, FellegiSunterParameters params) {
 		try {
-			FellegiSunterConfigurationManager.saveParameters(configDirectory, params);
+			FellegiSunterConfigurationManager.saveParameters(configDirectory, entityName, params);
 		} catch (Exception e) {
 			log.warn("Unable to save the model configuration of the probabilistic algorithm: " + e, e);
 		}
 	}
 
-	private void loadAdvancedParameters(String configDirectory, Map<String, Object> data, int count) {
+	private void loadAdvancedParameters(String configDirectory, String entityName, Map<String, Object> data, int count) {
 		if (configDirectory == null || configDirectory.length() == 0) {
 			configDirectory = ".";
 		}
-		FellegiSunterParameters params = loadParametersFromFile(configDirectory, count);
+		FellegiSunterParameters params = loadParametersFromFile(configDirectory, entityName, count);
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_CONVERGENCE_ERROR_KEY, params.getConvergenceError());
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_M_VALUES_KEY, params.getMValues());
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_U_VALUES_KEY, params.getUValues());
@@ -306,8 +351,6 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_INITIAL_U_VALUE_KEY, params.getUInitialValue());
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_INITIAL_P_VALUE_KEY, params.getPInitialValue());
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_MAX_ITERATIONS_KEY, params.getMaxIterations());
-		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_U_VALUES_KEY, params.getUValues());
-		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_P_VALUE_KEY, params.getPValue());
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOWER_BOUND_KEY, params.getLowerBound());
 		data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_UPPER_BOUND_KEY, params.getUpperBound());
 	}

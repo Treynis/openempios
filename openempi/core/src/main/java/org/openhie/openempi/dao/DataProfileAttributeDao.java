@@ -22,20 +22,27 @@ package org.openhie.openempi.dao;
 
 import java.util.List;
 
+import org.openhie.openempi.model.DataProfile;
 import org.openhie.openempi.model.DataProfileAttribute;
 import org.openhie.openempi.model.DataProfileAttributeValue;
 
 public interface DataProfileAttributeDao
 {
+    public DataProfile saveDataProfile(DataProfile dataProfile);
+    
+    public void removeDataProfile(int dataProfileId);
+    
 	public DataProfileAttribute saveDataProfileAttribute(DataProfileAttribute dataProfileAttribute);
 
 	public DataProfileAttributeValue saveDataProfileAttributeValue(DataProfileAttributeValue dataProfileAttributeValue);
 
 	public int removeDataProfileAttribute(DataProfileAttribute dataProfileAttribute);
 	
-	public int removeAllDataProfileAttributes(int sourceId);
+	public int removeAllDataProfileAttributes(int dataProfileId);
 	
-	public List<DataProfileAttribute> getDataProfileAttributes(int sourceId);
+	public List<DataProfile> getDataProfiles();
+	
+	public List<DataProfileAttribute> getDataProfileAttributes(int dataProfileId);
 	
 	public List<DataProfileAttributeValue> getTopDataProfileAttributeValues(int attributeId, int topCount);
 }

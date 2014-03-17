@@ -38,7 +38,7 @@ public class BasicRecordPairIterator implements RecordPairIterator
 
 	private BasicRecordPairSource recordPairSource;
 	private boolean initialized = false;
-	private List<Long> recordIds;
+	private List<String> blockRecordIds;
 	private List<RecordPair> recordPairs;
 	private List<BlockingRound> blockingRounds;
 
@@ -53,22 +53,13 @@ public class BasicRecordPairIterator implements RecordPairIterator
 	private synchronized void initialize() {
 		blockingRounds = recordPairSource.getBlockingRounds();
 		// If there are not records then there is nothing to do
-		if (recordIds == null || recordIds.size() == 0) {
+		if (blockRecordIds == null || blockRecordIds.size() == 0) {
+	        recordPairs = new ArrayList<RecordPair>();
 			return;
 		}
 		currentRecordId = 0;
-		Set<RecordPair> allPairs = new HashSet<RecordPair>();
 		recordPairs = new ArrayList<RecordPair>();
-		do {
-			boolean foundRecordPairs = loadRecordPairsForRecord(allPairs, currentRecordId);
-			if (!foundRecordPairs) {
-				return;
-			}
-			currentRecordId++;
-		} while (currentRecordId < recordIds.size());
-		recordPairs = new ArrayList<RecordPair>(allPairs.size());
-		recordPairs.addAll(allPairs);
-		currentRecordPair = 0;
+        loadRecordPairsForBlock();
 		initialized = true;
 	}
 
@@ -83,32 +74,40 @@ public class BasicRecordPairIterator implements RecordPairIterator
 			nextPair = pair;			
 			return true;
 		}
+		if (currentRecordId < blockRecordIds.size()) {
+	        recordPairs.clear();
+	        loadRecordPairsForBlock();
+		}
+		if (currentRecordId < blockRecordIds.size() && recordPairs.size() > 0) {
+		    return true;
+		}
 		return false;
 	}
 
-	private boolean loadRecordPairsForRecord(Set<RecordPair> allPairs, int recordIndex) {
-		// If we exhausted all records, then there is nothing more to do
-		if (recordIndex == recordIds.size()) {
-			return false;
-		}
-		Long recordId = recordIds.get(recordIndex);
-		Record record = recordPairSource.getCache().loadRecord(recordId);
-		if (record == null) {
-			return false;
-		}
-		for (BlockingRound round : blockingRounds) {
-			String blockingKeyValue = BlockingKeyValueGenerator.generateBlockingKeyValue(round.getFields(), record);
-			List<Record> records = recordPairSource.getCache().loadCandidateRecords(round, blockingKeyValue);
-			List<RecordPair> pairs = generateRecordPairs(records);
-			if (pairs.size() > 0) {
-				allPairs.addAll(pairs);
-			}
-		}
-		return true;
-	}
+    public RecordPair next() {
+        return nextPair;
+    }
 
-	public RecordPair next() {
-		return nextPair;
+    private void loadRecordPairsForBlock() {
+        Set<RecordPair> allPairs = new HashSet<RecordPair>();
+        boolean foundRecordPairs = false;
+        do {
+            foundRecordPairs = loadRecordPairsForBlock(allPairs, currentRecordId);
+            currentRecordId++;
+        } while (!foundRecordPairs && currentRecordId < blockRecordIds.size());
+        recordPairs = new ArrayList<RecordPair>(allPairs.size());
+        recordPairs.addAll(allPairs);
+        currentRecordPair = 0;
+    }
+    
+	private boolean loadRecordPairsForBlock(Set<RecordPair> allPairs, int blockIndex) {
+	    Set<Long> recordIds = recordPairSource.getBlockingDao().loadBlockData(recordPairSource.getEntity(), blockRecordIds.get(blockIndex));
+	    List<Record> records = recordPairSource.getCache().loadCandidateRecords(recordIds);
+	    List<RecordPair> pairs = generateRecordPairs(records);
+	    if (pairs.size() > 0) {
+	        allPairs.addAll(pairs);
+	    }
+		return true;
 	}
 
 	private List<RecordPair> generateRecordPairs(List<Record> records) {
@@ -116,6 +115,9 @@ public class BasicRecordPairIterator implements RecordPairIterator
 		for (int i=0; i < records.size()-1; i++) {
 			for (int j=i+1; j < records.size(); j++) {
 				RecordPair recordPair = new RecordPair(records.get(i), records.get(j));
+				if (records.get(i) == null) {
+				    log.warn("Record pair with null records: " + records.get(i) + records.get(j));
+				}
 				pairs.add(recordPair);
 			}
 		}
@@ -126,12 +128,16 @@ public class BasicRecordPairIterator implements RecordPairIterator
 		// This is an optional method of the interface and doesn't do
 		// anything in this implementation. This is a read-only iterator.
 	}
-
-	public void setRecordIds(List<Long> recordIds) {
-		this.recordIds = recordIds;
-	}
 	
-	public boolean isInitialized() {
+	public List<String> getBlockRecordIds() {
+        return blockRecordIds;
+    }
+
+    public void setBlockRecordIds(List<String> blockRecordIds) {
+        this.blockRecordIds = blockRecordIds;
+    }
+
+    public boolean isInitialized() {
 		return initialized;
 	}
 

@@ -20,6 +20,7 @@
  */
 package org.openhie.openempi.blocking.basicblocking;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,8 +45,10 @@ import org.openhie.openempi.util.ConvertUtil;
 
 public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver implements BlockingService
 {
-	private BlockingDao blockingDao;
-	private List<BlockingRound> blockingRounds;
+    private final static int BASIC_BLOCKING_ALGORITHM_ID = 1;
+
+    private BlockingDao blockingDao;
+	private Map<String,List<BlockingRound>> roundsByEntity = new HashMap<String,List<BlockingRound>>();
 
 	public void startup() throws InitializationException {
 		log.trace("Starting the Traditional Blocking Service");
@@ -75,7 +78,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	}
 	
 	public RecordPairSource getRecordPairSource(Entity entity) {
-		return getRecordPairSource(entity, getBlockingRounds());
+		return getRecordPairSource(entity, getBlockingRounds(entity.getName()));
 	}
 	
 	/**
@@ -86,7 +89,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	 * 
 	 */
 	public List<RecordPair> findCandidates(Record record) {
-		blockingRounds = getBlockingRounds();
+		List<BlockingRound> blockingRounds = getBlockingRounds(record.getEntity().getName());
 		int count = 0;
 		List<Record> records = new java.util.ArrayList<Record>();
 		for (BlockingRound round : blockingRounds) {
@@ -148,17 +151,23 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<BlockingRound> getBlockingRounds() {
-		
-		if (blockingRounds == null) {
-			Map<String,Object> configurationData = (Map<String,Object>) Context.getConfiguration()
-					.lookupConfigurationEntry(ConfigurationRegistry.BLOCKING_CONFIGURATION);
-			blockingRounds = (List<BlockingRound>) configurationData.get(BasicBlockingConstants.BLOCKING_ROUNDS_REGISTRY_KEY);
-		}
+	private List<BlockingRound> getBlockingRounds(String entityName) {
+	    List<BlockingRound> blockingRounds = roundsByEntity.get(entityName);
+	    if (blockingRounds == null) {
+    	    Map<String,Object> configurationData = (Map<String,Object>) Context.getConfiguration()
+    	            .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
+    	    blockingRounds = (List<BlockingRound>) configurationData
+    	            .get(BasicBlockingConstants.BLOCKING_ROUNDS_REGISTRY_KEY);
+    	    roundsByEntity.put(entityName, blockingRounds);
+	    }
 		return blockingRounds;
 	}
 
-	public BlockingDao getBlockingDao() {
+    public int getBlockingServiceId() {
+        return BASIC_BLOCKING_ALGORITHM_ID;
+    }
+
+    public BlockingDao getBlockingDao() {
 		return blockingDao;
 	}
 

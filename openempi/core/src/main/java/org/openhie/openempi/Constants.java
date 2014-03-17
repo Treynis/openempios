@@ -54,7 +54,7 @@ public final class Constants
     public static final String OPENEMPI_HOME_ENV_VARIABLE = "OPENEMPI_HOME";
 
     public static final String OPENEMPI_HOME_ENV_VALUE = System.getenv(OPENEMPI_HOME_ENV_VARIABLE);
-
+    
     /**
      * System parameter name for list of extension contexts
      */
@@ -74,6 +74,11 @@ public final class Constants
      * Name for extension contexts property file name
      */
     public static final String OPENEMPI_EXTENSION_CONTEXTS_PROPERTY_FILENAME = "openempi-extension-contexts.properties";
+
+    /**
+     * System parameter used when set to true to indicate that OpenEMPI instance is running in cluster mode. 
+     */
+    public static final String OPENEMPI_CLUSTER_MODE = "openempi.cluster.mode";
 
     /**
      * Default upload file directory
@@ -151,6 +156,11 @@ public final class Constants
     public static final Integer CUSTOM_FIELD_MAX_NUMBER = 20;
 
     /**
+     * Provides a key to lookup the entity name
+     */
+    public static final String ENTITY_NAME_KEY = "entityName";
+    
+    /**
      * Defines the bean that implements the default blocking service
      */
     public static final String NAIVE_BLOCKING_SERVICE = "naiveBlockingService";
@@ -167,6 +177,8 @@ public final class Constants
 	public static final Integer MATCH_CLASSIFICATION = 1;
 	public static final Integer PROBABLE_MATCH_CLASSIFICATION = 2;
 	public static final Integer NON_MATCH_CLASSIFICATION = 3;
+	
+	public static final String RECORD_CACHE_SERVICE = "recordCache";
 	
 	public final static String PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_FILE = "log-to-file";
 	public final static String PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_DB = "log-to-db";

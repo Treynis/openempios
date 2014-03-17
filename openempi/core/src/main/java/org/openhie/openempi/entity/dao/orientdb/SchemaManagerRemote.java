@@ -23,12 +23,10 @@ package org.openhie.openempi.entity.dao.orientdb;
 import java.io.IOException;
 
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.model.Entity;
 
 import com.orientechnologies.orient.client.remote.OServerAdmin;
-import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabase;
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 
 public class SchemaManagerRemote extends SchemaManagerAbstract
 {
@@ -38,22 +36,22 @@ public class SchemaManagerRemote extends SchemaManagerAbstract
     
     public EntityStore getStoreByName(String entityName) {
         String storeName = entityName;
-        String storeUrl = REMOTE_STORAGE_MODE + ":localhost/" + buildStoreName(entityName);
-        return new EntityStore(entityName, storeName, storeUrl);
+        String storageName = buildStoreName(entityName);
+        String dataDirectory = Context.getConfiguration().getAdminConfiguration().getDataDirectory();
+        String storeUrl = REMOTE_STORAGE_MODE + ":localhost/" + dataDirectory + "/" + storageName;
+        return new EntityStore(entityName, storeName, storeUrl, storageName);
     }
 
     private String buildStoreName(String entityName) {
         if (getConnectionManager().getStorageMode().equalsIgnoreCase(REMOTE_STORAGE_MODE)) {
             return entityName + "-db";
         }
-        String dataDirectory = Context.getConfiguration().getAdminConfiguration().getDataDirectory();
-        String storeName = dataDirectory + "/" + entityName + "-db";
+        String storeName =  entityName + "-db";
         log.debug("The store for entity " + entityName + " is at: " + storeName);
         return storeName;
     }
 
-    @Override
-    public OGraphDatabase createDatabase(EntityStore store) {
+    public void createDatabase(EntityStore store, OrientBaseGraph db) {
         log.info("Creating a store for entity " + store.getEntityName() + " in location " + store.getStoreName());
         String databaseUrl = store.getStoreUrl();
         try {
@@ -62,18 +60,16 @@ public class SchemaManagerRemote extends SchemaManagerAbstract
             if (!admin.existsDatabase(PLOCAL_STORAGE_MODE)) {
                 admin.createDatabase(GRAPH_DATABASE_TYPE, PLOCAL_STORAGE_MODE);
             }            
-            OGraphDatabase db = connectionManager.connectInitial(store);
-            db.getMetadata().getSecurity()
+            db.getRawGraph().getMetadata().getSecurity()
                 .createUser(connectionManager.getUsername(), connectionManager.getPassword(),
                     new String[] { "admin" });
             log.debug("Created user: " + connectionManager.getUsername());
-            db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useLightweightEdges=false");
-            db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForEdgeLabel=false");
-            db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForVertexLabel=false");
-            db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useVertexFieldsForEdgeLabels=false");
-            Object props = db.get(ODatabase.ATTRIBUTES.CUSTOM);
+            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useLightweightEdges=false");
+            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForEdgeLabel=false");
+            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForVertexLabel=false");
+            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useVertexFieldsForEdgeLabels=false");
+            Object props = db.getRawGraph().get(ODatabase.ATTRIBUTES.CUSTOM);
             log.debug("Database custom attributes " + props + " of type " + props.getClass());
-            return db;
         } catch (IOException e) {
             log.error("Unable to connect to the remote server: " + e, e);
             throw new RuntimeException("Unable to connect to the remote server; ensure that the server is up and running.");

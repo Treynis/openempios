@@ -37,21 +37,19 @@ import org.openhie.openempi.model.Record;
 
 public class FileRecordDataSource extends AbstractRecordDataSource
 {
-	public static final int REPOSITORY_RECORD_DATA_SOURCE_ID = 0;	
-	
-	private final static int MAX_FIELD_COUNT = 32;	
+	private final static int MAX_FIELD_COUNT = 32;
 	private Integer recordBlockSize = 1000;
 
 	private File file;
-	RandomAccessFile randomFile = null;
-	long offset = 0;
+	private RandomAccessFile randomFile = null;
+	private long offset = 0;
 	private Integer userFileId = null;
-	private List<AttributeMetadata> attribMetadata;	
-	
-	
+	private List<AttributeMetadata> attribMetadata;
+
+
 	public FileRecordDataSource() {
 	}
-	
+
 	public FileRecordDataSource(String filename, Integer userFileId, List<AttributeMetadata> attribMetadata) {
 		file = new File(filename);
 		if (!file.isFile() || !file.canRead()) {
@@ -60,93 +58,92 @@ public class FileRecordDataSource extends AbstractRecordDataSource
 		}
 		this.attribMetadata  = attribMetadata;
 		this.userFileId = userFileId;
-			
+
 		setRandomAccess();
 	}
-	
+
 	public void setRandomAccess() {
 		try {
-			if( randomFile != null) {
+			if (randomFile != null) {
 				randomFile.close();
-			};
-			
-			randomFile = new RandomAccessFile( file, "r");		
+			}
+
+			randomFile = new RandomAccessFile(file, "r");
 			String line = randomFile.readLine();
-			if( line != null) {
+			if (line != null) {
 				offset = randomFile.getFilePointer();
 			}
-			
-		} catch(IOException e) {
-			 throw new RuntimeException("Input file " + file.getName() + " cannot random access.");			
+
+		} catch (IOException e) {
+			 throw new RuntimeException("Input file " + file.getName() + " cannot random access.");
 		}
 	}
-	
+
 	public boolean isEmpty()
 	{
 		Boolean isEmpty = false;
-		try
-		{
-			if (randomFile.length() == 0)
+		try {
+			if (randomFile.length() == 0) {
 	 	   		isEmpty = true;
+			}
 		}
-		catch(Exception e)
-		{
+		catch (Exception e) {
 			log.warn("RandomAccessFile.length() : "  + e);
 		}
-		return isEmpty; 
+		return isEmpty;
 	}
 
-	private void saveUserFileInfo(String profileProcessed ) {
+	private void saveUserFileInfo(String profileProcessed) {
 		UserDao userDao = (UserDao) Context.getApplicationContext().getBean("userDao");
-		if( userFileId != null ) {
+		if (userFileId != null) {
 			// UserManager userService = Context.getUserManager();
 			org.openhie.openempi.model.UserFile userFileFound = userDao.getUserFile(userFileId);
 			userFileFound.setProfiled("Y");
 			userFileFound.setProfileProcessed(profileProcessed);
-			userDao.saveUserFile(userFileFound);			
+			userDao.saveUserFile(userFileFound);
 		}
 	}
-	
+
 	public List<Record> getRecordsFromFile(long start, int blockSize){
 		List<Record> records = new java.util.ArrayList<Record>(blockSize);
-		
+
 		try {
-			if( randomFile == null ) {
+			if ( randomFile == null) {
 				return new java.util.ArrayList<Record>(0);
 			}
-			
+
 			boolean done = false;
-			int lineCount = 0;						
-			randomFile.seek(start);		
-			while (!done) {				
+			int lineCount = 0;
+			randomFile.seek(start);
+			while (!done) {
 				String line = randomFile.readLine();
-				if (line == null) {					
+				if (line == null) {
 					done = true;
-					randomFile.close();	
+					randomFile.close();
 					randomFile = null;
 					continue;
 				}
-				Record record = processLine(line);	
+				Record record = processLine(line);
 				records.add(record);
 				lineCount++;
-				if(lineCount == blockSize ) {
+				if (lineCount == blockSize) {
 					done = true;
-					offset = randomFile.getFilePointer();	
+					offset = randomFile.getFilePointer();
 				}
 			}
-			
-			if( lineCount == 0 ) {
+
+			if (lineCount == 0) {
 				return new java.util.ArrayList<Record>(0);
 			} else {
 				return records.subList(0, lineCount);
 			}
-			
+
 		} catch (IOException e) {
 			log.error("Failed while loading the input file. Error: " + e);
 			throw new RuntimeException("Failed while loading the input file.");
-		}				
+		}
 	}
-	
+
 	protected Record processLine(String line) {
 		log.debug("Needs to parse the line " + line);
 		try {
@@ -157,7 +154,7 @@ public class FileRecordDataSource extends AbstractRecordDataSource
 			return null;
 		}
 	}
-	
+
 	private Record getEntityRecord(String line) throws ParseException {
 		if (line == null || line.length() == 0) {
 			return null;
@@ -166,45 +163,45 @@ public class FileRecordDataSource extends AbstractRecordDataSource
 
 		// create Record
 		Record record = new Record(new Entity());
-		for (int i=0; i < fields.length; i++) {
-			if( fields[i] != null ) {
-			
+		for (int i = 0; i < fields.length; i++) {
+			if (fields[i] != null) {
+
 				String attributeName =  attribMetadata.get(i).getAttributeName();
 				String stringValue = fields[i];
-				if(!attributeName.contains("<null>")) {
-					Object value = buildFieldValue(attributeName, attribMetadata.get(i).getDatatype(), stringValue);				
+				if (!attributeName.contains("<null>")) {
+					Object value = buildFieldValue(attributeName, attribMetadata.get(i).getDatatype(), stringValue);
 					record.set(attributeName, value);
 				}
 			}
-		}									
-		return record;			
-	}	
+		}
+		return record;
+	}
 
 	protected String[] loadFieldValues(String line) {
 		String[] fields = new String[MAX_FIELD_COUNT];
 		int length = line.length();
-		int begin=0;
-		int end=0;
-		int fieldIndex=0;
+		int begin = 0;
+		int end = 0;
+		int fieldIndex = 0;
 		while (end < length) {
-			while (end < length-1 && line.charAt(end) != ',') {
+			while (end < length - 1 && line.charAt(end) != ',') {
 				end++;
 			}
-			if (end == length -1 ) {
+			if (end == length - 1) {
 				break;
 			}
 			String fieldValue = line.substring(begin, end);
 			if (fieldValue != null && fieldValue.length() > 0) {
 				fieldValue = fieldValue.trim();
 			}
-			fields[fieldIndex++] = fieldValue; 
+			fields[fieldIndex++] = fieldValue;
 			end++;
-			begin=end;
-		}	
+			begin = end;
+		}
 		fields[fieldIndex] = line.substring(begin, end+1);
 		return fields;
-	}	
-	
+	}
+
 	private Object buildFieldValue(String name, int datatype, String token) {
 		if (datatype == DataProfileAttribute.STRING_DATA_TYPE) {
 			return token;
@@ -245,30 +242,50 @@ public class FileRecordDataSource extends AbstractRecordDataSource
 				return null;
 			}
 		}
-
-		if (datatype == DataProfileAttribute.DATE_DATA_TYPE ) {
-			String dateFormatString = "yyyyMMdd";			
+        if (datatype == DataProfileAttribute.BOOLEAN_DATA_TYPE) {
+            try {
+                Boolean value = Boolean.parseBoolean(token);
+                return value;
+            } catch (NumberFormatException e) {
+                log.error("For field in position " + name + " expected boolean but found a value of: '" + token + "'");
+                return null;
+            }
+        }
+		if (datatype == DataProfileAttribute.DATE_DATA_TYPE) {
+			String dateFormatString = "yyyyMMdd";
 			try {
 				SimpleDateFormat format = new SimpleDateFormat(dateFormatString);
 				Date date = format.parse(token);
 				return date;
 			} catch (ParseException e) {
-				log.error("For field in position " + name + " expected a date with format " + dateFormatString + 
+				log.error("For field in position " + name + " expected a date with format " + dateFormatString +
 						" but found a value of: '" + token + "'");
 				return null;
 			}
 		}
+        if (datatype == DataProfileAttribute.TIMESTAMP_DATA_TYPE) {
+            String dateFormatString = "yyyyMMddHHmmss";
+            try {
+                SimpleDateFormat format = new SimpleDateFormat(dateFormatString);
+                Date date = format.parse(token);
+                return date;
+            } catch (ParseException e) {
+                log.error("For field in position " + name + " expected a date with format " + dateFormatString +
+                        " but found a value of: '" + token + "'");
+                return null;
+            }
+        }
 		log.error("Cannot handle token with value '" + token + "' and of type: " + datatype);
 		return null;
 	}
-	
+
 	@Override
 	public Iterator<Record> iterator() {
 		return new RecordIterator(recordBlockSize);
-	}	
+	}
 
 	public int getRecordDataSourceId() {
-		return REPOSITORY_RECORD_DATA_SOURCE_ID;
+		return userFileId;
 	}
 
 	public List<AttributeMetadata> getAttributeMetadata() {
@@ -289,15 +306,15 @@ public class FileRecordDataSource extends AbstractRecordDataSource
 		java.util.List<Record> records;
 		int currentIndex;
 		int startIndex;
-		
+
 		public RecordIterator(int blockSize) {
 			this.blockSize = blockSize;
 			startIndex = 0;
 			currentIndex = -1;
-			
+
 			setRandomAccess();
 		}
-		
+
 		public boolean hasNext() {
 			if (records != null && currentIndex < records.size()) {
 				return true;

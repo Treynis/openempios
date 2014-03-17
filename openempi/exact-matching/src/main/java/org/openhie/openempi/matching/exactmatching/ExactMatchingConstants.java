@@ -22,5 +22,7 @@ package org.openhie.openempi.matching.exactmatching;
 
 public class ExactMatchingConstants
 {
-	public final static String EXACT_MATCHING_ALGORITHM_NAME = "Deterministic Matching Algorithm";
+    public static final String EXACT_MATCHING_ALGORITHM_NAME = "Deterministic Matching Algorithm";
+    public static final String EXACT_MATCHING_RULES_REGISTRY_KEY = "matchingRules";
+
 }

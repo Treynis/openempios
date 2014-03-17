@@ -22,6 +22,7 @@ package org.openhie.openempi.blocking.basicblocking;
 
 public class BasicBlockingConstants
 {
-	public final static String BLOCKING_ALGORITHM_NAME = "Traditional Blocking Algorithm";
-	public final static String BLOCKING_ROUNDS_REGISTRY_KEY = "blockingRounds";
+    public static final String BLOCKING_ALGORITHM_NAME = "Traditional Blocking Algorithm";
+    public static final String BLOCKING_ROUNDS_REGISTRY_KEY = "blockingRounds";
+    public static final String ENTITY_NAME_KEY = "entityName";
 }

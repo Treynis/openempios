@@ -44,7 +44,7 @@ public interface ConfigurationRegistry
 	 * @param key Should uniquely identify the configuration entry
 	 * @return
 	 */
-	public Object lookupConfigurationEntry(String key);
+	public Object lookupConfigurationEntry(String entityName, String key);
 	
 	/**
 	 * Register a new configuration entry for a component and make it available for
@@ -53,5 +53,5 @@ public interface ConfigurationRegistry
 	 * @param key A string that uniquely identifies the configuration entry
 	 * @param entry The actual configuration entry object itself.
 	 */
-	public void registerConfigurationEntry(String key, Object entry);
+	public void registerConfigurationEntry(String entityName, String key, Object entry);
 }

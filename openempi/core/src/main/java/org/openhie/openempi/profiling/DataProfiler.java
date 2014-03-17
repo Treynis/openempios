@@ -20,23 +20,35 @@
  */
 package org.openhie.openempi.profiling;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.lang.Math;
 
+import org.openhie.openempi.Constants;
+import org.openhie.openempi.context.Context;
 import org.openhie.openempi.dao.DataProfileAttributeDao;
+import org.openhie.openempi.model.DataProfile;
 import org.openhie.openempi.model.DataProfileAttribute;
 import org.openhie.openempi.model.DataProfileAttributeValue;
+import org.openhie.openempi.model.Entity;
+import org.openhie.openempi.model.EntityAttribute;
+import org.openhie.openempi.model.EntityAttributeDatatype;
 import org.openhie.openempi.model.Record;
+import org.openhie.openempi.service.Parameterizable;
 import org.openhie.openempi.service.impl.BaseServiceImpl;
+import org.openhie.openempi.util.ConvertUtil;
 import org.springframework.util.StringUtils;
 
-public class DataProfiler extends BaseServiceImpl implements Runnable
+
+public class DataProfiler extends BaseServiceImpl implements Runnable, Parameterizable
 {
 	private RecordDataSource recordDataSource;
 	private DataProfileAttributeDao dataProfileAttributeDao;
+	private java.util.Map<String, Object> parameters;
 	private java.util.Map<String, AttributeMetadata> metadata;
 	private java.util.List<String> attributeNames;
+	private String entityName;
+	private Entity entity;
 	private int attributeCount;
 	private int attributeBlockSize;
 
@@ -65,12 +77,23 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 
 		try {
 
-			if (getRecordDataSource().isEmpty()) {
+            RecordDataSource recordDataSource = getRecordDataSource();
+            if (getEntity() == null) {
+                if (recordDataSource instanceof EntityRecordDataSource) {
+                    log.info("Data profiler cannot find entity for EntityRecordDataSource.");
+                    return;
+                } else {
+                    log.info("Data profiler has not been configured with the entity name that means data profile info cominig from file.");
+//                  return;
+                }
+            }
+            recordDataSource.init(entity);
+
+            if (getRecordDataSource().isEmpty()) {
 				log.info("Record count is zero. Skipping Data Profiler processing ");
 				return;
 			}
-
-			clearCurrentMetrics();
+			DataProfile dataProfile = createDataProfile();
 			int recordCount = 0;
 			boolean done = false;
 			int attributeBlockStartIndex = 0;
@@ -91,7 +114,7 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 						}
 						attributesToBeProcessed = getAttributeBlock(attributeNames, attributeBlockStartIndex,
 								attributeBlockSize);
-						setupMetricsMap(attributeMetricsMap, attributesToBeProcessed);
+						setupMetricsMap(attributeMetricsMap, dataProfile, attributesToBeProcessed);
 					}
 					analyzeRecord(record, attributesToBeProcessed, attributeMetricsMap);
 					recordCount++;
@@ -103,6 +126,8 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 				totalRecordCount += recordCount;
 				recordCount = 0;
 			} while (!done);
+			dataProfile.setDateCompleted(new Date());
+			dataProfileAttributeDao.saveDataProfile(dataProfile);
 			recordDataSource.close("Completed");
 			long endTime = getTimestamp();
 			log.info("Data Profiler finished processing " + totalRecordCount + " records in " + (endTime - startTime)
@@ -113,12 +138,35 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 		}
 	}
 
-	private void clearCurrentMetrics() {
-		log.info("Clearing the repository of any existing data profile attribute metrics.");
-		int recordCount = dataProfileAttributeDao.removeAllDataProfileAttributes(recordDataSource
-				.getRecordDataSourceId());
-		log.info("Removed existing data profile attribute metrics of count: " + recordCount);
-	}
+	private Object getEntity() {
+	    if (parameters == null || parameters.keySet().size() == 0) {
+	        return null;
+	    }
+	    entityName = (String) parameters.get(Constants.ENTITY_NAME_KEY);
+	    try {
+	        entity = Context.getEntityDefinitionManagerService().getEntityByName(entityName);
+	    } catch (Exception e) {
+	        log.warn("Failed while trying to obtain the entity associated with the Data Profiler instance.");
+	        return null;
+	    }
+        return entity;
+    }
+
+    private DataProfile createDataProfile() {
+	    DataProfile dataProfile = new DataProfile();
+	    dataProfile.setDataSourceId(getRecordDataSource().getRecordDataSourceId());
+	    dataProfile.setDateInitiated(new Date());
+	    dataProfile.setEntity(entity);
+	    dataProfileAttributeDao.saveDataProfile(dataProfile);
+        return dataProfile;
+    }
+
+//    private void clearCurrentMetrics() {
+//		log.info("Clearing the repository of any existing data profile attribute metrics.");
+//		int recordCount = dataProfileAttributeDao.removeAllDataProfileAttributes(recordDataSource
+//				.getRecordDataSourceId());
+//		log.info("Removed existing data profile attribute metrics of count: " + recordCount);
+//	}
 
 	private void persistAttributeMetrics(List<String> attributesToBeProcessed,
 			Map<String, AttributeMetrics> attributeMetricsMap) {
@@ -126,6 +174,8 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 			AttributeMetrics metrics = attributeMetricsMap.get(attribute);
 			DataProfileAttribute dataProfileAttribute = dataProfileAttributeDao.saveDataProfileAttribute(metrics);
 			Map<Object, Integer> valueFrequencyMap = metrics.getValueFrequencyMap();
+            int datatypeId = metrics.getDatatypeId();
+
 			double entropy = 0;
 			double uValue = 0;
 			for (Object value : valueFrequencyMap.keySet()) {
@@ -143,9 +193,17 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 					log.debug(frequency + "," + probability + "," + entropy);
 				}
 				uValue += calculateUValue(probability, metrics.getRowCount());
+
+				// attribute value
 				DataProfileAttributeValue avalue = new DataProfileAttributeValue();
 				avalue.setAttributeId(dataProfileAttribute.getAttributeId());
-				avalue.setAttributeValue(value.toString());
+	            if (datatypeId == DataProfileAttribute.DATE_DATA_TYPE) {
+	                avalue.setAttributeValue(ConvertUtil.dateToString((Date) value));
+	            } else if (datatypeId == DataProfileAttribute.TIMESTAMP_DATA_TYPE) {
+	                avalue.setAttributeValue(ConvertUtil.dateTimeToString((Date) value));
+	            } else {
+	                avalue.setAttributeValue(value.toString());
+	            }
 				avalue.setFrequency(frequency);
 				dataProfileAttributeDao.saveDataProfileAttributeValue(avalue);
 			}
@@ -193,18 +251,20 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 	 * Allocate one attribute metrics object per attribute in the map so that we
 	 * can keep track of the calculations that we are making for each attribute
 	 * as we iterate over all the records. The map is indexed by attribute name.
-	 * 
+	 * @param dataProfile
+	 *
 	 */
-	private void setupMetricsMap(Map<String, AttributeMetrics> attributeMetricsMap, List<String> attributesToBeProcessed) {
+	private void setupMetricsMap(Map<String, AttributeMetrics> attributeMetricsMap, DataProfile dataProfile,
+	        List<String> attributesToBeProcessed) {
 		for (String attribute : attributesToBeProcessed) {
 			AttributeMetadata meta = metadata.get(attribute);
 			if (meta == null) {
-				log.error("Found attribute in record for which we have no metadata; this is an unexpected error condition.");
+				log.error("Found attribute in record for which we have no metadata; this is an unexpected error.");
 				throw new RuntimeException(
 						"Unable to continue to to an unexpected error condition; please check the logs.");
 			}
 			AttributeMetrics metrics = new AttributeMetrics(attribute, meta.getDatatype(), meta);
-			metrics.setDataSourceId(recordDataSource.getRecordDataSourceId());
+            metrics.setDataProfile(dataProfile);
 			attributeMetricsMap.put(attribute, metrics);
 		}
 	}
@@ -215,6 +275,7 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 
 	private void analyzeRecord(Record record, List<String> attributesToBeProcessed,
 			Map<String, AttributeMetrics> attributeMetricsMap) {
+        Entity entity = record.getEntity();
 		for (String attribute : attributesToBeProcessed) {
 			Object value = record.get(attribute);
 			AttributeMetrics metrics = attributeMetricsMap.get(attribute);
@@ -223,7 +284,10 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 			}
 
 			if (metrics.getDatatypeId() < 0) {
-				metrics.setDatatypeId(extractDatatypeFromValue(attribute, value));
+//				metrics.setDatatypeId(extractDatatypeFromValue(attribute, value));
+                EntityAttribute entityAttribute = entity.findAttributeByName(attribute);
+                EntityAttributeDatatype type = entityAttribute.getDatatype();
+			    metrics.setDatatypeId(type.getDatatypeCd());
 			}
 			int datatypeId = metrics.getDatatypeId();
 			/*
@@ -332,27 +396,6 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 		}
 	}
 
-	private int extractDatatypeFromValue(String attribute, Object value) {
-		int datatype = -1;
-		if (value instanceof String) {
-			datatype = DataProfileAttribute.STRING_DATA_TYPE;
-		} else if (value instanceof Integer) {
-			datatype = DataProfileAttribute.INTEGER_DATA_TYPE;
-		} else if (value instanceof Long) {
-			datatype = DataProfileAttribute.LONG_DATA_TYPE;
-		} else if (value instanceof Float) {
-			datatype = DataProfileAttribute.FLOAT_DATA_TYPE;
-		} else if (value instanceof Double) {
-			datatype = DataProfileAttribute.DOUBLE_DATA_TYPE;
-		} else if (value instanceof java.util.Date) {
-			datatype = DataProfileAttribute.DATE_DATA_TYPE;
-		} else {
-			log.warn("Attribute " + attribute + " is of unknown data type " + value.getClass()
-					+ " and will be ignored.");
-		}
-		return datatype;
-	}
-
 	private double normalizeValue(Object value, int datatypeId) {
 		double norm;
 		if (datatypeId == DataProfileAttribute.DOUBLE_DATA_TYPE) {
@@ -375,6 +418,10 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 			norm = ((java.util.Date) value).getTime();
 			return norm;
 		}
+        if (datatypeId == DataProfileAttribute.TIMESTAMP_DATA_TYPE) {
+            norm = ((java.util.Date) value).getTime();
+            return norm;
+        }
 		log.warn("This should not happend; we are unable to normalize a value of unknown datatype.");
 		return 0;
 	}
@@ -383,6 +430,7 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 		if (datatypeId == DataProfileAttribute.DOUBLE_DATA_TYPE || datatypeId == DataProfileAttribute.FLOAT_DATA_TYPE
 				|| datatypeId == DataProfileAttribute.INTEGER_DATA_TYPE
 				|| datatypeId == DataProfileAttribute.DATE_DATA_TYPE
+		        || datatypeId == DataProfileAttribute.TIMESTAMP_DATA_TYPE
 				|| datatypeId == DataProfileAttribute.LONG_DATA_TYPE) {
 			return true;
 		}
@@ -421,7 +469,15 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 		this.attributeBlockSize = attributeBlockSize;
 	}
 
-	public class AttributeMetrics extends DataProfileAttribute
+    public Map<String, Object> getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(Map<String, Object> parameters) {
+        this.parameters = parameters;
+    }
+
+    public class AttributeMetrics extends DataProfileAttribute
 	{
 		private static final long serialVersionUID = -5805814946755578692L;
 
@@ -521,11 +577,11 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 		}
 
 		/**
-		 * 
+		 *
 		 * One-pass algorithm for computing the mean and variance
 		 * variance_n is the population variance and
 		 * variance is the sample variance.
-		 * 
+		 *
 		 * def online_variance(data):
 		 * 		n = 0
 		 *      mean = 0
@@ -547,10 +603,10 @@ public class DataProfiler extends BaseServiceImpl implements Runnable
 			}
 			tempAverageValue = tempAverageValue + delta / n;
 			tempSquareDiff = tempSquareDiff + delta * (value - tempAverageValue);
-			
+
 			setAverageValue(tempAverageValue);
-			
-			if (datatypeId != DataProfileAttribute.DATE_DATA_TYPE) {
+
+			if (datatypeId != DataProfileAttribute.DATE_DATA_TYPE && datatypeId != DataProfileAttribute.TIMESTAMP_DATA_TYPE) {
 				if (n > 1) {
 					setVariance(tempSquareDiff/(n-1));
 					setStandardDeviation(Math.sqrt(tempSquareDiff/(n-1)));

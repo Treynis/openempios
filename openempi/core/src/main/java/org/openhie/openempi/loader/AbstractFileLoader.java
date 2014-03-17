@@ -42,30 +42,32 @@ public abstract class AbstractFileLoader implements FileLoader
 	public final static String LOADER_ALIAS = "flexibleDataLoader";
 	public final static String SKIP_HEADER_LINE = "skipHeaderLine";
 	public final static String IS_IMPORT = "isImport";
+	public final static String IS_MASSIVE_INSERT = "isMassiveInsert";
 	public final static String PREVIEW_ONLY = "previewOnly";
-	
+
 	public final static String SKIP_HEADER_LINE_DISPLAY = "Skip Header Line";
 	public final static String IS_IMPORT_DISPLAY = "Is Import";
+	public final static String IS_MASSIVE_INSERT_DISPLAY = "Bulk Import";
 	public final static String MAPPING_FILE_DISPLAY = "Mapping File Name";
 	public final static String PREVIEW_ONLY_DISPLAY = "Only Preview Import";
-	
+
 	private String loaderAlias;
-	
+
 	private PersonLoaderManager personManager;
 	private EntityLoaderManager entityManager;
-	
+
 	private Map<String,Race> raceCacheByName = new HashMap<String,Race>();
 	private Map<String,Race> raceCacheByCode = new HashMap<String,Race>();
 	private Map<String,Gender> genderCacheByCode = new HashMap<String,Gender>();
 	private Map<String,Gender> genderCacheByName = new HashMap<String,Gender>();
-	
+
 	public void init() {
         log.info("Initializing the file loader.");
 	}
-	
+
 	public void shutdown() {
 	}
-	
+
 	public void loadPerson(Person person) {
 		log.debug("Attempting to load person entry " + person);
 		try {
@@ -93,7 +95,7 @@ public abstract class AbstractFileLoader implements FileLoader
 		}
 		return race;
 	}
-	
+
 	public Race findRaceByName(String raceName) {
 		log.trace("Looking up race by race name: " + raceName);
 		Race race = raceCacheByName.get(raceName);
@@ -107,7 +109,7 @@ public abstract class AbstractFileLoader implements FileLoader
 		}
 		return race;
 	}
-	
+
 	public Gender findGenderByCode(String genderCode) {
 		Gender gender = genderCacheByCode.get(genderCode);
 		if (gender != null) {
@@ -135,7 +137,7 @@ public abstract class AbstractFileLoader implements FileLoader
 	public String parseFile(boolean skipHeaderLine, Entity entity, File file) {
 		return parseFile(skipHeaderLine, entity, file, true);
 	}
-	
+
 	public String getParameterAsString(String parameterName) {
 		Object value = getParameter(parameterName);
 		if (value != null) {
@@ -155,7 +157,7 @@ public abstract class AbstractFileLoader implements FileLoader
 		log.info("Setting the file loader parameter: " + parameterName + " to value: " + value);
 		getEntityLoaderManager().getPropertyMap().put(parameterName, value);
 	}
-	
+
 	public Object getParameter(String parameterName) {
 		if (getEntityLoaderManager() == null) {
 			log.warn("Unable to get file loader parameter because the loader manager has not been injected yet.");
@@ -163,7 +165,7 @@ public abstract class AbstractFileLoader implements FileLoader
 		}
 		return getEntityLoaderManager().getPropertyMap().get(parameterName);
 	}
-	
+
 	public String parseFile(boolean skipHeaderLine, Entity entity, File file, boolean populateCustomFields) {
 		BufferedReader reader = null;
 		try {
@@ -172,42 +174,42 @@ public abstract class AbstractFileLoader implements FileLoader
 			log.error("Unable to read the input file. Error: " + e);
 			throw new RuntimeException("Unable to read the input file.");
 		}
-		
+
 		if (getParameter(SKIP_HEADER_LINE) != null) {
 			skipHeaderLine = (Boolean) getParameter(SKIP_HEADER_LINE);
 		}
 		try {
 			boolean done = false;
-			int lineIndex=0;
+			int lineIndex = 0;
 			int rowsImported = 0;
 			while (!done) {
 				String line = reader.readLine();
-				if (line == null) {					
+				if (line == null) {
 					if (skipHeaderLine && lineIndex > 0) {
 						lineIndex--;
 					}
 					if (getloaderAlias().equals("concurrentDataLoader")) {
-						lineIndex--;	
+						lineIndex--;
 						rowsImported--;
 					}
 					done = true;
 					continue;
 				}
-				
+
 				// Skip the first line since its a header.
 				if (lineIndex == 0 && skipHeaderLine) {
 					lineIndex++;
 					continue;
 				}
-				
+
 				boolean imported = processLine(entity, line, lineIndex++, populateCustomFields);
 				if (imported) {
 					rowsImported++;
 				}
-			}			
+			}
 			reader.close();
-			return "" + lineIndex + "-" + rowsImported;				
-			
+			return "" + lineIndex + "-" + rowsImported;
+
 		} catch (IOException e) {
 			log.error("Failed while loading the input file. Error: " + e);
 			throw new RuntimeException("Failed while loading the input file.");
@@ -217,31 +219,31 @@ public abstract class AbstractFileLoader implements FileLoader
 	public String getloaderAlias() {
 		return this.loaderAlias;
 	}
-	
+
 	public void setLoaderAlias(String loaderAlias) {
-		this.loaderAlias = loaderAlias; 
+		this.loaderAlias = loaderAlias;
 	}
-	
+
 	public PersonLoaderManager getPersonLoaderManager() {
 		return this.personManager;
 	}
-	
+
 	public void setPersonLoaderManager(PersonLoaderManager personManager) {
-		this.personManager = personManager; 
+		this.personManager = personManager;
 	}
 
 	public EntityLoaderManager getEntityLoaderManager() {
 		return this.entityManager;
 	}
-	
+
 	public void setEntityLoaderManager(EntityLoaderManager entityManager) {
-		this.entityManager = entityManager; 
+		this.entityManager = entityManager;
 	}
-	
+
 	protected abstract boolean processLine(Entity entity, String line, int lineIndex);
-	
+
 	protected boolean processLine(Entity entity, String line, int lineIndex, boolean populateCustomFields) {
 		return processLine(entity, line, lineIndex);
 	}
-	
+
 }

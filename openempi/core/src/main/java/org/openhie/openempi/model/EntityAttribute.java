@@ -26,11 +26,9 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -39,9 +37,15 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
+
 @javax.persistence.Entity
 @Table(name = "entity_attribute")
-@SequenceGenerator(name="entity_attribute_seq", sequenceName="entity_attribute_seq")
+@GenericGenerator(name = "entity_attribute_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
+        @Parameter(name = "sequence_name", value = "entity_attribute_seq"),
+        @Parameter(name = "increment_size", value = "10"),
+        @Parameter(name = "optimizer", value = "hilo")})
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class EntityAttribute extends BaseObject implements Serializable
@@ -56,6 +60,8 @@ public class EntityAttribute extends BaseObject implements Serializable
 	private String displayName;
 	private Integer displayOrder;
 	private Boolean indexed;
+    private Boolean searchable;
+    private Boolean caseInsensitive;
 	private Boolean isCustom;
 	private String sourceName;
 	private String transformationFunction;
@@ -68,9 +74,8 @@ public class EntityAttribute extends BaseObject implements Serializable
 	private User userVoidedBy; 
 
 	@Id
-	@GeneratedValue(strategy=GenerationType.SEQUENCE, generator="entity_attribute_seq") 	
+	@GeneratedValue(generator="entity_attribute_gen") 	
 	@Column(name = "entity_attribute_id", unique = true, nullable = false)
-//	@XmlElement
 	public Integer getEntityAttributeId() {
 		return entityAttributeId;
 	}
@@ -81,7 +86,6 @@ public class EntityAttribute extends BaseObject implements Serializable
 
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "entity_version_id", nullable = false)
-//    @XmlElement
 	public Entity getEntity() {
 		return entity;
 	}
@@ -112,7 +116,6 @@ public class EntityAttribute extends BaseObject implements Serializable
 	}
 
 	@Column(name = "description", nullable = true)
-//    @XmlElement
 	public String getDescription() {
 		return description;
 	}
@@ -147,6 +150,24 @@ public class EntityAttribute extends BaseObject implements Serializable
 	public void setIndexed(Boolean indexed) {
 		this.indexed = indexed;
 	}
+
+    @Column(name = "searchable", nullable = false)
+    public Boolean getSearchable() {
+        return searchable;
+    }
+
+    public void setSearchable(Boolean searchable) {
+        this.searchable = searchable;
+    }
+
+    @Column(name = "case_insensitive", nullable = false)
+    public Boolean getCaseInsensitive() {
+        return caseInsensitive;
+    }
+
+    public void setCaseInsensitive(Boolean caseInsensitive) {
+        this.caseInsensitive = caseInsensitive;
+    }
 
 	@Column(name = "is_custom", nullable = false)
 	public Boolean getIsCustom() {
@@ -186,7 +207,6 @@ public class EntityAttribute extends BaseObject implements Serializable
 
 	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "date_created", nullable = false, length = 8)
-//    @XmlElement
 	public Date getDateCreated() {
 		return dateCreated;
 	}

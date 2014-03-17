@@ -89,6 +89,14 @@
         <level value="debug"/>
     </logger>
     
+    <logger name="org.openhie.openempi.blocking">
+        <level value="debug"/>
+    </logger>
+
+    <logger name="org.openhie.openempi.loader">
+        <level value="warn"/>
+    </logger>
+    
     <logger name="org.openhie.openempi.matching.EvaluateMatchingUsingTrainingData">
         <level value="debug"/>
     </logger>

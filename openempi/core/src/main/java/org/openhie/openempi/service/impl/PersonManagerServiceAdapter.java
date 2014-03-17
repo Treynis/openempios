@@ -467,8 +467,8 @@ public class PersonManagerServiceAdapter extends BaseServiceImpl implements Pers
         recordManagerService.linkAllRecordPairs(getEntity());     
 	}
 
-	public void initializeRepository() throws ApplicationException {
-        recordManagerService.initializeRepository(getEntity());     		
+	public void initializeRepository(Entity entity) throws ApplicationException {
+        recordManagerService.initializeRepository(entity);
 	}
 
 	public void generateCustomFields() throws ApplicationException {

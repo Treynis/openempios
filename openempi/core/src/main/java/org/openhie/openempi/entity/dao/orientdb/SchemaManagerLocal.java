@@ -20,13 +20,10 @@
  */
 package org.openhie.openempi.entity.dao.orientdb;
 
-import org.openhie.openempi.context.Context;
-import org.openhie.openempi.model.Entity;
+import org.openhie.openempi.entity.Constants;
 
-import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.db.ODatabase;
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
-import com.orientechnologies.orient.core.metadata.security.OUser;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 
 public class SchemaManagerLocal extends SchemaManagerAbstract
 {
@@ -36,37 +33,38 @@ public class SchemaManagerLocal extends SchemaManagerAbstract
     
     public EntityStore getStoreByName(String entityName) {
         String storeName = entityName;
-        String storeUrl = PLOCAL_STORAGE_MODE + ":" + buildStoreName(entityName);
-        return new EntityStore(entityName, storeName, storeUrl);
-    }
-
-    private String buildStoreName(String entityName) {
-        String dataDirectory = (String) getParameter(SchemaManager.DATA_DIRECTORY_KEY);
+        String storageName = buildStoreName(entityName);
+        String dataDirectory = (String) getParameter(Constants.DATA_DIRECTORY_KEY);
         if (dataDirectory == null) {
             dataDirectory = ".";
         }
-        String storeName = dataDirectory + "/" + entityName + "-db";
+        String storeUrl = PLOCAL_STORAGE_MODE + ":" + dataDirectory + "/" + storageName;
+        return new EntityStore(entityName, storeName, storeUrl, storageName);
+    }
+
+    private String buildStoreName(String entityName) {
+        String storeName = entityName + "-db";
         log.debug("The store for entity " + entityName + " is at: " + storeName);
         return storeName;
     }
 
-    @Override
-    public OGraphDatabase createDatabase(EntityStore store) {
+    public void createDatabase(EntityStore store, OrientBaseGraph db) {
         log.info("Creating a store for entity " + store.getEntityName() + " in location " + store.getStoreName());
-        String databaseUrl = store.getStoreUrl();
-        OGraphDatabase db = (OGraphDatabase) Orient.instance().getDatabaseFactory()
-                .createDatabase(GRAPH_DATABASE_TYPE, databaseUrl);
-        db.create();
-        db.getMetadata().getSecurity()
+//        String databaseUrl = store.getStoreUrl();
+
+//        ODatabaseDocumentTx db = (ODatabaseDocumentTx) Orient.instance().getDatabaseFactory()
+//                .createDatabase(GRAPH_DATABASE_TYPE, databaseUrl);
+//        if (!db.exists()) {
+//            db.create();
+//        }
+//        if (db.isClosed()) {
+//            db.open("admin", "admin");
+//        }
+        db.getRawGraph().getMetadata().getSecurity()
                 .createUser(connectionManager.getUsername(), connectionManager.getPassword(),
                         new String[] { "admin" });
         log.debug("Created user: " + connectionManager.getUsername());
-        db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useLightweightEdges=false");
-        db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForEdgeLabel=false");
-        db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForVertexLabel=false");
-        db.setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useVertexFieldsForEdgeLabels=false");
-        Object props = db.get(ODatabase.ATTRIBUTES.CUSTOM);
+        Object props = db.getRawGraph().get(ODatabase.ATTRIBUTES.CUSTOM);
         log.debug("Database custom attributes " + props + " of type " + props.getClass());
-        return db;
     }
 }

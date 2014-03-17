@@ -29,15 +29,17 @@ public class EntityStore
 {
     private String entityName;
     private String storeName;
+    private String storageName;
     private String storeUrl;
     private OClassImpl entityClass;
     private OClassImpl identifierClass;
     private Map<String, Integer> clusterIdByClassName = new HashMap<String, Integer>();
 
-    public EntityStore(String entityName, String storeName, String storeUrl) {
+    public EntityStore(String entityName, String storeName, String storeUrl, String storageName) {
         this.entityName = entityName;
         this.storeName = storeName;
         this.storeUrl = storeUrl;
+        this.storageName = storageName;
     }
 
     public void put(String className, Integer clusterId) {
@@ -60,9 +62,12 @@ public class EntityStore
         return storeUrl;
     }
 
-    public String toString() {
-        return "EntityStore [entityName=" + entityName + ", storeName=" + storeName + ", storeUrl=" + storeUrl
-                + ", clusterIdByClassName=" + clusterIdByClassName + "]";
+    public String getStorageName() {
+        return storageName;
+    }
+
+    public void setStorageName(String storageName) {
+        this.storageName = storageName;
     }
 
     public OClassImpl getEntityClass() {
@@ -79,5 +84,11 @@ public class EntityStore
 
     public void setIdentifierClass(OClassImpl identifierClass) {
         this.identifierClass = identifierClass;
+    }
+
+    public String toString() {
+        return "EntityStore [entityName=" + entityName + ", storeName=" + storeName + ", storageName=" + storageName
+                + ", storeUrl=" + storeUrl + ", entityClass=" + entityClass + ", identifierClass=" + identifierClass
+                + ", clusterIdByClassName=" + clusterIdByClassName + "]";
     }
 }

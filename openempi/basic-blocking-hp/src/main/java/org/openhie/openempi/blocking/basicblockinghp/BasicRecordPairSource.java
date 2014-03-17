@@ -20,7 +20,9 @@
  */
 package org.openhie.openempi.blocking.basicblockinghp;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,8 +51,10 @@ public class BasicRecordPairSource implements RecordPairSource
 
 	public RecordPairIterator iterator() {
 		BasicRecordPairIterator iterator = new BasicRecordPairIterator(this);
-		this.setBlockingDao(cache.getBlockingDao());
-		iterator.setRecordIds(blockingDao.getAllRecordIds(entity));
+		Set<String> blockRecordIds = cache.loadBlockRecordIds();
+		List<String> listIds = new ArrayList<String>(blockRecordIds.size());
+		listIds.addAll(blockRecordIds);
+		iterator.setBlockRecordIds(listIds);
 		return iterator;
 	}
 
@@ -70,6 +74,10 @@ public class BasicRecordPairSource implements RecordPairSource
 		this.cache = cache;
 	}
 
+	public Entity getEntity() {
+	    return entity;
+	}
+	
 	public BlockingDao getBlockingDao() {
 		return blockingDao;
 	}

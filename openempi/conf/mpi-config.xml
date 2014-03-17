@@ -25,42 +25,19 @@
         <universal-identifier-type>ECID</universal-identifier-type>
     </global-identifier>
     <!--<scheduled-tasks>
-        <scheduled-task schedule-type="schedule-at-fixed-rate" time-unit="seconds">
+        <scheduled-task entity-name="person" schedule-type="schedule-at-fixed-rate" time-unit="seconds">
             <task-name>test</task-name>
             <task-implementation>dataProfiler</task-implementation>
-            <initial-delay>30</initial-delay>
-            <period>86400</period>
+            <initial-delay>320</initial-delay>
+            <period>1800</period>
+        </scheduled-task>
+        <scheduled-task entity-name="provider" schedule-type="schedule-at-fixed-rate" time-unit="seconds">
+            <task-name>test-provider</task-name>
+            <task-implementation>dataProfiler</task-implementation>
+            <initial-delay>40</initial-delay>
+            <period>1880</period>
         </scheduled-task>
     </scheduled-tasks>-->
-    <custom-fields entity-name="person">
-        <custom-field>
-            <field-name>custom1</field-name>
-            <source-field-name>familyName</source-field-name>
-            <transformation-function>
-                <function-name>Nysiis</function-name>
-            </transformation-function>
-        </custom-field>
-        <custom-field>
-            <field-name>custom2</field-name>
-            <source-field-name>givenName</source-field-name>
-            <transformation-function>
-                <function-name>Nysiis</function-name>
-            </transformation-function>
-        </custom-field>
-        <custom-field>
-            <field-name>custom3</field-name>
-            <source-field-name>dateOfBirth</source-field-name>
-            <transformation-function>
-                <function-name>DateTransformationFunction</function-name>
-                <parameters>
-                    <parameter>
-                        <name>dateFormat</name>
-                        <value>yyyy</value>
-                    </parameter>
-                </parameters>
-            </transformation-function>
-        </custom-field>
-    </custom-fields>
     <bb:basic-blocking entity-name="person">
         <bb:blocking-rounds>
             <bb:blocking-round>
@@ -76,6 +53,8 @@
         </bb:blocking-rounds>
     </bb:basic-blocking>
     <em:exact-matching entity-name="person">
+        <em:match-rules>
+            <em:match-rule>
         <em:match-fields>
             <em:match-field>
                 <em:field-name>givenName</em:field-name>
@@ -91,14 +70,20 @@
                 </em:comparator-function>
                 <em:match-threshold>0.8</em:match-threshold>
             </em:match-field>
-            <em:match-field>
-                <em:field-name>city</em:field-name>
-                <em:comparator-function>
-                    <function-name>JaroWinkler</function-name>
-                </em:comparator-function>
-                <em:match-threshold>0.87</em:match-threshold>
-            </em:match-field>
-        </em:match-fields>
+                </em:match-fields>
+            </em:match-rule>
+            <em:match-rule>
+                <em:match-fields>
+                    <em:match-field>
+                        <em:field-name>familyName</em:field-name>
+                        <em:comparator-function>
+                            <function-name>JaroWinklerV2</function-name>
+                        </em:comparator-function>
+                        <em:match-threshold>0.89</em:match-threshold>
+                    </em:match-field>
+                </em:match-fields>
+            </em:match-rule>
+        </em:match-rules>
     </em:exact-matching>
     <admin-configuration>
         <file-repository-directory>fileRepository</file-repository-directory>

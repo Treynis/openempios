@@ -39,10 +39,14 @@ public enum AttributeDatatype
 	DATE("date", 8) {
 	},
 	TIMESTAMP("timestamp", 9) {
-	};
+	},
+	LINKSET("linkset", 10) {
+    },
+    EMBEDDEDSET("embedded", 11) {
+    };
 	
 	private static final AttributeDatatype[] TYPES = new AttributeDatatype[] { 
-		INTEGER, SHORT, LONG, DOUBLE, FLOAT, STRING, BOOLEAN, DATE, TIMESTAMP
+		INTEGER, SHORT, LONG, DOUBLE, FLOAT, STRING, BOOLEAN, DATE, TIMESTAMP, LINKSET, EMBEDDEDSET
 	};
 	private String name;
 	private int id;

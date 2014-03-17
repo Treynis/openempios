@@ -22,12 +22,16 @@ package org.openhie.openempi.profiling;
 
 import java.util.Iterator;
 
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.service.impl.BaseServiceImpl;
 
 public abstract class AbstractRecordDataSource extends BaseServiceImpl implements RecordDataSource
 {
 	public AbstractRecordDataSource() {
+	}
+	
+	public void init(Entity entity) {    
 	}
 	
 	public abstract Iterator<Record> iterator();

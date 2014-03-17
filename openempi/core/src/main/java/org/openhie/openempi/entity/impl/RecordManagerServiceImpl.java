@@ -28,33 +28,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.beanutils.PropertyUtils;
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.InitializationException;
 import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.blocking.RecordPairIterator;
 import org.openhie.openempi.blocking.RecordPairSource;
-import org.openhie.openempi.configuration.CustomField;
 import org.openhie.openempi.configuration.GlobalIdentifier;
 import org.openhie.openempi.configuration.UpdateNotificationRegistrationEntry;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.dao.IdentifierDomainDao;
 import org.openhie.openempi.dao.UniversalDao;
-import org.openhie.openempi.entity.DataAccessIntent;
-import org.openhie.openempi.entity.RecordCacheManager;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
-import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.PersistenceLifecycleObserver;
+import org.openhie.openempi.entity.RecordCacheManager;
+import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.dao.EntityDao;
 import org.openhie.openempi.matching.MatchingService;
 import org.openhie.openempi.model.AuditEventType;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Identifier;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierUpdateEvent;
 import org.openhie.openempi.model.LinkSource;
-import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
@@ -64,7 +60,6 @@ import org.openhie.openempi.notification.NotificationEvent;
 import org.openhie.openempi.notification.NotificationEventFactory;
 import org.openhie.openempi.notification.ObservationEventType;
 import org.openhie.openempi.service.impl.UpdateEventNotificationGenerator;
-import org.openhie.openempi.transformation.TransformationService;
 import org.openhie.openempi.util.ConvertUtil;
 
 import com.eaio.uuid.UUID;
@@ -124,7 +119,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         
 		// Before we save the entry we need to generate any custom
 		// fields that have been requested through configuration
-		populateCustomFields(record);
+		populateCustomFields(entity, record);
 
 		try {
 			record = entityDao.saveRecord(entity, record);
@@ -134,7 +129,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 			// Now we need to check for matches and if any are found, establish links among the aliases
 			RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
-			findAndProcessAddRecordLinks(record, state);
+			findAndProcessAddRecordLinks(entity, record, state);
             getUpdateEventNotificationGenerator().generateEvents(state);
 
 			// Generate a notification event to inform interested listeners that this event has occurred.
@@ -142,7 +137,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			Context.getNotificationService().fireNotificationEvent(event);
 
 			// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-			Context.notifyObserver(ObservationEventType.ENTITY_ADD_EVENT, record);
+			Context.notifyObserver(ObservationEventType.RECORD_ADD_EVENT, record);
 
 			return record;
 		} catch (Exception e) {
@@ -177,26 +172,25 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
             // Before we save the entry we need to generate any custom
             // fields that have been requested through configuration
-            populateCustomFields(record);
+            populateCustomFields(entity, record);
         }
 
 
         try {
             Set<Record> savedRecords = entityDao.saveRecords(entity, records);
 
+            // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
+            Context.notifyObserver(ObservationEventType.RECORDS_ADD_EVENT, records);
             for (Record record : savedRecords) {
 
                 // Now we need to check for matches and if any are found, establish links among the aliases
                 RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
-                findAndProcessAddRecordLinks(record, state);
+                findAndProcessAddRecordLinks(entity, record, state);
                 getUpdateEventNotificationGenerator().generateEvents(state);
 
                 // Generate a notification event to inform interested listeners that this event has occurred.
                 NotificationEvent event = NotificationEventFactory.createNotificationEvent(EventType.ADD_EVENT_TYPE, record);
                 Context.getNotificationService().fireNotificationEvent(event);
-
-                // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-                Context.notifyObserver(ObservationEventType.ENTITY_ADD_EVENT, record);
             }
             return savedRecords;
         } catch (Exception e) {
@@ -229,6 +223,9 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		validateRecord(entity, record);
         validateNoNewGlobalIdentifier(record, null);
 
+        // Before we save the entry we need to generate any custom
+        // fields that have been requested through configuration
+        populateCustomFields(entity, record);
 		try {
 			record = entityDao.saveRecord(entity, record);
 
@@ -240,7 +237,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			Context.getNotificationService().fireNotificationEvent(event);
 
 			// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-			Context.notifyObserver(ObservationEventType.ENTITY_ADD_EVENT, record);
+			Context.notifyObserver(ObservationEventType.RECORD_ADD_EVENT, record);
 
 			return record;
 		} catch (Exception e) {
@@ -271,18 +268,20 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
                 identifierDomainDao.saveIdentifierDomain(identifier.getIdentifierDomain());
             }
             validateRecord(entity, record);
+            // Before we save the entry we need to generate any custom
+            // fields that have been requested through configuration
+            populateCustomFields(entity, record);
         }
 
         try {
             Set<Record> savedRecords = entityDao.saveRecords(entity, records);
 
+            // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
+            Context.notifyObserver(ObservationEventType.RECORDS_ADD_EVENT, savedRecords);
             for (Record record : savedRecords) {
                 // Generate a notification event to inform interested listeners that this event has occurred.
                 NotificationEvent event = NotificationEventFactory.createNotificationEvent(EventType.ADD_EVENT_TYPE, record);
                 Context.getNotificationService().fireNotificationEvent(event);
-
-                // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-                Context.notifyObserver(ObservationEventType.ENTITY_ADD_EVENT, record);
             }
             return savedRecords;
         } catch (Exception e) {
@@ -434,12 +433,12 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 			// Before we save the entry we need to generate any custom
 			// fields that have been requested through configuration
-			populateCustomFields(record);
+			populateCustomFields(entity, record);
 
             RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.UPDATE_SOURCE);
 			record = entityDao.updateRecord(entity, record);
 	
-			findAndUpdateRecordLinks(record, state);
+			findAndUpdateRecordLinks(entity, record, state);
 			getUpdateEventNotificationGenerator().generateEvents(state);
 
 			// Audit the event that an existing record entry was updated.
@@ -450,7 +449,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			Context.getNotificationService().fireNotificationEvent(event);
 
 			// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-			Context.notifyObserver(ObservationEventType.ENTITY_UPDATE_EVENT, new Object[]{recordOriginal, record});
+			Context.notifyObserver(ObservationEventType.RECORD_UPDATE_EVENT, new Object[]{recordOriginal, record});
 
 			return record;
 		} catch (Exception e) {
@@ -486,7 +485,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			Context.getNotificationService().fireNotificationEvent(event);
 
 			// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-			Context.notifyObserver(ObservationEventType.ENTITY_DELETE_EVENT, record);
+			Context.notifyObserver(ObservationEventType.RECORD_DELETE_EVENT, record);
 
 			return record;
 		} catch (Exception e) {
@@ -513,7 +512,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			 Context.getNotificationService().fireNotificationEvent(event);
 
 			 // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-			 Context.notifyObserver(ObservationEventType.ENTITY_DELETE_EVENT, record);
+			 Context.notifyObserver(ObservationEventType.RECORD_DELETE_EVENT, record);
 		}
 		return records;
 	}
@@ -541,7 +540,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		Context.getNotificationService().fireNotificationEvent(event);
 
 		// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-		Context.notifyObserver(ObservationEventType.ENTITY_DELETE_EVENT, record);
+		Context.notifyObserver(ObservationEventType.RECORD_DELETE_EVENT, record);
 
 		return recordToDelete;
 	}
@@ -554,15 +553,15 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 		log.info("Initializing the repository for entity " + entity.getName() + 
 				" from the beginning using the underlying matching algorithm to do so.");
-		MatchingService matchingService = Context.getMatchingService();
-		matchingService.initializeRepository();
+		MatchingService matchingService = Context.getMatchingService(entity.getName());
+		matchingService.initializeRepository(entity.getName());
 		linkAllRecordPairs(entity);
 	}
 
 	public void linkAllRecordPairs(Entity entity) throws ApplicationException {
 		clearAllLinks(entity);
-		MatchingService matchingService = Context.getMatchingService();
-		BlockingService blockingService = Context.getBlockingService();
+		MatchingService matchingService = Context.getMatchingService(entity.getName());
+		BlockingService blockingService = Context.getBlockingService(entity.getName());
 		RecordPairSource recordPairSource = blockingService.getRecordPairSource(entity);
 		int pairCount=0;
 		List<RecordLink> links = new java.util.ArrayList<RecordLink>();
@@ -573,30 +572,30 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			pair = matchingService.match(pair);
 			RecordLink link = ConvertUtil.createRecordLinkFromRecordPair(pair);
 			if  (!(pair.getMatchOutcome() == RecordPair.MATCH_OUTCOME_UNLINKED) && (!mapOfLinks.containsKey(link))) {
-				log.warn("Record link " + link + " does not exist yet so it will be persisted.");
+				log.debug("Record link " + link + " does not exist yet so it will be persisted.");
 				links.add(link);
 				mapOfLinks.put(link, link);
 			} else {
-				log.warn("Record link " + link + " already exists so it will not be persisted.");
+				log.debug("Record link " + link + " already exists so it will not be persisted.");
 			}
 
 			if (links.size() == 10000) {
-				log.warn("Finished persisting a block of " + links.size() + " links out of a total of: " + mapOfLinks.keySet().size());
+				log.info("Finished persisting a block of " + links.size() + " links out of a total of: " + mapOfLinks.keySet().size());
 				entityDao.saveRecordLinks(links);
 				links.clear();
 			}
 
 			if (pairCount % TRANSACTION_BLOCK_SIZE == 0) {
-				log.warn("Finished linking " + pairCount + " record pairs.");
+				log.info("Finished linking " + pairCount + " record pairs.");
 			}
 		}
-		log.warn("Finished persisting a block of " + links.size() + " links out of a total of " + mapOfLinks.size());
+		log.info("Finished persisting a block of " + links.size() + " links out of a total of " + mapOfLinks.size());
 		entityDao.saveRecordLinks(links);
-		log.warn("In initializing the repository, we evaluated " + pairCount + " record pairs.");
+		log.info("In initializing the repository, we evaluated " + pairCount + " record pairs.");
 	}
 
 	public void clearAllLinks(Entity entity) {
-		MatchingService matchingService = Context.getMatchingService();
+		MatchingService matchingService = Context.getMatchingService(entity.getName());
 		// Remove all the current links in the system by the current matching algorithm.
 		LinkSource linkSource = new LinkSource(matchingService.getMatchingServiceId());
 		entityDao.removeRecordLinksBySource(entity, linkSource, null);
@@ -663,7 +662,6 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
     private void assignGlobalIdentifier(IdentifierDomain domain, Entity entity, Record record, Map<Long, Long> ids,
             boolean hasLinks) throws ApplicationException {
         // If already processed through a linked entry then skip it
-        log.info("Assigning global id to record " + record.getRecordId());
         if (ids.get(record.getRecordId()) != null) {
                 return;
         }
@@ -720,10 +718,8 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
     private Identifier extractGlobalIdentifier(Record record) {
         IdentifierDomain globalIdentifierDomain = Context.getConfiguration().getGlobalIdentifierDomain();
         for (Identifier identifier : record.getIdentifiers()) {
-            if (identifier.getIdentifierDomain() != null &&
-                    identifier.getIdentifierDomain().getIdentifierDomainName() != null &&
-                    identifier.getIdentifierDomain().getIdentifierDomainName()
-                        .equalsIgnoreCase(globalIdentifierDomain.getIdentifierDomainName())) {
+            if (identifier.getIdentifierDomain().getIdentifierDomainName()
+                    .equalsIgnoreCase(globalIdentifierDomain.getIdentifierDomainName())) {
                 if (log.isDebugEnabled()) {
                     log.debug("Found global identifier in linked record of :" + identifier);                    
                 }
@@ -861,7 +857,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		return true;
 	}
 
-	private void findAndUpdateRecordLinks(Record record, RecordState state) throws ApplicationException {
+	private void findAndUpdateRecordLinks(Entity entity, Record record, RecordState state) throws ApplicationException {
 	    List<RecordLink> currLinks = entityDao.loadRecordLinks(record.getEntity(), record.getRecordId());
 	    Set<RecordLink> preLinks = new HashSet<RecordLink>();
 	    state.setPreLinks(preLinks);
@@ -872,13 +868,13 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 	            entityDao.removeRecordLink(link);
 	        }
 	    }
-	    findAndProcessAddRecordLinks(record, state);
+	    findAndProcessAddRecordLinks(entity, record, state);
 	}
 	
-	private Set<RecordLink> findAndProcessAddRecordLinks(Record record, RecordState state) throws ApplicationException {
+	private Set<RecordLink> findAndProcessAddRecordLinks(Entity entity, Record record, RecordState state) throws ApplicationException {
 
 		// Call the matching service to find any record pairs that must be linked
-		MatchingService matchingService = Context.getMatchingService();
+		MatchingService matchingService = Context.getMatchingService(entity.getName());
 		Set<RecordPair> pairs = matchingService.match(record);
 
 		// If no matching records are found then return an empty list
@@ -1016,27 +1012,6 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		}
 	}
 
-	public void populateCustomFields(Person person) {
-		List<CustomField> customFields = Context.getConfiguration().getCustomFields();
-		TransformationService transformationService = Context.getTransformationService();
-		for (CustomField customField : customFields) {
-			log.trace("Need to generate a value for field " + customField.getSourceFieldName() + " using function " +
-					customField.getTransformationFunctionName() + " and save it as field " + customField.getFieldName());
-			try {
-				Object value = PropertyUtils.getProperty(person, customField.getSourceFieldName());
-				log.debug("Obtained a value of " + value + " for field " + customField.getSourceFieldName());
-				if (value != null) {
-					Object transformedValue = transformationService.transform(customField.getTransformationFunctionName(), value, customField.getConfigurationParameters());
-					PropertyUtils.setProperty(person, customField.getFieldName(), transformedValue);
-					log.debug("Custom field " + customField.getFieldName() + " has value " + BeanUtils.getProperty(person,
-							customField.getFieldName()));
-				}
-			} catch (Exception e) {
-				log.error("Failed while trying to obtain property for field " + customField.getSourceFieldName() + ":" + e.getMessage(), e);
-			}
-		}
-	}
-
 	public void generateCustomFields(Entity entity) throws ApplicationException {
 		if (entity == null || entity.getName() == null) {
 			log.debug("Attempted to generate custom fields for an entity without specifying the entity type.");
@@ -1061,7 +1036,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 	private void generateCustomFields(Entity entity, final List<Record> records) throws ApplicationException {
 		for (Record record : records) {
-			populateCustomFields(record);
+			populateCustomFields(entity, record);
 		}
 		entityDao.updateRecords(entity, records);
 	}
@@ -1076,6 +1051,10 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		}
 	    if (link.getUserCreatedBy() == null) {
 	        link.setUserCreatedBy(Context.getUserContext().getUser());
+	    }
+	    link.setLinkSource(new LinkSource(LinkSource.MANUAL_MATCHING_SOURCE));
+	    if (link.getState() == null) {
+	        link.setState(RecordLinkState.MATCH);
 	    }
 	}
 

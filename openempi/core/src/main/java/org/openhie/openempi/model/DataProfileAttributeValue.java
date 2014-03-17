@@ -20,14 +20,15 @@
  */
 package org.openhie.openempi.model;
 
+import java.io.Serializable;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.xml.bind.annotation.XmlRootElement;
+
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -35,9 +36,10 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "data_profile_attribute_value")
 @GenericGenerator(name = "data_profile_attribute_value_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "data_profile_attribute_value_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")})
 @XmlRootElement
-public class DataProfileAttributeValue extends BaseObject
+public class DataProfileAttributeValue extends BaseObject implements Serializable
 {
 	private static final long serialVersionUID = -5805814946755578692L;
 	

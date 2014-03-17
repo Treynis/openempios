@@ -47,6 +47,8 @@ public class EntityAttributeDatatype extends BaseObject implements Serializable
 	public static final int BOOLEAN_DATATYPE_CD = 7;
 	public static final int DATE_DATATYPE_CD = 8;
 	public static final int TIMESTAMP_DATATYPE_CD = 9;
+	public static final int LINKSET_DATATYPE_CO = 10;
+	public static final int EMBEDDEDSET_DATATYPE_CD = 11;
 	
 	private Integer datatypeCd;
 	private String name;

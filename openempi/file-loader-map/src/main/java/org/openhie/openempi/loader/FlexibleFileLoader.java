@@ -67,9 +67,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 public class FlexibleFileLoader extends AbstractFileLoader
 {
-    private static final int RECORD_CHUNK = 500;
-    private static final int NUM_LOADER_THREADS = 5;
-
     public static final String DEFAULT_DATE_FORMAT = "yyyyMMdd";
 
     private ThreadPoolTaskExecutor taskExecutor;
@@ -85,6 +82,9 @@ public class FlexibleFileLoader extends AbstractFileLoader
     private int recordCounter = 0;
     private LinkSource goldStandardLinkSource;
 
+    private int numLoaderThreads;
+    private int recordChunkSize;
+    
     public static final String GENDER = "gender";
     public static final String ETHNIC_GROUP = "ethnicGroup";
     public static final String RACE = "race";
@@ -139,8 +139,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
         if (trainingDataExtractor != null) {
             cacheOfRecordsLoaded = new HashMap<Serializable, Set<Long>>();
         }
-        
-        for (int i=0; i < NUM_LOADER_THREADS; i++) {
+
+        for (int i = 0; i < getNumLoaderThreads(); i++) {
             RecordLoaderTask loaderThread = new RecordLoaderTask(getEntityLoaderManager(), Context.getUserContext());
             loaderThreads.add(loaderThread);
             futures.add(taskExecutor.getThreadPoolExecutor().submit(loaderThread, new Object()));
@@ -199,6 +199,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
         types.add(new ParameterType(SKIP_HEADER_LINE, SKIP_HEADER_LINE_DISPLAY, FormEntryDisplayType.CHECK_BOX,
                 trueOrFalse));
         types.add(new ParameterType(IS_IMPORT, IS_IMPORT_DISPLAY, FormEntryDisplayType.CHECK_BOX, trueOrFalse));
+        types.add(new ParameterType(IS_MASSIVE_INSERT, IS_MASSIVE_INSERT_DISPLAY, FormEntryDisplayType.CHECK_BOX, trueOrFalse));
         types.add(new ParameterType(MAPPING_FILE, MAPPING_FILE_DISPLAY, FormEntryDisplayType.TEXT_FIELD));
         types.add(new ParameterType(PREVIEW_ONLY, PREVIEW_ONLY_DISPLAY, FormEntryDisplayType.CHECK_BOX, trueOrFalse));
         return types.toArray(new ParameterType[] {});
@@ -213,7 +214,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
         if (currentEntity == null) {
             currentEntity = entity;
         }
-        
+
         // Create task
         RecordParseTask parser = new RecordParseTask(entity, line, lineIndex, Context.getUserContext());
         Future<Object> future = taskExecutor.getThreadPoolExecutor().submit(parser, new Object());
@@ -247,7 +248,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                 future.get(10, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 boolean status = future.cancel(true);
-                log.debug("Outcome of cancel was: " + status);                
+                log.debug("Outcome of cancel was: " + status);
             } catch (Throwable e) {
                 log.warn("Failed while waiting for the loader thread to complete: " + e, e);
             }
@@ -303,7 +304,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                 log.debug("Created the entity instance: " + record);
             }
         }
-        
+
         protected Record processLine(String line, int lineIndex) {
             if (line == null || line.length() == 0) {
                 return null;
@@ -522,6 +523,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
             }
             return id;
         }
+        
     }
 
     class TaskRecord
@@ -529,7 +531,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
         private Serializable key;
         private Entity entity;
         private Record record;
-        
+
         public TaskRecord(Serializable key, Entity entity, Record record) {
             this.key = key;
             this.entity = entity;
@@ -580,13 +582,20 @@ public class FlexibleFileLoader extends AbstractFileLoader
           Context.setUserContext(userContext);
             while (recordsQueue.size() > 0 || !done) {
                 try {
-                    for (int i=0; i < RECORD_CHUNK; i++) {
-                        TaskRecord task = recordsQueue.poll(5000, TimeUnit.MILLISECONDS);
-                        if (task == null) {
-                            log.debug("Time-out trying to get an entry from the list. Shutting down thread " + Thread.currentThread().getId());
-                            return;
+                    int records = recordsQueue.size();
+                    if (records > 0) {
+                        int chunkSize = getRecordChunkSize();
+                        if (records > chunkSize) {
+                            records = chunkSize;
                         }
-                        tasks.add(task);
+                        for (int i = 0; i < records; i++) {
+                            TaskRecord task = recordsQueue.poll(5000, TimeUnit.MILLISECONDS);
+                            if (task == null) {
+                                log.debug("Time-out trying to get an entry from the list. Shutting down thread " + Thread.currentThread().getId());
+                                return;
+                            }
+                            tasks.add(task);
+                        }
                     }
                 } catch (InterruptedException e) {
                     if (tasks.size() > 0) {
@@ -604,7 +613,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                 saveRecordsInTaskList();
             }
         }
-        
+
         public void generateKnownLinks(Serializable key, Record record) {
             if (key == null) {
                 return;
@@ -636,7 +645,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                     }
                 }
                 recordIds.add(leftId);
-            }       
+            }
         }
 
         public void saveRecordsInTaskList() {
@@ -652,18 +661,18 @@ public class FlexibleFileLoader extends AbstractFileLoader
                     records.add(task.getRecord());
                     if (task.getKey() != null) {
                         generateKnownLinks(task.getKey(), task.getRecord());
-                    }                    
+                    }
                 }
                 entityLoaderManager.addRecords(tasks.get(0).getEntity(), records);
                 long endTime = new java.util.Date().getTime();
-                log.warn("Persisting a chunk of " + records.size() + " took " + (endTime-startTime) + " msec.");
+                log.warn("Persisting a chunk of " + records.size() + " took " + (endTime - startTime) + " msec.");
             } catch (Exception e) {
                 log.error("Failed while adding a chunk of records to the system. Error: " + e, e);
             } finally {
                 tasks.clear();
             }
         }
-        
+
         public boolean isDone() {
             return done;
         }
@@ -770,5 +779,21 @@ public class FlexibleFileLoader extends AbstractFileLoader
                     .append("universalIdentifier", universalIdentifier)
                     .append("universalIdentifierTypeCode", universalIdentifierTypeCode).toString();
         }
+    }
+
+    public int getNumLoaderThreads() {
+        return numLoaderThreads;
+    }
+
+    public void setNumLoaderThreads(int numLoaderThreads) {
+        this.numLoaderThreads = numLoaderThreads;
+    }
+
+    public int getRecordChunkSize() {
+        return recordChunkSize;
+    }
+
+    public void setRecordChunkSize(int recordChunkSize) {
+        this.recordChunkSize = recordChunkSize;
     }
 }

@@ -37,12 +37,12 @@
 		<field
 			datatype="String">
 			<column-index>2</column-index>
-			<field-name>firstName</field-name>
+			<field-name>givenName</field-name>
 		</field>
 		<field
 			datatype="String">
 			<column-index>3</column-index>
-			<field-name>lastName</field-name>
+			<field-name>familyName</field-name>
 		</field>
 		<field
 			is-ignored="true">
@@ -50,14 +50,14 @@
 			<field-name/>
 		</field>
 		<field
-			is-ignored="true">
+			datatype="String">
 			<column-index>5</column-index>
-			<field-name/>
+			<field-name>address</field-name>
 		</field>
 		<field
-			is-ignored="true">
+			datatype="String">
 			<column-index>6</column-index>
-			<field-name/>
+			<field-name>city</field-name>
 		</field>
 		<field
 			is-ignored="true">
@@ -65,9 +65,9 @@
 			<field-name/>
 		</field>
 		<field
-			is-ignored="true">
+			datatype="String">
 			<column-index>8</column-index>
-			<field-name/>
+			<field-name>postalCode</field-name>
 		</field>
 		<field
 			is-ignored="true">

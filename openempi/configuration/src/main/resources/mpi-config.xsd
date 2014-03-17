@@ -32,7 +32,6 @@
 			<xs:sequence>
 				<xs:element name="global-identifier" type="mpi:global-identifier" minOccurs="0"/>
 				<xs:element name="scheduled-tasks" type="mpi:scheduled-tasks" minOccurs="0"/>
-				<xs:element name="custom-fields" type="mpi:custom-fields" minOccurs="0"/>
 				<xs:element ref="mpi:blocking-configuration" minOccurs="1" maxOccurs="unbounded"/>
 				<xs:element ref="mpi:matching-configuration" minOccurs="1" maxOccurs="unbounded"/>
 				<xs:element ref="mpi:single-best-record" minOccurs="0" maxOccurs="unbounded"/>
@@ -65,6 +64,7 @@
 			<xs:element name="initial-delay" minOccurs="0" maxOccurs="1" type="xs:long"/>
  			<xs:element name="period" minOccurs="0" maxOccurs="1" type="xs:long"/>
 		</xs:sequence>
+		<xs:attribute name="entity-name" type="xs:string"/>
 		<xs:attribute name="schedule-type" use="required">
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
@@ -105,24 +105,6 @@
 	</xs:complexType>
 	<xs:element name="single-best-record" abstract="true" type="mpi:single-best-record-type"/>	
 
-	<xs:complexType name="custom-fields">
-		<xs:sequence minOccurs="1" maxOccurs="unbounded">
-			<xs:element name="custom-field" type="mpi:custom-field"/>
-		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="custom-field">
-		<xs:sequence>
-			<xs:element name="field-name" type="xs:string"/>
-			<xs:element name="source-field-name" type="xs:string"/>
-			<xs:element name="transformation-function" type="mpi:transformation-function"/>
-		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="transformation-function">
-		<xs:sequence>
-			<xs:element name="function-name" type="xs:string" minOccurs="1"/>
-			<xs:element name="parameters" type="mpi:parameters" minOccurs="0"/>
-		</xs:sequence>
-	</xs:complexType>	
 	<xs:complexType name="comparator-function">
 		<xs:sequence>
 			<xs:element name="function-name" type="xs:string" minOccurs="1"/>
@@ -140,6 +122,7 @@
 			<xs:element name="value" type="xs:string"/>
 		</xs:sequence>
 	</xs:complexType>
+
 	<xs:complexType name="admin-configuration">
 		<xs:sequence>
 			<xs:element name="file-repository-directory" type="xs:string"/>

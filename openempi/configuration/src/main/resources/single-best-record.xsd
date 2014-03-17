@@ -38,6 +38,7 @@
 					<xs:element name="implementation-description" type="xs:string"/>
 					<xs:element name="ruleset" type="sbr:ruleset"/>
 				</xs:sequence>
+				<xs:attribute name="entity-name" type="xs:string"/>
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>

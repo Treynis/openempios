@@ -23,10 +23,13 @@ package org.openhie.openempi.profiling;
 import java.util.Iterator;
 import java.util.List;
 
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Record;
 
 public interface RecordDataSource extends Iterable<Record>
 {
+    public void init(Entity entity);
+    
 	public List<AttributeMetadata> getAttributeMetadata();
 	
 	public int getRecordDataSourceId();

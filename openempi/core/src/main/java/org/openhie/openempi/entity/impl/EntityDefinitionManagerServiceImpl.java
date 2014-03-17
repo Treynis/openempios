@@ -75,25 +75,25 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 {
 	private static final String ENTITY_DEFINITION_CACHE = "entityDefinitionCache";
 	private static final int MAX_ENTITY_DEFINITION_CACHE_ELEMENTS = 100;
-	
+
 	private static boolean initialized = false;
 	private EntityDefinitionDao entityDao;
 	private static CacheManager cacheManager;
 	private static Cache entityDefinitionCache;
 	private static List<EntityAttributeDatatype> datatypes;
-	
+
 	public EntityDefinitionManagerServiceImpl() {
 	}
-	
+
 	public Entity addEntity(Entity entity) throws ApplicationException {
 		if (entity == null) {
 			return null;
 		}
-		
+
 		if (entity.getEntityVersionId() != null) {
 			throw new ApplicationException("This entity definition already exists so it can only be updated.");
 		}
-		
+
 		validateNameUniqueness(entity);
 		try {
 			entity.setUserCreatedBy(Context.getUserContext().getUser());
@@ -106,6 +106,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 			}
 			entityDao.addEntity(entity);
 			addToCache(entity);
+	        Context.notifyObserver(ObservationEventType.ENTITY_ADD_EVENT, entity);
 			return entity;
 		} catch (DaoException e) {
 			throw new ApplicationException(e.getMessage());
@@ -113,7 +114,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 	}
 
 	public EntityAttributeGroup addEntityAttributeGroup(EntityAttributeGroup entityAttributeGroup) throws ApplicationException {
-		if (entityAttributeGroup == null || entityAttributeGroup.getEntity() == null || 
+		if (entityAttributeGroup == null || entityAttributeGroup.getEntity() == null ||
 				entityAttributeGroup.getEntityAttributes() == null) {
 			throw new ApplicationException("This entity attribute group is invalid.");
 		}
@@ -162,39 +163,37 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 				}
 				attrib.setEntity(entity);
 			}
-			
+
 			// Mark deletion attributes
 			handleAttributeUpdates(entity);
-			
-			for (EntityAttribute attrib : entity.getAttributes()) {
-				System.out.println(attrib);
-			}	
-			
+
 			// remove validations for marked attribute
-			for (EntityAttribute attrib : entity.getAttributes()) {			
+			for (EntityAttribute attrib : entity.getAttributes()) {
 				if (attrib.getUserVoidedBy() != null) {
-					
+
 				    // remove validations
-				    List<EntityAttributeValidation> existingValidations = loadEntityAttributeValidations(attrib);	
-					for (EntityAttributeValidation validation : existingValidations) {	
-						deleteEntityAttributeValidation(validation);				
-					}				    
+				    List<EntityAttributeValidation> existingValidations = loadEntityAttributeValidations(attrib);
+					for (EntityAttributeValidation validation : existingValidations) {
+						deleteEntityAttributeValidation(validation);
+					}
 				}
-			}					
-			
-			Entity updatedEntity = entityDao.updateEntity(entity);			
+			}
+
+			Entity updatedEntity = entityDao.updateEntity(entity);
 			updatedEntity = entityDao.loadEntity(entity.getEntityVersionId());
-			
+
 			addToCache(updatedEntity);
+            Context.notifyObserver(ObservationEventType.ENTITY_ATTRIBUTE_UPDATE_EVENT, entity);
+
 			return updatedEntity;
 		} catch (DaoException e) {
 			throw new ApplicationException(e.getMessage());
 		}
 	}
-	
+
 	public EntityAttributeValidation updateEntityAttributeValidation(EntityAttributeValidation validation) throws ApplicationException {
 		if (validation == null) {
-			return null; 
+			return null;
 		}
 		if (validation.getEntityAttributeValidationId() == null || validation.getParameters() == null) {
 			throw new ApplicationException("An entity attribute validation must first be created before it is updated.");
@@ -209,45 +208,45 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 
 	public void updateEntityAttributeValidations(List<EntityAttributeValidation> validations, Entity updatedEntity, String attributeName) throws ApplicationException {
 		if (validations == null) {
-			return; 
+			return;
 		}
-		
-		Entity existing = entityDao.loadEntity(updatedEntity.getEntityVersionId());		
-		EntityAttribute existingAttribute = existing.findAttributeByName(attributeName);	
+
+		Entity existing = entityDao.loadEntity(updatedEntity.getEntityVersionId());
+		EntityAttribute existingAttribute = existing.findAttributeByName(attributeName);
 	    List<EntityAttributeValidation> existingValidations = loadEntityAttributeValidations(existingAttribute);
-	     
-		Map<Integer,EntityAttributeValidation> newValidationById = new HashMap<Integer,EntityAttributeValidation>();			
+
+		Map<Integer, EntityAttributeValidation> newValidationById = new HashMap<Integer, EntityAttributeValidation>();
 		for (EntityAttributeValidation validation : validations) {
-			if( validation.getEntityAttributeValidationId() != null ){
+			if (validation.getEntityAttributeValidationId() != null) {
 				newValidationById.put(validation.getEntityAttributeValidationId(), validation);
 			}
 		}
 
 		// remove deleted validations
 		for (EntityAttributeValidation validation : existingValidations) {
-			if (newValidationById.get(validation.getEntityAttributeValidationId()) == null) {				
-				deleteEntityAttributeValidation(validation);				
+			if (newValidationById.get(validation.getEntityAttributeValidationId()) == null) {
+				deleteEntityAttributeValidation(validation);
 			}
 		}
-		
-		for (EntityAttributeValidation newValidation : validations) {		
-			if( newValidation.getEntityAttributeValidationId() != null ) {
+
+		for (EntityAttributeValidation newValidation : validations) {
+			if (newValidation.getEntityAttributeValidationId() != null) {
 				updateEntityAttributeValidation(newValidation);
-			} else {			
+			} else {
 				addEntityAttributeValidation(newValidation);
-			}		 
-		}	
+			}
+		}
 	}
-	
+
 	public EntityAttributeGroup updateEntityAttributeGroup(EntityAttributeGroup entityAttributeGroup) throws ApplicationException {
 		if (entityAttributeGroup == null) {
-			return null; 
+			return null;
 		}
 
 		if (entityAttributeGroup.getEntityAttributeGroupId() == null || entityAttributeGroup.getEntityAttributes() == null) {
 			throw new ApplicationException("An entity attribute group must first be created before it is updated.");
 		}
-		
+
 		try {
 			entityDao.updateEntityAttributeGroup(entityAttributeGroup);
 			return entityAttributeGroup;
@@ -258,33 +257,33 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 
 	public void updateEntityAttributeGroups(List<EntityAttributeGroup> groups, Entity updatedEntity) throws ApplicationException {
 		if (groups == null) {
-			return; 
+			return;
 		}
-		
-		Entity existing = entityDao.loadEntity(updatedEntity.getEntityVersionId());		
+
+		Entity existing = entityDao.loadEntity(updatedEntity.getEntityVersionId());
 		List<EntityAttributeGroup> existingGroups = loadEntityAttributeGroups(existing);
-		
-		Map<Integer,EntityAttributeGroup> newGroupById = new HashMap<Integer,EntityAttributeGroup>();		
+
+		Map<Integer, EntityAttributeGroup> newGroupById = new HashMap<Integer,EntityAttributeGroup>();
 		for (EntityAttributeGroup group : groups) {
 			newGroupById.put(group.getEntityAttributeGroupId(), group);
 		}
 
 		// remove deleted groups
 		for (EntityAttributeGroup group : existingGroups) {
-			if (newGroupById.get(group.getEntityAttributeGroupId()) == null) {				
-				deleteEntityAttributeGroup(group);				
+			if (newGroupById.get(group.getEntityAttributeGroupId()) == null) {
+				deleteEntityAttributeGroup(group);
 			}
 		}
 
 		for (EntityAttributeGroup newgroup : groups) {
-			if( newgroup.getEntityAttributeGroupId() != null ) {
+			if (newgroup.getEntityAttributeGroupId() != null) {
 				updateEntityAttributeGroup(newgroup);
-			} else {			
+			} else {
 				addEntityAttributeGroup(newgroup);
 			}
-		} 					
+		}
 	}
-	
+
 	public void deleteEntity(Entity entity) throws ApplicationException {
 		if (entity == null) {
 			return;
@@ -307,7 +306,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 			throw new ApplicationException(e.getMessage());
 		}
 	}
-	
+
 	public void deleteEntityAttributeGroup(EntityAttributeGroup entityAttributeGroup) throws ApplicationException {
 		if (entityAttributeGroup == null) {
 			return;
@@ -321,7 +320,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 			throw new ApplicationException(e.getMessage());
 		}
 	}
-	
+
 	public void deleteEntityAttributeValidation(EntityAttributeValidation validation) throws ApplicationException {
 		if (validation == null) {
 			return;
@@ -345,6 +344,10 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		return entity;
 	}
 
+	public Entity getEntityByName(String name) {
+	    return findLatestEntityVersionByName(name);
+	}
+
 	public List<Entity> findEntitiesByName(String name) {
 		List<Entity> entities =  entityDao.findEntitiesByName(name);
 		for (Entity entity : entities) {
@@ -353,18 +356,15 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		return entities;
 	}
 
-	/**
-	 * Will export the entity passed in as the first parameter in the method into a file.
-	 * The filename is assumed to be relative to the data-directory defined in the mpi-config.xml
-	 * file and is not supposed to be a fully qualified filename. Ultimately this will be
-	 * invoked by the client and we don't want the client to be able to export files anywhere
-	 * on the server.
-	 *
-	 */
-	public String exportEntity(Entity entity, String filename) throws ApplicationException {
-        if (entity == null) {
+    /**
+     * Will export the entity passed in as the entity version id into a string.
+     */
+    public String exportEntity(Integer entityVersionId) throws ApplicationException {
+        if (entityVersionId == null) {
             return "";
         }
+
+        Entity entity = entityDao.loadEntity(entityVersionId);
 
         try {
             // 1. convert Entity to EntityModel
@@ -401,23 +401,37 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
             OutputStream outputStream = new ByteArrayOutputStream();
             jaxbMarshaller.marshal(entityModel, outputStream);
 
-            // write to file
-            File fileOut = new File(filename);
-            BufferedWriter writer = null;
-            try {
-                writer = new BufferedWriter(new FileWriter(fileOut));
-
-                writer.write(outputStream.toString());
-                writer.close();
-
-                return outputStream.toString();
-
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to write new output file: " + filename);
-            }
+            return outputStream.toString();
         } catch (JAXBException e) {
             log.warn("Unable to serialize a Entity into a string: " + e, e);
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Will export the entity passed in as the first parameter in the method into a file.
+     */
+	public String exportEntity(Entity entity, String filename) throws ApplicationException {
+        if (entity == null) {
+            return "";
+        }
+
+        String entityDefinition = exportEntity(entity.getEntityVersionId());
+        try {
+
+            // write to file
+            File fileOut = new File(filename);
+            BufferedWriter writer = null;
+
+            writer = new BufferedWriter(new FileWriter(fileOut));
+
+            writer.write(entityDefinition);
+            writer.close();
+
+            return entityDefinition;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to write new output file: " + filename);
         }
 	}
 
@@ -445,7 +459,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 
             // convert EntityModel to Entity, EntityAttributeGroups, EntityAttributeValidations
             Entity entity = ConvertUtil.mapToEntityModel(entityModel, getEntityAttributeDatatypes(), Entity.class);
-            
+
             // check existing entity
             List<Entity> entities = entityDao.findEntitiesByName(entity.getName());
             for (Entity en : entities) {
@@ -570,7 +584,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 				throw new ApplicationException("Unable to add a custom field that already exists in the system.");
 			}
 		}
-		
+
 		Entity entity = findLatestEntityVersionByName(field.getEntityName());
 		try {
 			EntityAttribute attribute = buildAttributeFromCustomField(entity, field);
@@ -580,6 +594,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 			attribute = entityDao.addCustomField(entity, attribute);
 			// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
 			Context.notifyObserver(ObservationEventType.CUSTOM_FIELD_ADD_EVENT, field);
+            Context.notifyObserver(ObservationEventType.ENTITY_ATTRIBUTE_UPDATE_EVENT, entity);
 			return field;
 		} catch (DaoException e) {
 			log.error("Failed while saving a custom field: " + e, e);
@@ -598,7 +613,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		Entity entity = findLatestEntityVersionByName(field.getEntityName());
 		EntityAttribute attrib = null;
 		for (EntityAttribute item : entity.getAttributes()) {
-			if (item.getName().equalsIgnoreCase(field.getFieldName()) && 
+			if (item.getName().equalsIgnoreCase(field.getFieldName()) &&
 					item.getDateVoided() == null) {
 				attrib = item;
 			}
@@ -619,9 +634,9 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		} catch (DaoException e) {
 			log.error("Failed while updating a custom field: " + e, e);
 			throw new ApplicationException("Failed while updating the custom field: " + e.getMessage());
-		}			
+		}
 	}
-	
+
 	public void deleteCustomField(CustomField field) throws ApplicationException {
 		if (field == null ||
 				ConvertUtil.isNullOrEmpty(field.getEntityName()) ||
@@ -632,7 +647,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		Entity entity = findLatestEntityVersionByName(field.getEntityName());
 		EntityAttribute attrib = null;
 		for (EntityAttribute item : entity.getAttributes()) {
-			if (item.getName().equalsIgnoreCase(field.getFieldName()) && 
+			if (item.getName().equalsIgnoreCase(field.getFieldName()) &&
 					item.getDateVoided() == null) {
 				attrib = item;
 			}
@@ -646,17 +661,17 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		try {
 			entityDao.updateEntity(entity);
 			// Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-			Context.notifyObserver(ObservationEventType.CUSTOM_FIELD_DELETE_EVENT, field);			
+			Context.notifyObserver(ObservationEventType.CUSTOM_FIELD_DELETE_EVENT, field);
 		} catch (DaoException e) {
 			log.error("Failed while deleting a custom field: " + e, e);
 			throw new ApplicationException("Failed while deleting the custom field: " + e.getMessage());
-		}	
+		}
 	}
 
 	public void startup() throws InitializationException {
 		if (initialized) {
 			return;
-		}		
+		}
 		cacheManager = CacheManager.create();
 
 		//Create a Cache for storing entity definitions
@@ -671,7 +686,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		Context.registerObserver(this, ObservationEventType.CUSTOM_FIELD_ADD_EVENT);
 		Context.registerObserver(this, ObservationEventType.CUSTOM_FIELD_DELETE_EVENT);
 		Context.registerObserver(this, ObservationEventType.CUSTOM_FIELD_UPDATE_EVENT);
-		initialized = true;	
+		initialized = true;
 	}
 
 	public boolean isReady() {
@@ -681,7 +696,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 
 	public void shutdown() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	public boolean isDown() {
@@ -692,22 +707,22 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 	private void preloadCache() {
 		List<Entity> entities = loadEntities();
 		log.info("Pre-loaded configuration for " + entities.size() + " entities.");
-		Map<String,List<CustomField>> customFieldsListByEntityName = new HashMap<String,List<CustomField>>();
-		Map<String,Map<String,CustomField>> customFieldsMapByEntityName = new HashMap<String,Map<String,CustomField>>();
+		Map<String, List<CustomField>> customFieldsListByEntityName = new HashMap<String,List<CustomField>>();
+		Map<String, Map<String,CustomField>> customFieldsMapByEntityName = new HashMap<String,Map<String,CustomField>>();
 		for (Entity entity : entities) {
 			List<CustomField> customFields = loadCustomFields(entity.getName());
 			customFieldsListByEntityName.put(entity.getName(), customFields);
 			log.info("Pre-loaded a list of " + customFields.size() + " custom fields for entity " + entity.getName());
-			Map<String,CustomField> customFieldMap = new HashMap<String,CustomField>();
+			Map<String, CustomField> customFieldMap = new HashMap<String,CustomField>();
 			for (CustomField field : customFields) {
 				customFieldMap.put(field.getFieldName(), field);
 			}
 			customFieldsMapByEntityName.put(entity.getName(), customFieldMap);
+	        Context.getConfiguration().registerConfigurationEntry(entity.getName(),
+	                ConfigurationRegistry.CUSTOM_FIELD_LIST_BY_ENTITY_NAME_MAP, customFieldsListByEntityName);
+	        Context.getConfiguration().registerConfigurationEntry(entity.getName(),
+	                ConfigurationRegistry.CUSTOM_FIELD_MAP_BY_ENTITY_NAME_MAP, customFieldsMapByEntityName);
 		}
-		Context.getConfiguration()
-			.registerConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELD_LIST_BY_ENTITY_NAME_MAP, customFieldsListByEntityName);
-		Context.getConfiguration()
-			.registerConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELD_MAP_BY_ENTITY_NAME_MAP, customFieldsMapByEntityName);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -718,12 +733,14 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		}
 		EventObservable event = (EventObservable) o;
 		CustomField customField = (CustomField) eventData;
-		Map<String,List<CustomField>> customFieldsListByEntityName = (Map<String, List<CustomField>>) Context
-				.getConfiguration().lookupConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELD_LIST_BY_ENTITY_NAME_MAP);
-		Map<String,Map<String,CustomField>> customFieldsMapByEntityName = (Map<String, Map<String, CustomField>>) Context
-				.getConfiguration().lookupConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELD_MAP_BY_ENTITY_NAME_MAP);
+		Map<String, List<CustomField>> customFieldsListByEntityName = (Map<String, List<CustomField>>) Context
+				.getConfiguration().lookupConfigurationEntry(customField.getEntityName(),
+				        ConfigurationRegistry.CUSTOM_FIELD_LIST_BY_ENTITY_NAME_MAP);
+		Map<String, Map<String, CustomField>> customFieldsMapByEntityName = (Map<String, Map<String, CustomField>>) Context
+				.getConfiguration().lookupConfigurationEntry(customField.getEntityName(),
+				        ConfigurationRegistry.CUSTOM_FIELD_MAP_BY_ENTITY_NAME_MAP);
 		List<CustomField> fieldList = customFieldsListByEntityName.get(customField.getEntityName());
-		Map<String,CustomField> fieldMap = customFieldsMapByEntityName.get(customField.getEntityName());
+		Map<String, CustomField> fieldMap = customFieldsMapByEntityName.get(customField.getEntityName());
 		if (event.getType() == ObservationEventType.CUSTOM_FIELD_ADD_EVENT) {
 			log.debug("A new custom field was added; we need to update the in-memory registry: " + customField);
 			fieldList.add(customField);
@@ -766,20 +783,20 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		}
 		return datatypes;
 	}
-	
+
 	private void validateNameUniqueness(Entity entity) throws ApplicationException {
 		@SuppressWarnings("rawtypes")
 		List keys = entityDefinitionCache.getKeys();
-		for (int i=0; i < keys.size(); i++) {
+		for (int i = 0; i < keys.size(); i++) {
 			Object key = keys.get(i);
 			Element elem = entityDefinitionCache.get(key);
-			if( elem != null ) {
+			if (elem != null) {
 				Entity item = (Entity) elem.getObjectValue();
 				if (item.getDateVoided() != null) {
 				    continue;
 				}
-				
-				if (entity.getName().equalsIgnoreCase(item.getName()) && entity.getVersionId() == item.getVersionId() ) {
+
+				if (entity.getName().equalsIgnoreCase(item.getName()) && entity.getVersionId() == item.getVersionId()) {
 					throw new ApplicationException("Cannot add entity because another entity by the same name already exists.");
 				}
 			}
@@ -788,21 +805,34 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 
 	private void handleAttributeUpdates(Entity entity) {
 		Entity existing = entityDao.loadEntity(entity.getEntityVersionId());
-		
-		Map<Integer,EntityAttribute> newAttribById = new HashMap<Integer,EntityAttribute>();
+
+		Map<Integer, EntityAttribute> newAttribById = new HashMap<Integer,EntityAttribute>();
 		for (EntityAttribute attribute : entity.getAttributes()) {
 			newAttribById.put(attribute.getEntityAttributeId(), attribute);
 		}
 		// Mark for deletion attributes that were removed
-		for (EntityAttribute attrib : existing.getAttributes()) {			
+		for (EntityAttribute attrib : existing.getAttributes()) {
 			if (newAttribById.get(attrib.getEntityAttributeId()) == null) {
 				attrib.setDateVoided(entity.getDateChanged());
 				attrib.setUserVoidedBy(Context.getUserContext().getUser());
 				entity.addAttribute(attrib);
 			}
-		}		
+		}
 	}
-	
+
+    public Entity loadEntityByName(String entityName) {
+        @SuppressWarnings("unchecked")
+        List<Object> keys = entityDefinitionCache.getKeys();
+        for (Object key : keys) {
+            Entity entity = getFromCache((Integer) key);
+            if (entity.getName().equals(entityName)) {
+                return entity;
+            }
+        }
+        Entity entity = findLatestEntityVersionByName(entityName);
+        return entity;
+    }
+
 	private Entity getFromCache(Integer id) {
 		if (id == null) {
 			return null;
@@ -818,17 +848,17 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 	    if (!entityDefinitionCache.getStatus().equals(Status.STATUS_ALIVE)) {
 	        return;
 	    }
-	    
+
 		Element element = entityDefinitionCache.get(entity.getEntityVersionId());
 		if (element != null) {
 			log.debug("Updating an entity definition entry in the cache: " + entity);
 		} else {
 			log.debug("Adding an entity definition entry in the cache: " + entity);
 		}
-		element = new Element(entity.getEntityVersionId(), entity);			
+		element = new Element(entity.getEntityVersionId(), entity);
 		entityDefinitionCache.put(element);
 	}
-	
+
 	private CustomField buildCustomFieldFromAttribute(EntityAttribute attrib) {
 		CustomField field = new CustomField();
 		field.setEntityName(attrib.getEntity().getName());
@@ -852,6 +882,8 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		attrib.setEntity(entity);
 		attrib.setFunctionParameters(serializeParameters(field.getConfigurationParameters()));
 		attrib.setIndexed(false);
+	    attrib.setSearchable(false);
+        attrib.setCaseInsensitive(false);
 		attrib.setIsCustom(true);
 		attrib.setName(field.getFieldName());
 		attrib.setSourceName(field.getSourceFieldName());
@@ -860,11 +892,11 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		return attrib;
 	}
 
-	private String serializeParameters(Map<String, String> params) {		
-		if( params == null) {
+	private String serializeParameters(Map<String, String> params) {
+		if (params == null) {
 			return null;
 		}
-		
+
 		int count = params.keySet().size();
 		if (count == 0) {
 			return null;
@@ -874,7 +906,7 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		for (String key : params.keySet()) {
 			String value = params.get(key);
 			sb.append(key).append(":").append(value);
-			if (index < count-1) {
+			if (index < count - 1) {
 				sb.append(",");
 			}
 			index++;
@@ -885,8 +917,8 @@ public class EntityDefinitionManagerServiceImpl extends BaseServiceImpl
 		return sb.toString();
 	}
 
-	private Map<String,String> deserializeParameters(String params) {
-		Map<String,String> map = new HashMap<String,String>();
+	private Map<String, String> deserializeParameters(String params) {
+		Map<String, String> map = new HashMap<String, String>();
 		String[] items = params.split(",");
 		for (String item : items) {
 			String[] keyValue = item.split(":");

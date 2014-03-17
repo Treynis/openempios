@@ -31,29 +31,17 @@
 
 	<bean id="blockingServiceHp" class="org.openhie.openempi.blocking.basicblockinghp.BlockingServiceImpl">
 		<property name="blockingDao" ref="blockingHpDao" />
-		<property name="cacheTaskExecutor" ref="cacheTaskExecutor" /> 
-		<property name="cacheManager" ref="cacheManager" /> 
-<!-- 		<property name="blockingServiceCache" ref="blockingServiceCache"/> -->
+		<property name="entityDao" ref="entityDao" />
+		<property name="cacheTaskExecutor" ref="cacheTaskExecutor" />
 	</bean>
 
-<!--   
-   <bean id="blockingServiceCache"
-   		class="org.openhie.openempi.blocking.basicblockinghp.cache.BlockingServiceCache">
-    	<property name="blockingDao" ref="blockingHpDao" />
-   </bean>
-   -->
     <bean id="blockingHpDao" class="org.openhie.openempi.blocking.basicblockinghp.dao.orientdb.BlockingDaoOrientdb">
     	<property name="entityDao" ref="entityDao" />
     </bean>
 
-    <bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
-        <property name="configLocation" value="file:///${OPENEMPI_HOME}/conf/openempiCache.xml"/>
-        <property name="shared" value="true"/>
-    </bean>
-
 	<bean id="cacheTaskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
 		<property name="corePoolSize" value="2" />
-		<property name="maxPoolSize" value="10" />
+		<property name="maxPoolSize" value="2" />
 		<property name="queueCapacity" value="1" />
 		<property name="rejectedExecutionHandler" ref="generalCallerRunsPolicy"/>
 	</bean>

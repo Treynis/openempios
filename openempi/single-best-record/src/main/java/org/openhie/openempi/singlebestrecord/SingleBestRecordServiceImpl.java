@@ -42,7 +42,7 @@ public class SingleBestRecordServiceImpl implements SingleBestRecordService
 		if (records.size() == 1) {
 			return records.get(0);
 		}
-		SingleBestRecordConfiguration config = getConfiguration();
+		SingleBestRecordConfiguration config = getConfiguration(records.get(0).getEntity().getName());
 		if (log.isDebugEnabled()) {
 			log.debug("Selecting single best record using implementation: " + config.getName());
 		}
@@ -165,11 +165,9 @@ public class SingleBestRecordServiceImpl implements SingleBestRecordService
 		return null;
 	}
 
-	private SingleBestRecordConfiguration getConfiguration() {
-		if (configuration == null) {
-			configuration = (SingleBestRecordConfiguration) Context.getConfiguration()
-				.lookupConfigurationEntry(ConfigurationRegistry.SINGLE_BEST_RECORD_CONFIGURATION);
-		}
+	private SingleBestRecordConfiguration getConfiguration(String entityName) {
+	    configuration = (SingleBestRecordConfiguration) Context.getConfiguration()
+				.lookupConfigurationEntry(entityName, ConfigurationRegistry.SINGLE_BEST_RECORD_CONFIGURATION);
 		return configuration;
 	}
 }

@@ -56,8 +56,8 @@ import org.openhie.openempi.configuration.xml.model.GroupType;
 import org.openhie.openempi.configuration.xml.model.GroupsType;
 import org.openhie.openempi.configuration.xml.model.ValidationParameterType;
 import org.openhie.openempi.configuration.xml.model.ValidationParametersType;
-import org.openhie.openempi.configuration.xml.model.ValidationsType;
 import org.openhie.openempi.configuration.xml.model.ValidationType;
+import org.openhie.openempi.configuration.xml.model.ValidationsType;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.dao.PersonDao;
 import org.openhie.openempi.model.AttributeDatatype;
@@ -103,6 +103,8 @@ public final class ConvertUtil
 {
     private static final Log log = LogFactory.getLog(ConvertUtil.class);
     public static Map<String, Method> methodByFieldName = new HashMap<String, Method>();
+    public static DateFormat dateTimeFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+    public static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     /**
      * Checkstyle rule: utility classes should not have public constructor
@@ -134,21 +136,6 @@ public final class ConvertUtil
 		}
 		return record;
 	}
-
-//    private static String extractAttributeNameFromIdentifierDomainName(String name) {
-//    	if (name == null && name.length() == 0) {
-//    		return "";
-//    	}
-//    	StringBuffer buf = new StringBuffer();
-//		for (int i=0; i < name.length(); i++) {
-//			if (!Character.isJavaIdentifierPart(name.charAt(i))) {
-//				buf.append("_");
-//			} else {
-//				buf.append(name.charAt(i));
-//			}
-//		}
-//		return buf.toString();
-//	}
 
 	/**
      * Convert a java.util.List of LabelValue objects to a LinkedHashMap.
@@ -468,10 +455,10 @@ public final class ConvertUtil
 			if (obj instanceof Date) {
 				switch(AttributeDatatype.getById(attrib.getDatatype().getDatatypeCd())) {
 				case DATE:
-					theRecord.set(key, DateToString((Date) obj));
+					theRecord.set(key, dateToString((Date) obj));
 					break;
 				case TIMESTAMP:
-					theRecord.set(key, DateTimeToString((Date) obj));
+					theRecord.set(key, dateTimeToString((Date) obj));
 					break;
 				default:
 					break;
@@ -798,59 +785,94 @@ public final class ConvertUtil
 		return "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
 	}
 
-	public static String DateToString(Date date)
+    public static Record convertKeyValListToRecord(Entity entity, List<String> keyValList) {
+        Record record = new Record(entity);
+        for (String entry : keyValList) {
+            String[] keyValue = entry.split(",");
+
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+
+                EntityAttribute attribute = entity.findAttributeByName(key);
+
+                switch(AttributeDatatype.getById(attribute.getDatatype().getDatatypeCd())) {
+                case DATE:
+                    record.set(key, stringToDate(value));
+                    break;
+                case TIMESTAMP:
+                    record.set(key, stringToDateTime(value));
+                    break;
+                case LONG:
+                    record.set(key, Long.parseLong(value));
+                    break;
+                case INTEGER:
+                    record.set(key, Integer.parseInt(value));
+                    break;
+                case DOUBLE:
+                    record.set(key, Double.parseDouble(value));
+                    break;
+                case FLOAT:
+                    record.set(key, Float.parseFloat(value));
+                    break;
+                case BOOLEAN:
+                    record.set(key, Boolean.parseBoolean(value));
+                    break;
+                default:
+                    // String
+                    record.set(key, value);
+                    break;
+                }
+            }
+        }
+        return record;
+    }
+
+	public static String dateToString(Date date)
 	{
 		if (date == null) {
 			return "";
 		}
-
-		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-		String strDate = df.format(date);
-
-		// System.out.println("Report Date: " + strDate);
-		return strDate;
+		return dateFormat.format(date);
 	}
 
-	public static Date StringToDate(String strDate) {
-		DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-		Date date = null;
-		if (strDate != null && !strDate.isEmpty()) {
-			try {
-				date = df.parse(strDate);
-				// System.out.println("Today = " + df.format(date));
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}
-		}
-		return date;
-	}
-
-	public static String DateTimeToString(Date date)
+	public static String dateTimeToString(Date date)
 	{
 		if (date == null) {
 			return "";
 		}
-
-		DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
-		String strDate = df.format(date);
-
-		// System.out.println("Report Date: " + strDate);
-		return strDate;
+		return dateTimeFormat.format(date);
 	}
 
-	public static Date StringToDateTime(String strDate) {
-		DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
-		Date date = null;
-		if (strDate != null && !strDate.isEmpty()) {
-			try {
-				date = df.parse(strDate);
-				// System.out.println("Today = " + df.format(date));
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}
-		}
-		return date;
-	}
+    public static Date stringToDate(String strDate) {
+        Date date = null;
+        if (strDate == null || strDate.isEmpty()) {
+            return date;
+        }
+        try {
+            date = dateFormat.parse(strDate);
+        } catch (ParseException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to parse string to date: " + strDate);
+            }
+        }
+        return date;
+    }
+
+    public static Date stringToDateTime(String strDate) {
+        Date date = null;
+        if (strDate == null || strDate.isEmpty()) {
+            return date;
+        }
+        try {
+            date = dateTimeFormat.parse(strDate);
+        } catch (ParseException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Unable to parse string to date: " + strDate);
+            }
+        }
+        return date;
+    }
 
 	public static RecordLink createRecordLinkFromRecordPair(RecordPair pair) {
 		RecordLink link = new RecordLink();
@@ -884,6 +906,7 @@ public final class ConvertUtil
         EntityModel entityModel = new EntityModel();
         entityModel.setName(entity.getName());
         entityModel.setDisplayName(entity.getDisplayName());
+        entityModel.setDescription(entity.getDescription());
         entityModel.setVersionId(entity.getVersionId());
 
         if (entity.getAttributes() != null && entity.getAttributes().size() > 0) {
@@ -891,10 +914,11 @@ public final class ConvertUtil
             AttributesType entityAttributes = new AttributesType();
             for (EntityAttribute entityAttribute : entity.getAttributes()) {
 
+            // Keep Custom field for export
                  // Attribute is Custom field
-                 if (entityAttribute.getIsCustom()) {
-                    continue;
-                 }
+                 // if (entityAttribute.getIsCustom()) {
+                 //     continue;
+                 // }
 
                  AttributeType attributeType = new AttributeType();
                  attributeType.setName(entityAttribute.getName());
@@ -902,6 +926,9 @@ public final class ConvertUtil
                  attributeType.setDescription(entityAttribute.getDescription());
                  attributeType.setDisplayOrder(entityAttribute.getDisplayOrder());
                  attributeType.setIndexed(entityAttribute.getIndexed());
+                 attributeType.setSearchable(entityAttribute.getSearchable());
+                 attributeType.setCaseInsensitive(entityAttribute.getCaseInsensitive());
+                 attributeType.setIsCustom(entityAttribute.getIsCustom());
 
                  attributeType.setDataTypeCode(entityAttribute.getDatatype().getDatatypeCd());
 
@@ -975,6 +1002,7 @@ public final class ConvertUtil
         Entity entity = new Entity();
         entity.setName(entityModel.getName());
         entity.setDisplayName(entityModel.getDisplayName());
+        entity.setDescription(entityModel.getDescription());
         entity.setVersionId(entityModel.getVersionId());
 
         if (entityModel.getAttributes() != null && entityModel.getAttributes().getAttribute().size() > 0) {
@@ -986,7 +1014,9 @@ public final class ConvertUtil
                  entityAttribute.setDescription(attributeType.getDescription());
                  entityAttribute.setDisplayOrder(attributeType.getDisplayOrder());
                  entityAttribute.setIndexed(attributeType.isIndexed());
-                 entityAttribute.setIsCustom(false);
+                 entityAttribute.setSearchable(attributeType.isSearchable());
+                 entityAttribute.setCaseInsensitive(attributeType.isCaseInsensitive());
+                 entityAttribute.setIsCustom(attributeType.isIsCustom());
 
                  EntityAttributeDatatype entityAttributeDatatype = null;
                  for (EntityAttributeDatatype type : types) {

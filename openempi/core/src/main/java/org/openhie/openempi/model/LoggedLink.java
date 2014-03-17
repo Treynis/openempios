@@ -26,14 +26,15 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 
 /**
@@ -43,7 +44,10 @@ import javax.persistence.TemporalType;
  */
 @Entity
 @Table(name = "link_log")
-@SequenceGenerator(name="person_link_seq", sequenceName="person_link_seq")
+@GenericGenerator(name = "link_log_entry_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
+        @Parameter(name = "sequence_name", value = "link_log_seq"),
+        @Parameter(name = "increment_size", value = "10"),
+        @Parameter(name = "optimizer", value = "hilo") })
 public class LoggedLink extends BaseObject implements java.io.Serializable
 {
 	private static final long serialVersionUID = -2998399249175445866L;
@@ -63,7 +67,7 @@ public class LoggedLink extends BaseObject implements java.io.Serializable
 
 	// Property accessors
 	@Id
-	@GeneratedValue(strategy=GenerationType.SEQUENCE, generator="person_link_seq") 
+	@GeneratedValue(generator="link_log_entry_gen")
 	@Column(name = "link_id", unique = true, nullable = false)
 	public Integer getLinkId() {
 		return this.linkId;
@@ -81,7 +85,7 @@ public class LoggedLink extends BaseObject implements java.io.Serializable
     public void setEntityId(Integer entityId) {
         this.entityId = entityId;
     }
-    
+
 	@Column(name = "lh_record_id", nullable = false)
 	public Long getLeftRecordId() {
 		return this.leftRecordId;
@@ -124,11 +128,11 @@ public class LoggedLink extends BaseObject implements java.io.Serializable
 	public Double getWeight() {
 		return this.weight;
 	}
-	
+
 	public void setWeight(Double weight) {
 		this.weight = weight;
 	}
-	
+
 	@Column(name = "vector_value")
 	public Integer getVectorValue() {
 		return vectorValue;

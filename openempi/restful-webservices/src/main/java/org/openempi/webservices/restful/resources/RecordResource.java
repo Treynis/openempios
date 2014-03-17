@@ -38,20 +38,27 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.openempi.webservices.restful.util.Converter;
-import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.BadRequestException;
+import org.openhie.openempi.ConflictException;
+import org.openhie.openempi.NotFoundException;
+import org.openhie.openempi.cluster.ServiceName;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.entity.EntityDefinitionManagerService;
-import org.openhie.openempi.entity.RecordManagerService;
-import org.openhie.openempi.entity.RecordQueryService;
 import org.openhie.openempi.model.Entity;
-import org.openhie.openempi.model.Identifier;
-import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.Record;
-import org.openhie.openempi.service.IdentifierDomainService;
+import org.openhie.openempi.service.RecordResourceService;
+import org.openhie.openempi.service.ResourceServiceFactory;
 
 @Path("/{versionId}/records")
 public class RecordResource extends BaseResource
 {
+    private RecordResourceService recordService;
+    
+    public RecordResource() {
+        recordService = (RecordResourceService)
+                ResourceServiceFactory.createResourceService(ServiceName.RECORD_RESOURCE_SERVICE,
+                        RecordResourceService.class);
+    }
+    
     @GET
     @Path("{id}")
     @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
@@ -60,20 +67,14 @@ public class RecordResource extends BaseResource
                                                                         @QueryParam("entityId") Integer entityId,
                                                                         @PathParam("id") Long id) {
         validateVersion(versionId);
-        if (entityId == null || id == null) {
+        try {
+            Record record = recordService.loadRecordById(versionId, entityId, id);
+            return Converter.convertRecordToRestfulRecord(record);
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        RecordQueryService queryService = Context.getRecordQueryService();
-        Record record = queryService.loadRecordById(entity, id);
-        if (record == null) {
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-        return Converter.convertRecordToRestfulRecord(record);
     }
 
     @GET
@@ -85,59 +86,37 @@ public class RecordResource extends BaseResource
                                                  @QueryParam("keyVal") List<String> keyVal,
                                                  @DefaultValue("0") @QueryParam("firstResult") Integer firstResult,
                                                  @DefaultValue("10") @QueryParam("maxResults") Integer maxResults) {
-
         validateVersion(versionId);
-        if (entityId == null) {
+        try {
+            List<Record> records = recordService.findByAttributes(versionId, entityId, keyVal, firstResult, maxResults);
+            // convert to list of restful model Record
+            
+            List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
+            for (Record rec : records) {
+                restRecords.add(Converter.convertRecordToRestfulRecord(rec));
+            }
+            return restRecords;
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-        // findRecordsByAttributes
-        Record record = Converter.convertKeyValListToRecord(entity, keyVal);
-        RecordQueryService queryService = Context.getRecordQueryService();
-        List<Record> records = queryService.findRecordsByAttributes(entity, record, firstResult, maxResults);
-        if (records == null || records.size() == 0) {
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-
-        // convert to list of restful model Record
-        List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
-        for (Record rec : records) {
-            restRecords.add(Converter.convertRecordToRestfulRecord(rec));
-        }
-        return restRecords;
     }
 
     @GET
     @Path("/recordCountByAttributes")
     @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
-    //@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON, MediaType.TEXT_PLAIN })
     @Produces({ MediaType.TEXT_PLAIN })
     public String recordCountByAttributes(@PathParam("versionId") String versionId,
                                           @QueryParam("entityId") Integer entityId,
                                           @QueryParam("keyVal") List<String> keyVal) {
         validateVersion(versionId);
-        if (entityId == null) {
+        try {
+            String count = recordService.recordCountByAttributes(versionId, entityId, keyVal);
+            return count;
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-        // getRecordCount
-        Record record = Converter.convertKeyValListToRecord(entity, keyVal);
-        RecordQueryService queryService = Context.getRecordQueryService();
-        final Long count = queryService.getRecordCount(entity, record);
-        return count.toString();
-
-        // if @Produces MediaType is not TEXT_PLAIN
-        // return "<Count>"+count.toString()+"</Count>";
     }
 
     @GET
@@ -151,45 +130,21 @@ public class RecordResource extends BaseResource
                                                  @DefaultValue("0") @QueryParam("firstResult") Integer firstResult,
                                                  @DefaultValue("10") @QueryParam("maxResults") Integer maxResults) {
         validateVersion(versionId);
-        if (entityId == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-
-        List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
-
-        // identifier and identifier domain
-        RecordQueryService queryService = Context.getRecordQueryService();
-        IdentifierDomainService domainService = Context.getIdentifierDomainService();
-        Identifier identifier = new Identifier();
-        identifier.setIdentifier(identifierName);
-        IdentifierDomain identifierDomain = null;
-        if (identifierDomainId != null) {
-            identifierDomain = domainService.findIdentifierDomainById(identifierDomainId);
-            if (identifierDomain == null) {
-                // cannot find the identifier domain by id
-                // return restRecords;
-                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        try {
+            List<Record> records = recordService.findByIdentifier(versionId, entityId, identifierName, 
+                    identifierDomainId, firstResult, maxResults);
+            // convert to list of restful model Record
+            
+            List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
+            for (Record rec : records) {
+                restRecords.add(Converter.convertRecordToRestfulRecord(rec));
             }
-            identifier.setIdentifierDomain(identifierDomain);
-        }
-
-        // findRecordsByIdentifier
-        List<Record> records = queryService.findRecordsByIdentifier(entity, identifier, firstResult, maxResults);
-        if (records == null || records.size() == 0) {
+            return restRecords;
+        } catch (BadRequestException e) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-
-        // convert to list of restful model Record
-        for (Record rec : records) {
-            restRecords.add(Converter.convertRecordToRestfulRecord(rec));
-        }
-        return restRecords;
     }
 
     @GET
@@ -202,38 +157,13 @@ public class RecordResource extends BaseResource
                                           @QueryParam("identifier") String identifierName,
                                           @QueryParam("identifierDomainId") Integer identifierDomainId) {
         validateVersion(versionId);
-        if (entityId == null) {
+        try {
+            String count = recordService.recordCountByIdentifier(versionId, entityId, identifierName,
+                    identifierDomainId);
+            return count;
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-        Long count = new Long(0);
-
-        // identifier and identifier domain
-        RecordQueryService queryService = Context.getRecordQueryService();
-        IdentifierDomainService domainService = Context.getIdentifierDomainService();
-        Identifier identifier = new Identifier();
-        identifier.setIdentifier(identifierName);
-        IdentifierDomain identifierDomain = null;
-        if (identifierDomainId != null) {
-            identifierDomain = domainService.findIdentifierDomainById(identifierDomainId);
-            if (identifierDomain == null) {
-                // cannot find the identifier domain by id
-                return count.toString();
-            }
-            identifier.setIdentifierDomain(identifierDomain);
-        }
-
-        // getRecordCount
-        count = queryService.getRecordCount(entity, identifier);
-        return count.toString();
-
-        // if @Produces MediaType is not TEXT_PLAIN
-        // return "<Count>"+count.toString()+"</Count>";
     }
 
     @GET
@@ -243,26 +173,19 @@ public class RecordResource extends BaseResource
                                                  @QueryParam("entityId") Integer entityId,
                                                  @QueryParam("recordId") List<Long> recordIds) {
         validateVersion(versionId);
-        if (entityId == null || recordIds == null) {
+
+        try {
+            List<Record> records = recordService.loadRecordByIds(versionId, entityId, recordIds);
+            List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
+            for (Record rec : records) {
+                restRecords.add(Converter.convertRecordToRestfulRecord(rec));
+            }
+            return restRecords;
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        RecordQueryService queryService = Context.getRecordQueryService();
-        List<Record> records = queryService.loadRecordsById(entity, recordIds);
-        if (records == null || records.size() == 0) {
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
-
-        // convert to list of restful model Record
-        List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
-        for (Record rec : records) {
-            restRecords.add(Converter.convertRecordToRestfulRecord(rec));
-        }
-        return restRecords;
     }
 
     @POST
@@ -270,22 +193,18 @@ public class RecordResource extends BaseResource
     @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
     public org.openempi.webservices.restful.model.Record addRecord(@PathParam("versionId") String versionId,
                                                                    org.openempi.webservices.restful.model.Record restRec) {
-        validateVersion(versionId);
+        validateVersion(versionId);        
         if (restRec == null || restRec.getEntityId() == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(restRec.getEntityId());
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-        RecordManagerService managerService = Context.getRecordManagerService();
         try {
-             Record record =  managerService.addRecord(entity, Converter.convertRestfulRecordToRecord(entity, restRec));
-             return Converter.convertRecordToRestfulRecord(record);
-        } catch (ApplicationException e) {
+            Entity entity = Context.getEntityDefinitionManagerService().loadEntity(restRec.getEntityId());
+            if (entity == null) {
+                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+            }
+            Record record =  recordService.addRecord(versionId, Converter.convertRestfulRecordToRecord(entity, restRec));
+            return Converter.convertRecordToRestfulRecord(record);
+        } catch (ConflictException e) {
             throw new WebApplicationException(Response.Status.CONFLICT);
         }
     }
@@ -300,17 +219,15 @@ public class RecordResource extends BaseResource
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
 
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(restRec.getEntityId());
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(restRec.getEntityId());
         if (entity == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
 
-        RecordManagerService managerService = Context.getRecordManagerService();
         try {
-             Record record =  managerService.updateRecord(entity, Converter.convertRestfulRecordToRecord(entity, restRec));
-             return Converter.convertRecordToRestfulRecord(record);
-        } catch (ApplicationException e) {
+            Record record =  recordService.updateRecord(versionId, Converter.convertRestfulRecordToRecord(entity, restRec));
+            return Converter.convertRecordToRestfulRecord(record);
+        } catch (ConflictException e) {
             throw new WebApplicationException(Response.Status.CONFLICT);
         }
     }
@@ -328,26 +245,16 @@ public class RecordResource extends BaseResource
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
 
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
         if (entity == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
 
-        RecordManagerService managerService = Context.getRecordManagerService();
         try {
-            Record record = Context.getRecordQueryService().loadRecordById(entity, recordId);
-            if (record == null) {
-                throw new WebApplicationException(Response.Status.NOT_FOUND);
-            }
-
-            if (removeOption) {
-                managerService.removeRecord(entity, record);
-            } else {
-                managerService.deleteRecord(entity, record);
-            }
-
-        } catch (ApplicationException e) {
+            recordService.deleteRecord(versionId, entityId, recordId, removeOption);
+        } catch (NotFoundException e) {
+            throw new WebApplicationException(Response.Status.NOT_FOUND);
+        } catch (ConflictException e) {
             throw new WebApplicationException(Response.Status.CONFLICT);
         }
     }

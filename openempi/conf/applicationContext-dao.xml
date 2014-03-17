@@ -35,7 +35,7 @@
                 hibernate.query.substitutions=true 'Y', false 'N'
                 hibernate.cache.use_second_level_cache=true
                 hibernate.show_sql=false
-                hibernate.cache.region.factory_class=net.sf.ehcache.hibernate.EhCacheRegionFactory
+		hibernate.cache.region.factory_class=net.sf.ehcache.hibernate.SingletonEhCacheRegionFactory
                 hibernate.id.new_generator_mappings=true
             </value>
             <!-- hibernate.cache.provider_class=org.hibernate.cache.EhCacheProvider -->
@@ -110,6 +110,10 @@
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
+    <bean id="jobEntryDao" class="org.openhie.openempi.dao.hibernate.JobEntryDaoHibernate">
+        <property name="sessionFactory" ref="sessionFactory"/>  
+    </bean>
+    
     <bean id="entityDefinitionDao" class="org.openhie.openempi.entity.dao.hibernate.EntityDefinitionDaoHibernate">
         <property name="sessionFactory" ref="sessionFactory"/>
 	<property name="incrementer" ref="entityIdIncrementer"/>

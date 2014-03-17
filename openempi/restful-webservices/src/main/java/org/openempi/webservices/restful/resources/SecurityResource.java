@@ -29,18 +29,33 @@ import javax.ws.rs.core.Response;
 
 import org.openempi.webservices.restful.model.AuthenticationRequest;
 import org.openhie.openempi.AuthenticationException;
-import org.openhie.openempi.context.Context;
+import org.openhie.openempi.cluster.ServiceName;
+import org.openhie.openempi.service.ResourceServiceFactory;
+import org.openhie.openempi.service.SecurityResourceService;
 
 @Path("/security-resource")
-public class SecurityResource
+public class SecurityResource extends BaseResource
 {
+    public SecurityResourceService securityService;
+    
+    public SecurityResource()
+    {
+        try {
+            securityService = (SecurityResourceService)
+                    ResourceServiceFactory.createResourceService(ServiceName.SECURITY_RESOURCE_SERVICE,
+                            SecurityResourceService.class);
+        } catch (Exception e) {
+            log.error("Failed during construction: " + e, e);
+        }
+    }
+    
 	@PUT
 	@Path("/authenticate")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public String authenticate(AuthenticationRequest authRequest) {
 		String sessionKey = null;
 		try {
-			sessionKey = Context.authenticate(authRequest.getUsername(), authRequest.getPassword());
+			sessionKey = securityService.authenticate(authRequest.getUsername(), authRequest.getPassword());
 		} catch (AuthenticationException e) {
 			throw new WebApplicationException(Response.Status.UNAUTHORIZED);
 		}

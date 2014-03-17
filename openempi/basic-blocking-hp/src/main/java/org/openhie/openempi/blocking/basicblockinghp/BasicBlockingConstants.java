@@ -24,5 +24,6 @@ public class BasicBlockingConstants
 {
     public static final String BLOCKING_ALGORITHM_NAME = "Traditional Blocking Algorithm (High Performance)";
     public static final String BLOCKING_ROUNDS_REGISTRY_KEY = "blockingRounds";
+    public static final String ENTITY_NAME__KEY = "entityName";
     public static final String MAXIMUM_BLOCK_SIZE = "maxBlockSize";
 }

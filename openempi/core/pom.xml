@@ -33,7 +33,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>aspectj-maven-plugin</artifactId>
-				<version>1.0</version>
+				<version>1.5</version>
 				<configuration>
 					<source>1.5</source>
 					<verbose>true</verbose>
@@ -57,12 +57,12 @@
 					<dependency>
 						<groupId>org.aspectj</groupId>
 						<artifactId>aspectjrt</artifactId>
-						<version>1.6.0</version>
+						<version>${aspectj.version}</version>
 					</dependency>
 					<dependency>
 						<groupId>org.aspectj</groupId>
 						<artifactId>aspectjtools</artifactId>
-						<version>1.6.0</version>
+						<version>${aspectj.version}</version>
 					</dependency>
 				</dependencies>
 			</plugin>
@@ -318,6 +318,11 @@
 			<version>${orientdb.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>com.orientechnologies</groupId>
+			<artifactId>orientdb-graphdb</artifactId>
+			<version>${orientdb.version}</version>
+		</dependency>	
+		<dependency>
 			<groupId>org.iq80.snappy</groupId>
 			<artifactId>snappy</artifactId>
 			<version>0.3</version>
@@ -342,6 +347,11 @@
 			<artifactId>orientdb-tools</artifactId>
 			<version>${orientdb.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.hazelcast</groupId>
+			<artifactId>hazelcast</artifactId>
+			<version>${hazelcast.version}</version>
+		</dependency>		
 <!--
 		<dependency>
 			<groupId>org.codehaus.xfire</groupId>
@@ -388,7 +398,7 @@
 -->
 		<dependency>
 			<groupId>org.hibernate</groupId>
-			<artifactId>hibernate</artifactId>
+			<artifactId>hibernate-core</artifactId>
 			<version>${hibernate.version}</version>
 			<exclusions>
 				<exclusion>
@@ -434,12 +444,12 @@
 			<artifactId>hibernate-search</artifactId>
 			<version>${hibernate.search.version}</version>
 		</dependency>
--->
 		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-commons-annotations</artifactId>
 			<version>${hibernate.annotations.version}</version>
 		</dependency>
+-->
 		<dependency>
 			<groupId>org.jmock</groupId>
 			<artifactId>jmock</artifactId>

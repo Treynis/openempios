@@ -44,11 +44,21 @@
 		<xs:complexContent>
 			<xs:extension base="mpi:matching-configuration-type">
 				<xs:sequence>
-					<xs:element name="match-fields" type="em:match-fields" />
+					<xs:element name="match-rules" type="em:match-rules" />
 				</xs:sequence>
 				<xs:attribute name="entity-name" type="xs:string"/>
 			</xs:extension>
 		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="match-rules">
+		<xs:sequence minOccurs="1" maxOccurs="unbounded">
+			<xs:element name="match-rule" type="em:match-rule"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="match-rule">
+		<xs:sequence>
+			<xs:element name="match-fields" type="em:match-fields"/>
+		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="match-fields">
 		<xs:sequence minOccurs="1" maxOccurs="unbounded">

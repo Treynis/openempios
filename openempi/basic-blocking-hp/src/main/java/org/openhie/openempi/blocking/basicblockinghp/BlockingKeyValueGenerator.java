@@ -20,6 +20,7 @@
  */
 package org.openhie.openempi.blocking.basicblockinghp;
 
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -30,12 +31,14 @@ public class BlockingKeyValueGenerator
 {
 	private static Logger log = Logger.getLogger(BlockingKeyValueGenerator.class);
 	
+	private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd");
+	
 	public static String generateBlockingKeyValue(List<BaseField> fields, Record record) {
 		Object[] attributes = new Object[fields.size()];
 		int index=0;
 		for (BaseField field : fields) {
 			if( record.get(field.getFieldName()) != null) {
-				attributes[index] = record.get(field.getFieldName());
+				attributes[index] = harmonizeValue(record, field.getFieldName());
 			} else {
 				attributes[index] = "<null>";
 			}
@@ -48,7 +51,21 @@ public class BlockingKeyValueGenerator
 		return blockingKeyValue;
 	}
 	
-	public static String generateBlockingKeyValue(Object[] fields) {
+	private static Object harmonizeValue(Record record, String fieldName) {
+	    Object objValue = record.get(fieldName);
+	    String strValue = null;
+	    if (objValue instanceof java.util.Date) {
+	        strValue = dateFormat.format(objValue);
+	    } else {
+	        strValue = objValue.toString();
+	    }
+	    String value = strValue
+	            .replace('\'', '#')
+	            .replace('%','#');
+        return value;
+    }
+
+    public static String generateBlockingKeyValue(Object[] fields) {
 		StringBuffer sb = new StringBuffer();
 		for (int i=0; i < fields.length; i++) {
 			sb.append(fields[i].toString());

@@ -21,11 +21,12 @@
 package org.openhie.openempi.entity.dao.orientdb;
 
 import org.apache.log4j.Logger;
-import org.openhie.openempi.entity.DataAccessIntent;
+import org.openhie.openempi.context.Context;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
 
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
 import com.orientechnologies.orient.core.intent.OIntentMassiveInsert;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 
 public class IntentMassiveInsertImpl implements DataAccessIntent
 {
@@ -37,33 +38,33 @@ public class IntentMassiveInsertImpl implements DataAccessIntent
         this.dao = dao;
     }
     
-    @Override
     public void begin(Entity entity, DataAccessIntent param) {
-        OGraphDatabase db = getConnection(entity);
+        OrientBaseGraph db = getConnection(entity);
         if (db == null) {
             return;
         }
-        db.declareIntent(new OIntentMassiveInsert());
+        db.getRawGraph().declareIntent(new OIntentMassiveInsert());
         this.entity = entity;
         log.warn("Removing all indexes.");
         dao.getSchemaManager(entity).removeIndexes(entity, db);
-        db.close();
+        Context.registerDataAccessIntent(this);
+        db.getRawGraph().close();
     }
 
-    @Override
     public void end() {
-        OGraphDatabase db = getConnection(entity);
+        OrientBaseGraph db = getConnection(entity);
         if (db == null) {
             return;
         }
-        db.declareIntent(null);
+        db.getRawGraph().declareIntent(null);
         log.warn("Recreating all indexes.");
+        Context.registerDataAccessIntent(null);
         dao.getSchemaManager(entity).createIndexes(entity, db);
-        db.close();
+        db.getRawGraph().close();
     }
 
-    private OGraphDatabase getConnection(Entity entity) {
-        OGraphDatabase db = dao.getConnection(entity);
+    private OrientBaseGraph getConnection(Entity entity) {
+        OrientBaseGraph db = dao.getConnectionInternal(entity);
         if (db == null) {
             log.warn("Unable to implement massive insert intent due to no connection.");
             return null;

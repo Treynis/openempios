@@ -26,20 +26,22 @@ import java.util.Map;
 import org.openhie.openempi.configuration.ConfigurationRegistry;
 import org.openhie.openempi.configuration.CustomField;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.service.impl.BaseServiceImpl;
 import org.openhie.openempi.transformation.TransformationService;
 
 public class RecordCommonServiceImpl extends BaseServiceImpl
 {
-	protected void populateCustomFields(Record record) {
+	protected void populateCustomFields(Entity entity, Record record) {
 		@SuppressWarnings("unchecked")
 		Map<String,List<CustomField>> customFieldsListByEntityName = (Map<String, List<CustomField>>) Context
-				.getConfiguration().lookupConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELD_LIST_BY_ENTITY_NAME_MAP);
-		List<CustomField> customFields = customFieldsListByEntityName.get(record.getEntity().getName());
+				.getConfiguration().lookupConfigurationEntry(entity.getName(),
+				        ConfigurationRegistry.CUSTOM_FIELD_LIST_BY_ENTITY_NAME_MAP);
+		List<CustomField> customFields = customFieldsListByEntityName.get(entity.getName());
 		if (customFields == null) {
 			if (log.isDebugEnabled()) {
-				log.debug("No custom fields have been defined for entity " + record.getEntity().getName());
+				log.debug("No custom fields have been defined for entity " + entity.getName());
 			}
 			return;
 		}
