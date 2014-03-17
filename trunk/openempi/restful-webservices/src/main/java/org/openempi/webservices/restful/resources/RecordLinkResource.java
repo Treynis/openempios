@@ -38,19 +38,27 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.openempi.webservices.restful.util.Converter;
-import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.BadRequestException;
+import org.openhie.openempi.ConflictException;
+import org.openhie.openempi.NotFoundException;
+import org.openhie.openempi.cluster.ServiceName;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.entity.EntityDefinitionManagerService;
-import org.openhie.openempi.entity.RecordManagerService;
-import org.openhie.openempi.entity.RecordQueryService;
 import org.openhie.openempi.model.Entity;
-import org.openhie.openempi.model.LinkSource;
 import org.openhie.openempi.model.RecordLink;
-import org.openhie.openempi.model.RecordLinkState;
+import org.openhie.openempi.service.RecordLinkResourceService;
+import org.openhie.openempi.service.ResourceServiceFactory;
 
 @Path("{versionId}/record-links")
 public class RecordLinkResource extends BaseResource
 {
+    private RecordLinkResourceService recordLinkService;
+    
+    public RecordLinkResource() {
+        recordLinkService = (RecordLinkResourceService)
+                ResourceServiceFactory.createResourceService(ServiceName.RECORD_LINK_RESOURCE_SERVICE,
+                        RecordLinkResourceService.class);
+    }
+    
     @GET
     @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
@@ -61,31 +69,20 @@ public class RecordLinkResource extends BaseResource
                                            @DefaultValue("0") @QueryParam("firstResult") Integer firstResult,
                                            @DefaultValue("10") @QueryParam("maxResults") Integer maxResults) {
         validateVersion(versionId);
-        if (entityId == null) {
+        try {
+            List<RecordLink> recordLinks = recordLinkService.getRecordLinks(versionId, entityId, linkState,
+                    firstResult, maxResults);
+            List<org.openempi.webservices.restful.model.RecordLink> restRecordLinks = new
+                    ArrayList<org.openempi.webservices.restful.model.RecordLink>();
+            for (RecordLink recLink : recordLinks) {
+                restRecordLinks.add(Converter.convertRecordToRestfulRecordLink(recLink));
+            }
+            return restRecordLinks;
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-        RecordQueryService queryService = Context.getRecordQueryService();
-        List<RecordLink> recordLinks = queryService.loadRecordLinks(entity, RecordLinkState.fromString((linkState)), firstResult, maxResults);
-        if (recordLinks == null || recordLinks.size() == 0) {
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-
-        // convert to list of restful model Record
-        List<org.openempi.webservices.restful.model.RecordLink> restRecordLinks = new ArrayList<org.openempi.webservices.restful.model.RecordLink>();
-        for (RecordLink recLink : recordLinks) {
-
-            // load info for left and right records
-            RecordLink link = queryService.loadRecordLink(entity, recLink.getRecordLinkId());
-
-            restRecordLinks.add(Converter.convertRecordToRestfulRecordLink(link));
-        }
-        return restRecordLinks;
+        }        
     }
 
     @GET
@@ -97,21 +94,14 @@ public class RecordLinkResource extends BaseResource
                                          @QueryParam("entityId") Integer entityId,
                                          @PathParam("recordLinkId") String recordLinkId) {
         validateVersion(versionId);
-        if (entityId == null || recordLinkId == null) {
+        try {
+            RecordLink recordLink = recordLinkService.loadByRecordLinkId(versionId, entityId, recordLinkId);
+            return Converter.convertRecordToRestfulRecordLink(recordLink);
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        RecordQueryService queryService = Context.getRecordQueryService();
-        RecordLink recordLink = queryService.loadRecordLink(entity, recordLinkId);
-        if (recordLink == null) {
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-
-        return Converter.convertRecordToRestfulRecordLink(recordLink);
+        }        
     }
 
     @GET
@@ -123,30 +113,19 @@ public class RecordLinkResource extends BaseResource
                                           @QueryParam("entityId") Integer entityId,
                                           @QueryParam("recordId") Long recordId) {
         validateVersion(versionId);
-        if (entityId == null || recordId == null) {
+        try {
+            List<RecordLink> recordLinks = recordLinkService.loadByRecordId(versionId, entityId, recordId);
+            List<org.openempi.webservices.restful.model.RecordLink> restRecordLinks = new
+                    ArrayList<org.openempi.webservices.restful.model.RecordLink>();
+            for (RecordLink recLink : recordLinks) {
+                restRecordLinks.add(Converter.convertRecordToRestfulRecordLink(recLink));
+            }
+            return restRecordLinks;
+        } catch (BadRequestException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-        RecordQueryService queryService = Context.getRecordQueryService();
-        List<RecordLink> recordLinks = queryService.loadRecordLinks(entity, recordId);
-        if (recordLinks == null || recordLinks.size() == 0) {
+        } catch (NotFoundException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
-        }
-
-        // convert to list of restful model Record
-        List<org.openempi.webservices.restful.model.RecordLink> restRecordLinks = new ArrayList<org.openempi.webservices.restful.model.RecordLink>();
-        for (RecordLink recLink : recordLinks) {
-
-            // load info for left and right records
-            RecordLink link = queryService.loadRecordLink(entity, recLink.getRecordLinkId());
-
-            restRecordLinks.add(Converter.convertRecordToRestfulRecordLink(link));
-        }
-        return restRecordLinks;
+        }        
     }
 
     @POST
@@ -156,29 +135,20 @@ public class RecordLinkResource extends BaseResource
                                                     @PathParam("versionId") String versionId,
                                                     org.openempi.webservices.restful.model.RecordLink restRecordLink) {
         validateVersion(versionId);
-        RecordManagerService managerService = Context.getRecordManagerService();
-        if (restRecordLink == null || restRecordLink.getEntityId() == null) {
+        if (restRecordLink.getEntityId() == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(restRecordLink.getEntityId());
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(restRecordLink.getEntityId());
         if (entity == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-
         try {
-            RecordLink recordLink =  Converter.convertRestfulRecordLinkToRecordLink(entity, restRecordLink);
-
-            LinkSource linkSource = new LinkSource();
-            linkSource.setLinkSourceId(LinkSource.MANUAL_MATCHING_SOURCE);
-            recordLink.setLinkSource(linkSource);
-            recordLink.setUserCreatedBy(Context.getUserContext().getUser());
-
-            recordLink = managerService.addRecordLink(recordLink);
-
+            RecordLink recordLink = recordLinkService.addRecordLink(versionId, entity.getEntityId(),
+                    Converter.convertRestfulRecordLinkToRecordLink(entity, restRecordLink));
             return Converter.convertRecordToRestfulRecordLink(recordLink);
-       } catch (ApplicationException e) {
+       } catch (BadRequestException e) {
+           throw new WebApplicationException(Response.Status.BAD_REQUEST);
+       } catch (ConflictException e) {
            throw new WebApplicationException(Response.Status.CONFLICT);
        }
     }
@@ -190,31 +160,23 @@ public class RecordLinkResource extends BaseResource
                                         @PathParam("versionId") String versionId,
                                         org.openempi.webservices.restful.model.RecordLink restRecordLink) {
         validateVersion(versionId);
-        RecordManagerService managerService = Context.getRecordManagerService();
         if (restRecordLink == null || restRecordLink.getEntityId() == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(restRecordLink.getEntityId());
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(restRecordLink.getEntityId());
         if (entity == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
-
         try {
-            RecordLink recordLink = Context.getRecordQueryService()
-                    .loadRecordLink(entity, restRecordLink.getRecordLinkId().toString());
-            if (recordLink == null) {
-                throw new WebApplicationException(Response.Status.NOT_FOUND);
-            }
-
-            recordLink.setState(RecordLinkState.fromString(restRecordLink.getState()));
-            recordLink.setWeight(restRecordLink.getWeight());
-
-            recordLink =  managerService.updateRecordLink(recordLink);
+            RecordLink recordLink = recordLinkService.updateRecordLink(versionId, entity.getEntityId(),
+                    Converter.convertRestfulRecordLinkToRecordLink(entity, restRecordLink));
             return Converter.convertRecordToRestfulRecordLink(recordLink);
-       } catch (ApplicationException e) {
+       } catch (BadRequestException e) {
+           throw new WebApplicationException(Response.Status.BAD_REQUEST);
+       } catch (ConflictException e) {
            throw new WebApplicationException(Response.Status.CONFLICT);
+       } catch (NotFoundException e) {
+           throw new WebApplicationException(Response.Status.NOT_FOUND);
        }
     }
 
@@ -227,27 +189,14 @@ public class RecordLinkResource extends BaseResource
                                  @QueryParam("entityId") Integer entityId,
                                  @PathParam("id") Long recordLinkId) {
         validateVersion(versionId);
-        RecordManagerService managerService = Context.getRecordManagerService();
-        if (entityId == null || recordLinkId == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
-        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
-        Entity entity = defService.loadEntity(entityId);
-        if (entity == null) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-
         try {
-            RecordLink recordLink = Context.getRecordQueryService()
-                    .loadRecordLink(entity, recordLinkId.toString());
-            if (recordLink == null) {
-                throw new WebApplicationException(Response.Status.NOT_FOUND);
-            }
-
-            managerService.removeRecordLink(recordLink);
-        } catch (ApplicationException e) {
+            recordLinkService.removeRecordLink(versionId, entityId, recordLinkId);
+        } catch (BadRequestException e) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        } catch (ConflictException e) {
             throw new WebApplicationException(Response.Status.CONFLICT);
+        } catch (NotFoundException e) {
+            throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
     }
 }

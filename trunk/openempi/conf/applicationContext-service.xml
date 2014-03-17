@@ -218,14 +218,7 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		<property name="validationService" ref="validationService" />
 		<property name="dataProfileService" ref="dataProfileService" />
 		<property name="entityValidationService" ref="entityValidationService" />
-	</bean>
-
-	<bean id="personManagerService"
-		class="org.openhie.openempi.service.impl.PersonManagerServiceImpl">
-		<property name="entityName" value="person" />
-		<property name="personDao" ref="personDao" />
-		<property name="personLinkDao" ref="personLinkDao" />
-		<property name="transactionTemplate" ref="transactionTemplate"/>
+		<property name="jobQueueService" ref="jobQueueService" />
 	</bean>
 
 	<bean id="personManagerServiceAdapter" class="org.openhie.openempi.service.impl.PersonManagerServiceAdapter">
@@ -258,6 +251,30 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		<property name="entityCacheManager" ref="entityCacheManager"/>
 	</bean>
 
+	<bean id="recordLinkResourceServiceImpl"
+		class="org.openhie.openempi.service.impl.RecordLinkResourceServiceImpl">
+	</bean>
+
+	<bean id="recordResourceServiceImpl"
+		class="org.openhie.openempi.service.impl.RecordResourceServiceImpl">
+	</bean>
+
+	<bean id="securityResourceServiceImpl"
+		class="org.openhie.openempi.service.impl.SecurityResourceServiceImpl">
+	</bean>
+
+	<bean id="recordLinkResourceServiceClusterImpl"
+		class="org.openhie.openempi.service.impl.RecordLinkResourceServiceImpl">
+	</bean>
+
+	<bean id="recordResourceServiceClusterImpl"
+		class="org.openhie.openempi.service.impl.RecordResourceServiceClusterImpl">
+	</bean>
+
+	<bean id="securityResourceServiceClusterImpl"
+		class="org.openhie.openempi.service.impl.SecurityResourceServiceClusterImpl">
+	</bean>
+
 	<bean id="personQueryServiceAdapter" class="org.openhie.openempi.service.impl.PersonQueryServiceAdapter">
 		<property name="personEntityName" value="person" />
 		<property name="entityDefinitionService" ref="entityDefinitionManagerService"/>
@@ -265,16 +282,15 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		<property name="personDao" ref="personDao" />
 		<property name="identifierDomainDao" ref="identifierDomainDao" />
 	</bean>
-
-	<bean id="personQueryService"
-		class="org.openhie.openempi.service.impl.PersonQueryServiceImpl">
-		<property name="personDao" ref="personDao" />
-		<property name="personLinkDao" ref="personLinkDao" />
-	</bean>
 	
 	<bean id="identifierDomainService"
 		class="org.openhie.openempi.service.impl.IdentifierDomainServiceImpl">
 		<property name="identifierDomainDao" ref="identifierDomainDao" />
+	</bean>
+
+	<bean id="jobQueueService"
+		class="org.openhie.openempi.service.impl.JobQueueServiceImpl">
+		<property name="jobEntryDao" ref="jobEntryDao" />
 	</bean>
 	
 	<bean id="naiveBlockingService"
@@ -300,18 +316,17 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 	</bean>
 -->
 
-	<bean id="entityRecordDataSource" class="org.openhie.openempi.profiling.EntityRecordDataSource">
-		<property name="entityName" value="person" />
+	<bean id="entityRecordDataSource" class="org.openhie.openempi.profiling.EntityRecordDataSource" scope="prototype">
 		<property name="entityDefinitionService" ref="entityDefinitionManagerService"/>
-		<property name="entityDao" ref="entityDao"/>
 		<property name="recordBlockSize" value="10000"/>
+	    	<property name="entityDao" ref="entityDao" />
 	</bean>
 	
 	<bean id="dataProfileService" class="org.openhie.openempi.profiling.DataProfileServiceImpl">
 		<property name="dataProfileAttributeDao" ref="dataProfileAttributeDao" />
 	</bean>
 
-	<bean id="dataProfiler" class="org.openhie.openempi.profiling.DataProfiler">
+	<bean id="dataProfiler" class="org.openhie.openempi.profiling.DataProfiler" scope="prototype">
 		<property name="recordDataSource" ref="entityRecordDataSource"/>
 		<property name="dataProfileAttributeDao" ref="dataProfileAttributeDao"/>
 		<property name="attributeBlockSize" value="0"/>

@@ -31,7 +31,6 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -53,6 +52,7 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "entity")
 @GenericGenerator(name = "entity_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "entity_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")})
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
@@ -225,6 +225,18 @@ public class Entity extends BaseObject implements Serializable
 			}
 		}
 		return attributeMapByName.get(name);
+	}
+	
+	public boolean hasCustomFields() {
+	    if (attributes == null || attributes.size() == 0) {
+	        return false;
+	    }
+	    for (EntityAttribute attribute : attributes) {
+	        if (attribute.getIsCustom() == true) {
+	            return true;
+	        }
+	    }
+	    return false;
 	}
 	
 	@Override

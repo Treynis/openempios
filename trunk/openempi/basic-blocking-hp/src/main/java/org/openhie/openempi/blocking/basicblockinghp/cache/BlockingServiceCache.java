@@ -20,50 +20,42 @@
  */
 package org.openhie.openempi.blocking.basicblockinghp.cache;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
-import net.sf.ehcache.Element;
-
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openhie.openempi.Constants;
+import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.blocking.basicblockinghp.BlockingKeyValueGenerator;
 import org.openhie.openempi.blocking.basicblockinghp.dao.BlockingDao;
-import org.openhie.openempi.configuration.BaseField;
+import org.openhie.openempi.blocking.basicblockinghp.dao.BlockingRoundClass;
 import org.openhie.openempi.configuration.BlockingRound;
-import org.openhie.openempi.configuration.ConfigurationRegistry;
-import org.openhie.openempi.configuration.MatchField;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.entity.dao.EntityDao;
+import org.openhie.openempi.entity.dao.orientdb.ConcurrentModificationException;
 import org.openhie.openempi.model.Entity;
-import org.openhie.openempi.model.NameValuePair;
+import org.openhie.openempi.model.EntityAttribute;
+import org.openhie.openempi.model.EntityAttributeDatatype;
 import org.openhie.openempi.model.Record;
-import org.openhie.openempi.notification.EventObservable;
-import org.openhie.openempi.notification.ObservationEventType;
-import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 public class BlockingServiceCache
 {
+    public final static String BLOCKINGKEYVALUE_FIELD = "blockingKeyValue";
+    public final static String RECORDIDS_FIELD = "rids";
     protected final Log log = LogFactory.getLog(getClass());
-    private final static String RECORD_CACHE = "recordCache.cache";
 
     private BlockingDao blockingDao;
-    private CacheManager cacheManager;
-    private Cache recordCache;
+    private EntityDao entityDao;
     private List<BlockingRound> blockingRounds;
     private Integer maximumBlockSize;
-    private List<String> fieldList;
-    private Map<String, Cache> cacheByRound = new HashMap<String, Cache>();
+    private Map<String, BlockingRoundClass> roundClassByRound = new HashMap<String, BlockingRoundClass>();
     private Entity entity;
     private ThreadPoolTaskExecutor cacheTaskExecutor;
 
@@ -75,337 +67,204 @@ public class BlockingServiceCache
         this.entity = entity;
     }
 
-    public void init(List<BlockingRound> blockingRounds) {
+    public void init(List<BlockingRound> blockingRounds, boolean isReinitialize) {
         this.blockingRounds = blockingRounds;
 
         long startTime = System.currentTimeMillis();
-        log.info("Initializing the cache using " + blockingRounds.size() + " blocking rounds.");
-        fieldList = buildFieldList();
-        List<Future<Object>> futures = new LinkedList<Future<Object>>();
-        Future<Object> future;
-        LoadCacheTask recordTask = new LoadCacheTask(true, RECORD_CACHE, null);
-        try {
-            future = cacheTaskExecutor.getThreadPoolExecutor().submit(recordTask, new Object());
-            futures.add(future);
-        } catch (TaskRejectedException e) {
-            log.error("Interrupted while loading blocking Round Cache: " + e, e);
-            try {
-                Thread.sleep(5000);
-            } catch (Exception exe) {
-            }
+        if (isReinitialize) {
+            dropBlockingClasses(blockingRounds);
         }
+        createBlockingClasses(blockingRounds);
+        
+        List<BlockingRoundClass> blockingRoundsNeedData= new ArrayList<BlockingRoundClass>();
         for (BlockingRound round : blockingRounds) {
-            log.info("Building cache for round: " + round.getName());
-            LoadCacheTask task = new LoadCacheTask(false, round.getName(), round);
-
-            try {
-                future = cacheTaskExecutor.getThreadPoolExecutor().submit(task, new Object());
-                futures.add(future);
-            } catch (TaskRejectedException e) {
-                log.error("Interrupted while loading blocking Round Cache: " + e, e);
-                try {
-                    Thread.sleep(5000);
-                } catch (Exception exe) {
-                }
+            BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+            long blockCount = blockingDao.loadBlockDataCount(entity, roundClass);
+            if (blockCount == 0) {
+                log.info("Need to load data for this round.");
+                blockingRoundsNeedData.add(roundClass);
             }
         }
-
-        try {
-            // now wait until all jobs have completed
-            for (Future<Object> futureObj : futures) {
-                futureObj.get();
-            }
-        } catch (InterruptedException e) {
-            log.error("Interrupted while loading blocking Round Cache: " + e, e);
-        } catch (ExecutionException e) {
-            log.error("Interrupted while loading blocking Round Cache: " + e, e);
+        if (blockingRoundsNeedData.size() > 0) {
+            cacheTaskExecutor.getThreadPoolExecutor().execute(new BlockingDataGenerator(entity,
+                    blockingRoundsNeedData, BlockingTaskWorkType.LOAD_WORK));
         }
-
         long stopTime = System.currentTimeMillis();
         long elapsedTime = stopTime - startTime;
         log.info("BlockingServiceCache init time: " + elapsedTime);
     }
 
-    private class LoadCacheTask implements Runnable
-    {
-
-        private Boolean isRecordCache;
-        private String cacheName;
-        private BlockingRound round;
-
-        public LoadCacheTask(Boolean isRecordCache, String cacheName, BlockingRound round) {
-            this.isRecordCache = isRecordCache;
-            this.cacheName = cacheName;
-            this.round = round;
-        }
-
-        public void run() {
-            if (isRecordCache == true) {
-                try {
-                    recordCache = cacheManager.getCache(RECORD_CACHE);
-                    log.info("BlockingServiceCache: cacheManagerRecordCache is " + cacheManager);
-                    cacheAllRecords(fieldList);
-                } catch (Exception e) {
-                    log.error("Interrupted while loading blocking Record Cache: " + e, e);
-                }
-            } else {
-                Cache cache = cacheManager.getCache(cacheName + ".cache");
-                if (cache == null) {
-                    cacheManager.addCache(cacheName + ".cache");
-                    cache = cacheManager.getCache(cacheName + ".cache");
-                }
-                cacheByRound.put(cacheName, cache);
-                initializeCacheForRound(round, cache);
-            }
-        }
-    }
-
-    private void cacheAllRecords(List<String> blockingFieldList) {
-        blockingDao.loadAllRecords(entity, recordCache, blockingFieldList);
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<String> buildFieldList() {
-        Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                .lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
-        if (configurationData == null) {
-            log.error("No blocking configuration has been provided.");
-            throw new RuntimeException("The blocking configuration is invalid.");
-        }
-        List<MatchField> fields = (List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
-        Set<String> fieldNames = new HashSet<String>();
-        for (MatchField field : fields) {
-            fieldNames.add(field.getFieldName());
-        }
+    private void createBlockingClasses(List<BlockingRound> blockingRounds) {
+        long startTime = new Date().getTime();
         for (BlockingRound round : blockingRounds) {
-            for (BaseField field : round.getFields()) {
-                fieldNames.add(field.getFieldName());
+            log.info("The round is called: " + round);
+            Entity roundEntity = buildEntityFromRound(round);
+            try {
+                if (!entityDao.classExists(entity, roundEntity.getName())) {
+                    entityDao.createClass(entity, roundEntity, "V");
+                }
+                roundClassByRound.put(round.getName(), new BlockingRoundClass(round, roundEntity));
+            } catch (ApplicationException e) {
+                log.error("Failed while creating the class " + roundEntity.getName() + " due to " + e, e);
+                throw new RuntimeException("Initialization of the blocking algorithm failed.");
             }
         }
-        List<String> fieldNameList = new java.util.ArrayList<String>();
-        fieldNameList.add("personId");
-        fieldNameList.addAll(fieldNames);
-        log.info("Obtained a cached field list of: " + new ToStringBuilder(this).append("Field List", fieldNameList));
-        return fieldNameList;
+        long stopTime = System.currentTimeMillis();
+        long elapsedTime = stopTime - startTime;
+        log.info("BlockingServiceCache created classes in time: " + elapsedTime);
+    }
+    
+    private void dropBlockingClasses(List<BlockingRound> blockingRounds) {
+        long startTime = new Date().getTime();
+        for (BlockingRound round : blockingRounds) {
+            log.info("The round is called: " + round);
+            Entity roundEntity = buildEntityFromRound(round);
+            try {
+                entityDao.dropClass(entity, roundEntity.getName());
+            } catch (ApplicationException e) {
+                log.error("Failed while creating the class " + roundEntity.getName() + " due to " + e, e);
+                throw new RuntimeException("Initialization of the blocking algorithm failed.");
+            }
+        }
+        roundClassByRound.clear();
+        long stopTime = System.currentTimeMillis();
+        long elapsedTime = stopTime - startTime;
+        log.info("BlockingServiceCache dropped classes in time: " + elapsedTime);
     }
 
-    public void removeCaches(List<BlockingRound> blockingRounds) {
-        for (BlockingRound round : blockingRounds) {
-            Cache cache = cacheByRound.get(round.getName());
-            log.info("Removing cache " + cache + " for round: " + round.getName());
-            if (cache != null) {
-                cacheManager.removeCache(cache.getName());
-            }
-        }
-        recordCache.removeAll();
+    private Entity buildEntityFromRound(BlockingRound round) {
+        Entity entity = new Entity();
+        entity.setName("Blocking" + getEntityNameFromRoundName(round.getName()));
+        EntityAttribute attrib = new EntityAttribute();
+        attrib.setName("blockingKeyValue");
+        attrib.setDatatype(new EntityAttributeDatatype(EntityAttributeDatatype.STRING_DATATYPE_CD));
+        attrib.setIndexed(true);
+        entity.addAttribute(attrib);
+        
+        attrib = new EntityAttribute();
+        attrib.setName("rids");
+        attrib.setDatatype(new EntityAttributeDatatype(EntityAttributeDatatype.EMBEDDEDSET_DATATYPE_CD));
+        attrib.setIndexed(false);
+        entity.addAttribute(attrib);
+        return entity;
+    }
+
+    private String getEntityNameFromRoundName(String name) {
+        // TODO OrientDB cannot handle '.' in the name
+        name = name.replace('.', '-');
+        return name;
     }
 
     public void shutdown() {
-        cacheManager.shutdown();
         cacheTaskExecutor.shutdown();
     }
 
+    @SuppressWarnings("unchecked")
     public int getCandidateRecordCount(BlockingRound round, String blockingKeyValue) {
-        Cache cache = cacheByRound.get(round.getName());
-        if (cache == null) {
-            log.error("Unexpected error occured; nable to locate a cache for blocking round " + round.getName());
-            throw new RuntimeException(
-                    "Unable to locate a cache to retrieve blocking records from implying a system configuration issue.");
-        }
-        Element elem = cache.get(blockingKeyValue);
-        if (elem == null) {
-            return 0;
-        }
-        @SuppressWarnings("unchecked")
-        List<Long> pointers = (List<Long>) elem.getObjectValue();
+        BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+        Record blockRecord = getBlockingDao().loadBlockData(entity, roundClass, blockingKeyValue);
+        Set<Long> pointers = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);
         return pointers.size();
     }
 
-    public List<Record> loadCandidateRecords(BlockingRound round, String blockingKeyValue) {
-        List<Record> records = new java.util.ArrayList<Record>();
-        Cache cache = cacheByRound.get(round.getName());
-        if (cache == null) {
-            log.error("Unexpected error occured; nable to locate a cache for blocking round " + round.getName());
-            throw new RuntimeException(
-                    "Unable to locate a cache to retrieve blocking records from implying a system configuration issue.");
-        }
-        Element elem = cache.get(blockingKeyValue);
-        if (elem == null) {
-            return records;
-        }
-        @SuppressWarnings("unchecked")
-        List<Long> pointers = (List<Long>) elem.getObjectValue();
-        log.debug("Using key " + blockingKeyValue + " found " + pointers.size() + " candidate records.");
-        return blockRecords(pointers);
-    }
-
-    public Record loadRecord(Long recordId) {
-        Element element = recordCache.get(recordId);
-        if (element == null) {
-            log.debug("Did not find a record in the cache; loading from the database record with id: " + recordId);
-            Record record = blockingDao.loadRecord(entity, recordCache, recordId);
-            element = new Element(recordId, record);
-            recordCache.put(element);
-        }
-        return (Record) element.getObjectValue();
-    }
-
-    private List<Record> blockRecords(List<Long> pointers) {
+    private List<Record> blockRecords(Collection<Long> pointers) {
         List<Record> records = new java.util.ArrayList<Record>();
         for (Long key : pointers) {
             Record record = loadRecord(new Long(key));
+            if (record == null) {
+                log.warn("Unable to find record with id " + key + " in the db.");
+            }
             log.trace("Located the record " + key + " in the cache.");
             records.add(record);
         }
         return records;
     }
 
-    public void updateRecordCache(EventObservable o, Record record) {
-        if (o.getType() == ObservationEventType.ENTITY_ADD_EVENT) {
-            Element element = new Element(record.getRecordId(), record);
-            recordCache.put(element);
-            log.trace("Added a new record to the record cache with id: " + record.getRecordId());
-        } else if (o.getType() == ObservationEventType.ENTITY_DELETE_EVENT) {
-            Element found = recordCache.get(record.getRecordId());
-            if (found == null) {
-                if (log.isTraceEnabled()) {
-                    log.trace("Couldn't find record entry in cache with key " + record.getRecordId()
-                            + " to be removed.");
-                }
-                return;
-            }
-            recordCache.remove(record.getRecordId());
-            log.trace("Daleted a record from the record cache with id: " + record.getRecordId());
-        } else if (o.getType() == ObservationEventType.ENTITY_UPDATE_EVENT) {
-            Element element = new Element(record.getRecordId(), record);
-            recordCache.put(element);
-            log.trace("Updated a record in the record cache with id: " + record.getRecordId());
-        }
+    public Record loadRecord(Long recordId) {
+        return entityDao.loadRecord(entity, recordId);
     }
 
-    public void addRecordToIndex(BlockingRound round, String blockingKeyValue, Long value) {
-        Cache cache = cacheByRound.get(round.getName());
-        if (cache == null) {
-            log.error("Unexpected error occured; unable to locate a cache for blocking round " + round.getName());
-            throw new RuntimeException(
-                    "Unable to locate a cache to retrieve blocking records from implying a system configuration issue.");
-        }
-        if (log.isTraceEnabled()) {
-            log.trace("Adding new index value: (" + blockingKeyValue + "," + value + ")");
-        }
-        addEntryToCache(cache, blockingKeyValue, value);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void addEntryToCache(Cache cache, String key, Long value) {
-        Element found = cache.get(key);
-        List<Long> pointers = null;
-        if (found == null) {
-            pointers = new java.util.ArrayList<Long>();
-        } else {
-            pointers = (List<Long>) found.getObjectValue();
-            if (maximumBlockSize > 0 && pointers.size() > maximumBlockSize) {
-                log.info("Skipping adding value to block with key " + key + " and size " + pointers.size()
-                        + " because it exceeds the maximum block size.");
-                return;
-            }
-        }
-        pointers.add(value);
-        found = new Element(key, pointers);
-        cache.put(found);
-    }
-
-    public void deleteRecordFromIndex(BlockingRound round, String key, Long value) {
-        Cache cache = cacheByRound.get(round.getName());
-        if (cache == null) {
-            log.error("Unexpected error occured; unable to locate a cache for blocking round " + round.getName());
-            throw new RuntimeException(
-                    "Unable to locate a cache to retrieve blocking records from implying a system configuration issue.");
-        }
-        if (log.isTraceEnabled()) {
-            log.trace("Removing index value: (" + key + "," + value + ")");
-        }
-        deleteEntryFromCache(cache, key, value);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void deleteEntryFromCache(Cache cache, String key, Long value) {
-        Element found = cache.get(key);
-        List<Long> pointers = null;
-        if (found == null) {
+    public void addRecordToIndex(Record record) {
+        if (Context.getDataAccessIntent() != null) {
             if (log.isTraceEnabled()) {
-                log.trace("Couldn't find index entry with key: " + key + " in the cache " + cache + " to be removed.");
+                log.trace("Ignoring updating the blocking index due to a data access intent in-place.");
             }
             return;
-        } else {
-            pointers = (List<Long>) found.getObjectValue();
         }
-        @SuppressWarnings("rawtypes")
-        List<Long> newPointers = new java.util.ArrayList();
-        for (Long pointer : pointers) {
-            if (pointer.longValue() != value.longValue()) {
-                newPointers.add(pointer);
+        cacheTaskExecutor.getThreadPoolExecutor().execute(new BlockingDataGenerator(entity, record,
+                BlockingTaskWorkType.ADD_RECORD_WORK));
+//        BlockingDataGenerator generator = new BlockingDataGenerator(entity, record, BlockingTaskWorkType.ADD_RECORD_WORK);
+//        generator.run();
+    }
+
+    public void addRecordsToIndex(Set<Record> records) {
+        if (Context.getDataAccessIntent() != null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Ignoring updating the blocking index due to a data access intent in-place.");
             }
+            return;
         }
-        found = new Element(key, newPointers);
-        cache.put(found);
+        cacheTaskExecutor.getThreadPoolExecutor().execute(new BlockingDataGenerator(entity, records,
+                BlockingTaskWorkType.ADD_RECORDS_WORK));
+//        BlockingDataGenerator generator = new BlockingDataGenerator(entity, record, BlockingTaskWorkType.ADD_RECORD_WORK);
+//        generator.run();
+    }
+
+    public void deleteRecordFromIndex(Record record) {
+        if (Context.getDataAccessIntent() != null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Ignoring updating the blocking index due to a data access intent in-place.");
+            }
+            return;
+        }
+        cacheTaskExecutor.getThreadPoolExecutor().execute(new BlockingDataGenerator(entity, record,
+                BlockingTaskWorkType.DELETE_RECORD_WORK));
+//        BlockingDataGenerator generator = new BlockingDataGenerator(entity, record, BlockingTaskWorkType.DELETE_RECORD_WORK);
+//        generator.run();
+    }
+
+    public void updateRecordInIndex(Record preUpdateRecord, Record postUpdateRecord) {
+        if (Context.getDataAccessIntent() != null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Ignoring updating the blocking index due to a data access intent in-place.");
+            }
+            return;
+        }
+        cacheTaskExecutor.getThreadPoolExecutor().execute(new BlockingDataGenerator(entity, preUpdateRecord,
+                postUpdateRecord, BlockingTaskWorkType.UPDATE_RECORD_WORK));
+//        BlockingDataGenerator generator = new BlockingDataGenerator(entity, preUpdateRecord, BlockingTaskWorkType.DELETE_RECORD_WORK);
+//        generator.run();
     }
 
     @SuppressWarnings("unchecked")
-    public List<Record> loadCandidateRecords(String blockingKeyValue) {
+    public List<Record> loadCandidateRecords(BlockingRound round, String blockingKeyValue) {
         List<Record> records = new java.util.ArrayList<Record>();
-        for (BlockingRound round : blockingRounds) {
-            // log.debug("Loading records for round: " + round.getName());
-            Cache cache = cacheByRound.get(round.getName());
-            if (cache == null) {
-                log.error("Unexpected error occured; unable to locate a cache for blocking round " + round.getName());
-                throw new RuntimeException(
-                        "Unable to locate a cache to retrieve blocking records from implying a system configuration issue.");
-            }
-            Element elem = cache.get(blockingKeyValue);
-            if (elem == null) {
-                continue;
-            }
-            List<Long> pointers = new CopyOnWriteArrayList<Long>();
-            // List<Integer> pointers = (List<Integer>) elem.getValue();
-            pointers = (List<Long>) elem.getObjectValue();
-            log.debug("Using key " + blockingKeyValue + " found " + pointers.size() + " candidate records.");
-            records.addAll(blockRecords(pointers));
+        BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+        Record blockRecord = getBlockingDao().loadBlockData(entity, roundClass, blockingKeyValue);
+        if (blockRecord == null) {
+            return records;
         }
+        Set<Long> pointers = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);
+        if (log.isDebugEnabled()) {
+            log.debug("Using key " + blockingKeyValue + " found " + pointers.size() + " candidate records.");
+        }
+        return blockRecords(pointers);
+    }
+
+    public List<Record> loadCandidateRecords(Set<Long> pointers) {
+        List<Record> records = new java.util.ArrayList<Record>();
+        records.addAll(blockRecords(pointers));
         return records;
     }
 
-    public List<String> getKeyListByRound(BlockingRound round) {
-        if (round == null) {
-            return new java.util.ArrayList<String>();
+    public Set<String> loadBlockRecordIds() {
+        Set<String> allBlockRecordIds = new HashSet<String>();
+        for (BlockingRound round : blockingRounds) {
+            BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+            Set<String> blockRecordIds = getBlockingDao().loadBlockRecordIds(entity, roundClass);
+            allBlockRecordIds.addAll(blockRecordIds);
         }
-        Cache cache = cacheByRound.get(round.getName());
-        if (cache == null) {
-            return new java.util.ArrayList<String>();
-        }
-        @SuppressWarnings("unchecked")
-        List<String> keyList = (List<String>) cache.getKeys();
-        return keyList;
-    }
-
-    private void initializeCacheForRound(BlockingRound round, Cache cache) {
-        List<BaseField> fields = round.getFields();
-        List<NameValuePair> pairs = blockingDao.getDistinctKeyValuePairs(entity, getBlockingFieldList(fields));
-        populateCache(cache, pairs);
-    }
-
-    private void populateCache(Cache cache, List<NameValuePair> pairs) {
-        for (NameValuePair pair : pairs) {
-            addEntryToCache(cache, pair.getName(), (Long) pair.getValue());
-        }
-    }
-
-    private List<String> getBlockingFieldList(List<BaseField> fields) {
-        List<String> fieldList = new java.util.ArrayList<String>(fields.size());
-        for (BaseField field : fields) {
-            fieldList.add(field.getFieldName());
-        }
-        return fieldList;
+        return allBlockRecordIds;
     }
 
     public Integer getMaximumBlockSize() {
@@ -416,14 +275,6 @@ public class BlockingServiceCache
         this.maximumBlockSize = maximumBlockSize;
     }
 
-    public CacheManager getCacheManager() {
-        return cacheManager;
-    }
-
-    public void setCacheManager(CacheManager cacheManager) {
-        this.cacheManager = cacheManager;
-    }
-
     public BlockingDao getBlockingDao() {
         return blockingDao;
     }
@@ -432,11 +283,282 @@ public class BlockingServiceCache
         this.blockingDao = blockingDao;
     }
 
+    public EntityDao getEntityDao() {
+        return entityDao;
+    }
+
+    public void setEntityDao(EntityDao entityDao) {
+        this.entityDao = entityDao;
+    }
+    
     public void setCacheTaskExecutor(ThreadPoolTaskExecutor cacheTaskExecutor) {
         this.cacheTaskExecutor = cacheTaskExecutor;
     }
 
     public ThreadPoolTaskExecutor getCacheTaskExecutor() {
         return cacheTaskExecutor;
+    }
+    
+    enum BlockingTaskWorkType {
+        LOAD_WORK, ADD_RECORD_WORK, ADD_RECORDS_WORK, UPDATE_RECORD_WORK, DELETE_RECORD_WORK
+    }
+    
+    public class BlockingDataGenerator implements Runnable
+    {
+        private Entity entity;
+        private List<BlockingRoundClass> blockingClasses;
+        private BlockingTaskWorkType workType;
+        private Record record;
+        private Record newRecord;
+        private Set<Record> records;
+        
+        public BlockingDataGenerator(Entity entity, List<BlockingRoundClass> blockingClasses, BlockingTaskWorkType workType) {
+            this.entity = entity;
+            this.blockingClasses = blockingClasses;
+            this.workType = workType;
+        }
+
+        public BlockingDataGenerator(Entity entity, Set<Record> records, BlockingTaskWorkType workType) {
+            this.entity = entity;
+            this.records = records;
+            this.workType = workType;
+        }
+
+        public BlockingDataGenerator(Entity entity, Record record, BlockingTaskWorkType workType) {
+            this.entity = entity;
+            this.record = record;
+            this.workType = workType;
+        }
+
+        public BlockingDataGenerator(Entity entity, Record record, Record newRecord, BlockingTaskWorkType workType) {
+            this.entity = entity;
+            this.record = record;
+            this.newRecord = record;
+            this.workType = workType;
+        }
+
+        @Override
+        public void run() {
+            switch(workType) {
+            case LOAD_WORK:
+                loadBlocks();
+                break;
+            case ADD_RECORD_WORK:
+                addRecordToIndex();
+                break;
+            case ADD_RECORDS_WORK:
+                addRecordsToIndex();
+                break;
+            case DELETE_RECORD_WORK:
+                deleteRecordFromIndex();
+                break;
+            case UPDATE_RECORD_WORK:
+                updateRecordInIndex();
+                break;
+            default:
+                log.warn("Task has now known work to do: " + workType);
+                break;
+            }
+        }
+        
+        @SuppressWarnings("unchecked")
+        private void updateRecordInIndex() {
+            for (BlockingRound round : blockingRounds) {
+                BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+                String blockingKeyValue = BlockingKeyValueGenerator
+                        .generateBlockingKeyValue(roundClass.getBlockingRound().getFields(), record);
+                String newBlockingKeyValue = BlockingKeyValueGenerator
+                        .generateBlockingKeyValue(roundClass.getBlockingRound().getFields(), newRecord);
+                if (blockingKeyValue.equalsIgnoreCase(newBlockingKeyValue)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Record update of record " + record.getRecordId() + 
+                                " resulted in the same blockingKey so there is nothing to do." + blockingKeyValue);
+                        return;
+                    }
+                }
+                long startLoadTime = new Date().getTime();
+                boolean done = true;
+                Record blockRecord = null;
+                do {
+                    try {
+                        blockRecord = getBlockingDao().loadBlockData(getEntity(), roundClass, blockingKeyValue);
+                        if (blockRecord == null) {
+                            log.warn("Received a request to delete a record from the index that is not in the index: " + record.getRecordId());
+                            return;
+                        }
+                        Set<Long> rids = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);
+                        rids.remove(record.getRecordId());
+                        getBlockingDao().saveBlockData(getEntity(), roundClass, blockRecord);
+                        
+                        blockRecord = getBlockingDao().loadBlockData(getEntity(), roundClass, newBlockingKeyValue);
+                        if (blockRecord == null) {
+                            blockRecord = new Record(roundClass.getRoundClass());
+                            rids = new HashSet<Long>();
+                            rids.add(getNewRecord().getRecordId());
+                            populateBlockData(blockRecord, blockingKeyValue, rids);
+                        } else {
+                            rids = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);
+                            rids.add(getNewRecord().getRecordId());
+                        }
+                        getBlockingDao().saveBlockData(getEntity(), roundClass, blockRecord);
+                        done = true;
+                    } catch (ConcurrentModificationException e) {
+                        done = false;
+                    }
+                } while (!done);
+                long endLoadTime = new Date().getTime();
+                if (log.isDebugEnabled()) {
+                    log.debug("Updated a record in a block: " + blockRecord.get(RECORDIDS_FIELD) + " in " + (endLoadTime-startLoadTime) + " msec.");
+                }
+            }
+        }
+        
+        @SuppressWarnings("unchecked")
+        private void deleteRecordFromIndex() {
+            for (BlockingRound round : blockingRounds) {
+                BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+                String blockingKeyValue = BlockingKeyValueGenerator
+                        .generateBlockingKeyValue(roundClass.getBlockingRound().getFields(), record);
+                long startLoadTime = new Date().getTime();
+                boolean done = true;
+                Record blockRecord = null;
+                do {
+                    try {
+                        blockRecord = getBlockingDao().loadBlockData(getEntity(), roundClass, blockingKeyValue);
+                        if (blockRecord == null) {
+                            log.warn("Received a request to delete a record from the index that is not in the index: " + record.getRecordId());
+                            return;
+                        }
+                        Set<Long> rids = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);
+                        rids.remove(record.getRecordId());
+                        getBlockingDao().saveBlockData(getEntity(), roundClass, blockRecord);
+                        done = true;
+                    } catch (ConcurrentModificationException e) {
+                        done = false;
+                    }
+                } while (!done);
+                long endLoadTime = new Date().getTime();
+                if (log.isDebugEnabled()) {
+                    log.debug("Deleted a record from a block: " + blockRecord.get(RECORDIDS_FIELD) + " in " + (endLoadTime-startLoadTime) + " msec.");
+                }
+            }
+        }
+        
+        private void addRecordToIndex() {
+            for (BlockingRound round : blockingRounds) {
+                BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+                String blockingKeyValue = BlockingKeyValueGenerator
+                        .generateBlockingKeyValue(roundClass .getBlockingRound().getFields(), record);
+                log.warn("Adding record to index: " + record);
+                addRecordToBlock(record, roundClass, blockingKeyValue);
+            }
+        }
+        
+        private void addRecordsToIndex() {
+            for (BlockingRound round : blockingRounds) {
+                BlockingRoundClass roundClass = roundClassByRound.get(round.getName());
+                log.warn("Adding records to index: " + records.size());
+                for (Record aRecord : records) {
+                    String blockingKeyValue = BlockingKeyValueGenerator
+                            .generateBlockingKeyValue(roundClass .getBlockingRound().getFields(), aRecord);
+                    addRecordToBlock(aRecord, roundClass, blockingKeyValue);
+                }
+            }
+        }
+
+        private void loadBlocks() {
+            List<Long> recordIds = entityDao.getAllRecordIds(entity);
+            if (recordIds != null && recordIds.size() > 0) {
+                int count=0;
+                for (Long rid : recordIds) {
+                    count++;
+                    Record record = entityDao.loadRecord(entity, rid);
+                    if (record == null) {
+                        log.warn("Couldn't find record with iD " + rid);
+                        continue;
+                    }
+                    if (count % 1000 == 0) {
+                        log.info("Working on record " + count);
+                    }
+                    for (BlockingRoundClass roundClass : blockingClasses) {
+                        String blockingKeyValue = BlockingKeyValueGenerator
+                                .generateBlockingKeyValue(roundClass.getBlockingRound().getFields(), record);
+                        addRecordToBlock(record, roundClass, blockingKeyValue);
+                    }
+                }
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private void addRecordToBlock(Record record, BlockingRoundClass roundClass, String blockingKeyValue) {
+            long startLoadTime = new Date().getTime();
+            boolean done=true;
+            Record blockRecord = null;
+            do {
+                try {
+                    blockRecord = getBlockingDao().loadBlockData(entity, roundClass, blockingKeyValue);
+                    if (blockRecord == null) {
+                        blockRecord = new Record(roundClass.getRoundClass());
+                        Set<Long> rids = new HashSet<Long>();
+                        rids.add(record.getRecordId());
+                        populateBlockData(blockRecord, blockingKeyValue, rids);
+                    } else {
+                        Set<Long> rids = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);
+                        if (maximumBlockSize > 0 && rids.size() >= maximumBlockSize) {
+                            if (log.isTraceEnabled()) {
+                                log.trace("Block with key " + blockingKeyValue + " exceeded the maximum block size of " + maximumBlockSize);
+                            }
+                            break;
+                        }
+                        rids.add(record.getRecordId());
+                    }
+                    getBlockingDao().saveBlockData(entity, roundClass, blockRecord);
+                    done=true;
+                } catch (ConcurrentModificationException e) {
+                    done=false;
+                }
+            } while (!done);
+            long loadTime = new Date().getTime() - startLoadTime;
+            if (log.isDebugEnabled()) {
+                log.info("Added a record to block: " + blockRecord.get(RECORDIDS_FIELD) + " in " + loadTime + " msec.");
+            }
+        }
+        
+        public Record getNewRecord() {
+            return newRecord;
+        }
+
+        public void setNewRecord(Record newRecord) {
+            this.newRecord = newRecord;
+        }
+
+        public Entity getEntity() {
+            return entity;
+        }
+
+        public void setEntity(Entity entity) {
+            this.entity = entity;
+        }
+
+        public Record getRecord() {
+            return record;
+        }
+
+        public void setRecord(Record record) {
+            this.record = record;
+        }
+
+        public BlockingTaskWorkType getWorkType() {
+            return workType;
+        }
+
+        public void setWorkType(BlockingTaskWorkType workType) {
+            this.workType = workType;
+        }
+
+        private void populateBlockData(Record record, String blockingKeyValue, Set<Long> rids) {
+            record.set(BLOCKINGKEYVALUE_FIELD, blockingKeyValue);
+            record.set(RECORDIDS_FIELD, rids);
+        }
     }
 }

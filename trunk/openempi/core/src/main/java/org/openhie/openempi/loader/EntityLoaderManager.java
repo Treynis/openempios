@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.openhie.openempi.ApplicationException;
-import org.openhie.openempi.entity.DataAccessIntent;
 import org.openhie.openempi.entity.RecordQueryService;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Record;
 

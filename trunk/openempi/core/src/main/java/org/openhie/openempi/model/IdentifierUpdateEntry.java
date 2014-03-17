@@ -26,7 +26,6 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -48,6 +47,7 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "identifier_update_entry")
 @GenericGenerator(name = "identifier_update_entry_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "identifier_event_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")}
     )
 @XmlRootElement

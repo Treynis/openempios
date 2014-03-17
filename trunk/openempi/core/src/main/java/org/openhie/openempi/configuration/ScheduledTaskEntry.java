@@ -33,6 +33,7 @@ public class ScheduledTaskEntry extends BaseObject
 	public final static int SCHEDULE_WITH_FIXED_DELAY_ENTRY_TYPE = 2;
 	
 	private String taskName;
+	private String entityName;
 	private String taskImplementation;
 	private long delay;
 	private long initialDelay;
@@ -53,7 +54,15 @@ public class ScheduledTaskEntry extends BaseObject
 		this.taskName = taskName;
 	}
 
-	public String getTaskImplementation() {
+	public String getEntityName() {
+        return entityName;
+    }
+
+    public void setEntityName(String entityName) {
+        this.entityName = entityName;
+    }
+
+    public String getTaskImplementation() {
 		return taskImplementation;
 	}
 

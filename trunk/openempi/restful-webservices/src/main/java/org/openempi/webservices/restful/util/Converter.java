@@ -20,11 +20,7 @@
  */
 package org.openempi.webservices.restful.util;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 
 import org.openempi.webservices.restful.model.FieldValue;
 import org.openhie.openempi.model.AttributeDatatype;
@@ -33,6 +29,7 @@ import org.openhie.openempi.model.EntityAttribute;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
+import org.openhie.openempi.util.ConvertUtil;
 
 public class Converter
 {
@@ -56,10 +53,10 @@ public class Converter
             String value;
             switch(AttributeDatatype.getById(attrib.getDatatype().getDatatypeCd())) {
             case DATE:
-                value = DateToString((Date) obj);
+                value = ConvertUtil.dateToString((Date) obj);
                 break;
             case TIMESTAMP:
-                value = DateTimeToString((Date) obj);
+                value = ConvertUtil.dateToString((Date) obj);
                 break;
             default:
                 value = obj.toString();
@@ -81,78 +78,39 @@ public class Converter
                 continue;
             }
             String fieldName = attrib.getName();
+            fieldName = fieldName.trim();
+            fieldName = fieldName.replace("\n", "");
             EntityAttribute attribute = entity.findAttributeByName(fieldName);
+            if (attribute == null) {
+                continue;
+            }
 
             switch(AttributeDatatype.getById(attribute.getDatatype().getDatatypeCd())) {
             case DATE:
-                record.set(fieldName, StringToDate(attrib.getValue()));
+                record.set(fieldName, ConvertUtil.stringToDate(attrib.getValue().trim()));
                 break;
             case TIMESTAMP:
-                record.set(fieldName, StringToDateTime(attrib.getValue()));
+                record.set(fieldName, ConvertUtil.stringToDateTime(attrib.getValue().trim()));
                 break;
             case LONG:
-                record.set(fieldName, Long.valueOf(attrib.getValue()));
+                record.set(fieldName, Long.valueOf(attrib.getValue().trim()));
                 break;
             case INTEGER:
-                record.set(fieldName, Integer.valueOf(attrib.getValue()));
+                record.set(fieldName, Integer.valueOf(attrib.getValue().trim()));
                 break;
             case DOUBLE:
-                record.set(fieldName, Double.valueOf(attrib.getValue()));
+                record.set(fieldName, Double.valueOf(attrib.getValue().trim()));
                 break;
             case FLOAT:
-                record.set(fieldName, Float.valueOf(attrib.getValue()));
+                record.set(fieldName, Float.valueOf(attrib.getValue().trim()));
                 break;
             case BOOLEAN:
-                record.set(fieldName, Boolean.valueOf(attrib.getValue()));
+                record.set(fieldName, Boolean.valueOf(attrib.getValue().trim()));
                 break;
             default:
                 // String
-                record.set(fieldName, attrib.getValue());
+                record.set(fieldName, attrib.getValue().trim());
                 break;
-            }
-        }
-        return record;
-    }
-
-    public static Record convertKeyValListToRecord(Entity entity, List<String> keyValList) {
-        Record record = new Record(entity);
-        for (String entry : keyValList) {
-            // entry:  "givenName, Albert"
-            String[] keyValue = entry.split(",");
-
-            if (keyValue.length == 2) {
-                String key = keyValue[0].trim();
-                String value = keyValue[1].trim();
-
-                EntityAttribute attribute = entity.findAttributeByName(key);
-
-                switch(AttributeDatatype.getById(attribute.getDatatype().getDatatypeCd())) {
-                case DATE:
-                    record.set(key, StringToDate(value));
-                    break;
-                case TIMESTAMP:
-                    record.set(key, StringToDateTime(value));
-                    break;
-                case LONG:
-                    record.set(key, Long.parseLong(value));
-                    break;
-                case INTEGER:
-                    record.set(key, Integer.parseInt(value));
-                    break;
-                case DOUBLE:
-                    record.set(key, Double.parseDouble(value));
-                    break;
-                case FLOAT:
-                    record.set(key, Float.parseFloat(value));
-                    break;
-                case BOOLEAN:
-                    record.set(key, Boolean.parseBoolean(value));
-                    break;
-                default:
-                    // String
-                    record.set(key, value);
-                    break;
-                }
             }
         }
         return record;
@@ -197,57 +155,5 @@ public class Converter
         recordLink.setWeight(restRecordLink.getWeight());
 
         return recordLink;
-    }
-
-    public static String DateToString(Date date)
-    {
-        if( date == null)
-            return "";
-        
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        String strDate = df.format(date);
-
-        // System.out.println("Report Date: " + strDate);
-        return strDate;
-    }
-    
-    public static Date StringToDate(String strDate) {
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        Date date = null;
-        if (strDate != null && !strDate.isEmpty()) {
-            try {
-                date = df.parse(strDate);
-                // System.out.println("Today = " + df.format(date));
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        }
-        return date;
-    }
-
-    public static String DateTimeToString(Date date)
-    {
-        if( date == null)
-            return "";
-        
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
-        String strDate = df.format(date);
-
-        // System.out.println("Report Date: " + strDate);
-        return strDate;
-    }
-    
-    public static Date StringToDateTime(String strDate) {
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
-        Date date = null;
-        if (strDate != null && !strDate.isEmpty()) {
-            try {
-                date = df.parse(strDate);
-                // System.out.println("Today = " + df.format(date));
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-        }
-        return date;
     }
 }

@@ -26,9 +26,11 @@ import org.openhie.openempi.InitializationException;
 
 public interface ConfigurationLoader
 {
-	public void loadAndRegisterComponentConfiguration(ConfigurationRegistry registry, Object configurationFragment)
-		throws InitializationException;
-	
-	public void saveAndRegisterComponentConfiguration(ConfigurationRegistry registry, Map<String,Object> configurationData)
-		throws InitializationException;
+    public void loadAndRegisterComponentConfiguration(ConfigurationRegistry registry,
+            Object configurationFragment) throws InitializationException;
+
+    public void saveAndRegisterComponentConfiguration(ConfigurationRegistry registry,
+            Map<String, Object> configurationData) throws InitializationException;
+    
+    public String getComponentEntity();
 }

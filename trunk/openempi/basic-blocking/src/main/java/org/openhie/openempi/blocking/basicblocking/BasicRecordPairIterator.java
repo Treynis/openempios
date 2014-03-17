@@ -51,7 +51,11 @@ public class BasicRecordPairIterator implements RecordPairIterator
 	
 	private synchronized void initialize() {
 		nameValuePairsList = recordPairSource.getBlockingValueList();
-		loadRecordPairList(nameValuePairsList.get(0));
+		if (nameValuePairsList.size() > 0) {
+		    loadRecordPairList(nameValuePairsList.get(0));
+		} else {
+		      recordPairs = new ArrayList<RecordPair>();
+		}
 		lastNameValuePairsSet = 1;
 		lastRecordPair = 0;
 		initialized = true;

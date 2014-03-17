@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
 
 import org.hibernate.Criteria;
 import org.hibernate.Hibernate;
@@ -37,6 +38,7 @@ import org.openhie.openempi.context.Context;
 import org.openhie.openempi.dao.IdentifierDomainDao;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
+import org.openhie.openempi.model.IdentifierUpdateEntry;
 import org.openhie.openempi.model.IdentifierUpdateEvent;
 import org.openhie.openempi.model.User;
 import org.openhie.openempi.notification.EventObservable;
@@ -94,6 +96,7 @@ public class IdentifierDomainDaoHibernate extends UniversalDaoHibernate implemen
 	@SuppressWarnings("unchecked")
 	public IdentifierDomain findIdentifierDomainByName(final String identifierDomainName) {
            return (IdentifierDomain) getHibernateTemplate().execute(new HibernateCallback() {
+                @SuppressWarnings("unchecked")
                 public Object doInHibernate(Session session) throws HibernateException, SQLException {
 
                     Criteria criteria = session.createCriteria(IdentifierDomain.class);
@@ -134,7 +137,7 @@ public class IdentifierDomainDaoHibernate extends UniversalDaoHibernate implemen
             return;
         }
         EventObservable event = (EventObservable) o;
-        if (event.getType() != ObservationEventType.IDENTIFIER_DOMAIN_UPDATED_EVENT) {
+        if (event.getType() != ObservationEventType.IDENTIFIER_DOMAIN_UPDATE_EVENT) {
             return;
         }
         // Reload the cache from the disk since something has changed.
@@ -275,8 +278,8 @@ public class IdentifierDomainDaoHibernate extends UniversalDaoHibernate implemen
                 identifierDomainCache.clear();
                 identifierDomainCache.addAll(domains);
                 if (!registeredUpdateListener) {
-                    Context.registerObserver(this, ObservationEventType.IDENTIFIER_DOMAIN_UPDATED_EVENT);
-                    log.info("Registered the listener for the event: " + ObservationEventType.IDENTIFIER_DOMAIN_UPDATED_EVENT);
+                    Context.registerObserver(this, ObservationEventType.IDENTIFIER_DOMAIN_UPDATE_EVENT);
+                    log.info("Registered the listener for the event: " + ObservationEventType.IDENTIFIER_DOMAIN_UPDATE_EVENT);
                     registeredUpdateListener = true;
                 }
             }

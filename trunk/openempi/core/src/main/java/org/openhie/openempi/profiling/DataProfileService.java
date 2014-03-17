@@ -22,12 +22,17 @@ package org.openhie.openempi.profiling;
 
 import java.util.List;
 
+import org.openhie.openempi.model.DataProfile;
 import org.openhie.openempi.model.DataProfileAttribute;
 import org.openhie.openempi.model.DataProfileAttributeValue;
 
 public interface DataProfileService
 {
-	public List<DataProfileAttribute> getDataProfileAttributes(int sourceId);
+    public List<DataProfile> getDataProfiles();
+
+    public void removeDataProfile(int dataProfileId);
+
+	public List<DataProfileAttribute> getDataProfileAttributes(int dataProfileId);
 	
 	public List<DataProfileAttributeValue> getTopDataProfileAttributeValues(int attributeId, int topCount);
 }

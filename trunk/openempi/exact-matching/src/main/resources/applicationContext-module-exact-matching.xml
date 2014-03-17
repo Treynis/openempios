@@ -30,6 +30,7 @@
 		class="org.openhie.openempi.matching.exactmatching.ExactMatchingConfigurationLoader">
 	</bean>
  
-	<bean id="basicExactMatchingService" class="org.openhie.openempi.matching.exactmatching.DeterministicExactMatchingService">
+	<bean id="basicExactMatchingService" class="org.openhie.openempi.matching.exactmatching.DeterministicExactMatchingService"
+	 	scope="prototype">
 	</bean>
 </beans>

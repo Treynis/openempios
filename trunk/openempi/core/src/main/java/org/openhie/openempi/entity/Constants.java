@@ -26,22 +26,37 @@ public class Constants
 	public final static String DATE_CHANGED_PROPERTY = "dateChanged";
 	public final static String DATE_REVIEWED_PROPERTY = "dateReviewed";
 	public final static String DATE_VOIDED_PROPERTY = "dateVoided";
-	public final static String ENTITY_PROPERTY = "entity";
+	public final static String ENTITY_PROPERTY = "record";
 	public final static String ENTITY_VERSION_ID_PROPERTY = "entityVersionId";
 	public final static String IDENTIFIER_PROPERTY = "identifier";
-	public final static String IDENTIFIER_SET_PROPERTY = "identifierSet";
+    public final static String IDENTIFIER_EDGE_TYPE = "identifierEdge";
+    public final static String IDENTIFIER_IN_PROPERTY = "out_" + IDENTIFIER_EDGE_TYPE;
+    public final static String IDENTIFIER_OUT_PROPERTY = "out_" + IDENTIFIER_EDGE_TYPE;
 	public final static String IDENTIFIER_DOMAIN_ID_PROPERTY = "identifierDomainId";
 	public final static String LINK_SOURCE_PROPERTY = "source";
 	public final static String LINK_STATE_PROPERTY = "state";
 	public final static String LINK_VECTOR_PROPERTY = "vector";
 	public final static String LINK_WEIGHT_PROPERTY = "weight";
 	public final static String ORIENTDB_CLUSTER_ID_KEY = "ORIENTDB_CLUSTER_ID";
-	public final static String OTHER_EDGE_PROPERTY = "OTHER_EDGE_PROPERTY";
 	public final static String RECORD_ID_PROPERTY = "recordId";
 	public final static String USER_CHANGED_BY_PROPERTY = "userChangedBy";
 	public final static String USER_CREATED_BY_PROPERTY = "userCreatedBy";
 	public final static String USER_REVIEWED_BY_PROPERTY = "userReviewedBy";
 	public final static String USER_VOIDED_BY_PROPERTY = "userVoidedBy";
-	public final static String VERTEX_IN_PROPERTY = "in";
-	public final static String VERTEX_OUT_PROPERTY = "out";
+	public final static String LOCAL_STORAGE_MODE = "local";
+	public final static String PLOCAL_STORAGE_MODE = "plocal";
+	public final static String REMOTE_STORAGE_MODE = "remote";
+	public final static String DATA_DIRECTORY_KEY = "dataDirectory";
+	public final static String INDEX_NAME_PREFIX = "idx-";
+	public final static String VERTEX_CLASS_NAME = "V";
+	public final static String EDGE_CLASS_NAME = "E";
+	public final static String GRAPH_DATABASE_TYPE = "graph";
+	public final static String RECORD_LINK_TYPE = "recordLink";
+	public final static String IDENTIFIER_TYPE = "identifier";
+    public final static String EDGE_IN_PROPERTY = "in";
+    public final static String EDGE_OUT_PROPERTY = "out";
+    public final static String VERTEX_IN_PROPERTY = "in_" + RECORD_LINK_TYPE;
+    public final static String VERTEX_OUT_PROPERTY = "out_" + RECORD_LINK_TYPE;
+
+	
 }

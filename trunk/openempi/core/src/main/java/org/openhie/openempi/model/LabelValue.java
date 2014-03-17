@@ -33,8 +33,7 @@ import java.util.Comparator;
  *
  * @see org.apache.struts.util.LabelValueBean
  */
-@SuppressWarnings("unchecked")
-public class LabelValue implements Comparable, Serializable {
+public class LabelValue implements Comparable<LabelValue>, Serializable {
 
     private static final long serialVersionUID = 3689355407466181430L;
 
@@ -42,10 +41,10 @@ public class LabelValue implements Comparable, Serializable {
      * Comparator that can be used for a case insensitive sort of
      * <code>LabelValue</code> objects.
      */
-    public static final Comparator CASE_INSENSITIVE_ORDER = new Comparator() {
-        public int compare(Object o1, Object o2) {
-            String label1 = ((LabelValue) o1).getLabel();
-            String label2 = ((LabelValue) o2).getLabel();
+    public static final Comparator<LabelValue> CASE_INSENSITIVE_ORDER = new Comparator<LabelValue>() {
+        public int compare(LabelValue o1, LabelValue o2) {
+            String label1 = o1.getLabel();
+            String label2 = o2.getLabel();
             return label1.compareToIgnoreCase(label2);
         }
     };
@@ -112,10 +111,10 @@ public class LabelValue implements Comparable, Serializable {
      * @param o LabelValue object to compare to
      * @return 0 if labels match for compared objects
      */
-    public int compareTo(Object o) {
+    public int compareTo(LabelValue o) {
         // Implicitly tests for the correct type, throwing
         // ClassCastException as required by interface
-        String otherLabel = ((LabelValue) o).getLabel();
+        String otherLabel = o.getLabel();
 
         return this.getLabel().compareTo(otherLabel);
     }

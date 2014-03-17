@@ -27,17 +27,15 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
@@ -51,7 +49,8 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "user_file")
 @GenericGenerator(name = "user_file_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "user_file_seq"),
-        @Parameter(name = "optimizer", value = "hilo")})
+        @Parameter(name = "increment_size", value = "10"),
+       @Parameter(name = "optimizer", value = "hilo")})
 public class UserFile extends BaseObject implements Serializable
 {
 	private static final long serialVersionUID = 6170253797278224912L;

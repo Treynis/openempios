@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Observer;
-import java.util.Properties;
+import java.util.Scanner;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -42,15 +42,17 @@ import org.openhie.openempi.AuthenticationException;
 import org.openhie.openempi.Constants;
 import org.openhie.openempi.blocking.BlockingLifecycleObserver;
 import org.openhie.openempi.blocking.BlockingService;
+import org.openhie.openempi.cluster.ClusterManager;
 import org.openhie.openempi.configuration.Configuration;
 import org.openhie.openempi.configuration.ScheduledTaskEntry;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
+import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.RecordQueryService;
-import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.loader.FileLoaderConfigurationService;
 import org.openhie.openempi.matching.MatchingLifecycleObserver;
 import org.openhie.openempi.matching.MatchingService;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.User;
 import org.openhie.openempi.notification.EventObservable;
 import org.openhie.openempi.notification.NotificationService;
@@ -63,10 +65,10 @@ import org.openhie.openempi.service.PersonManagerService;
 import org.openhie.openempi.service.PersonQueryService;
 import org.openhie.openempi.service.UserManager;
 import org.openhie.openempi.service.ValidationService;
+import org.openhie.openempi.service.JobQueueService;
 import org.openhie.openempi.singlebestrecord.SingleBestRecordService;
 import org.openhie.openempi.stringcomparison.StringComparisonService;
 import org.openhie.openempi.transformation.TransformationService;
-import org.openhie.openempi.util.PropertiesUtils;
 import org.openhie.openempi.validation.EntityValidationService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -80,8 +82,10 @@ public class Context implements ApplicationContextAware
 	
 	private static final ThreadLocal<Object[] /* UserContext */> userContextHolder = new ThreadLocal<Object[] /* UserContext */>();
 	private static ApplicationContext applicationContext;
+	private static ClusterManager clusterManager;
 	private static UserManager userManager;
 	private static EntityDefinitionManagerService entityDefinitionManagerService;
+	private static JobQueueService jobQueueService;
 	private static RecordManagerService recordManagerService;
 	private static RecordQueryService recordQueryService;
 	private static PersonManagerService personService;
@@ -89,8 +93,10 @@ public class Context implements ApplicationContextAware
 	private static IdentifierDomainService identifierDomainService;
 	private static ValidationService validationService;
 	private static Configuration configuration;
-	private static MatchingService matchingService;
-	private static BlockingService blockingService;
+	private static List<MatchingService> matchingServiceList = new ArrayList<MatchingService>();
+	private static Map<String,MatchingService> matchingServiceMap = new HashMap<String,MatchingService>();
+    private static List<BlockingService> blockingServiceList = new ArrayList<BlockingService>();
+    private static Map<String,BlockingService> blockingServiceMap = new HashMap<String,BlockingService>();
 	private static AuditEventService auditEventService;
 	private static StringComparisonService stringComparisonService;
 	private static TransformationService transformationService;
@@ -102,6 +108,7 @@ public class Context implements ApplicationContextAware
 	private static EntityValidationService entityValidationService;
 	private static ExecutorService threadPool;
 	private static ScheduledExecutorService scheduler;
+	private static DataAccessIntent currentIntent;
 	private static boolean isInitialized = false;
 	private static Map<ObservationEventType,EventObservable> observableByType = new HashMap<ObservationEventType,EventObservable>(); 
 	
@@ -119,13 +126,18 @@ public class Context implements ApplicationContextAware
 		try {
 			applicationContext = new ClassPathXmlApplicationContext(getConfigLocationsAsArray());
 			applicationContext.getBean("context");
+			startCluster();
 			configuration.init();
 			threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 			scheduler = Executors.newScheduledThreadPool(SCHEDULER_THREAD_POOL_SIZE);
 			
 			startPersistenceService();
-			startBlockingService();
-			startMatchingService();
+			for (BlockingService service : blockingServiceList) {
+			    startBlockingService(service);
+			}
+			for (MatchingService service : matchingServiceList) {
+			    startMatchingService(service);
+			}
 			startNotificationService();
 			startScheduledTasks();
 			isInitialized = true;
@@ -134,18 +146,33 @@ public class Context implements ApplicationContextAware
 		}
 	}
 	
-	public static void shutdown() {
-		stopMatchingService();
-		stopBlockingService();
-		stopPersistenceService();
+	private static void startCluster() {
+	    clusterManager = new ClusterManager();
+	    clusterManager.start();
+    }
+
+    public static void shutdown() {
+        for (MatchingService service : matchingServiceList) {
+            stopMatchingService(service);
+        }
+        for (BlockingService service : blockingServiceList) {
+            stopBlockingService(service);
+        }
+        stopRecordCacheService(null);
+		stopPersistenceService(null);
 		stopScheduledTasks();
 		stopThreadPool();
+		clusterManager.stop();
 		isInitialized = false;		
 	}
 	
 	public static void shutdownAll() {
-		stopMatchingService();
-		stopBlockingService();
+        for (MatchingService service : matchingServiceList) {
+            stopMatchingService(service);
+        }        
+        for (BlockingService service : blockingServiceList) {
+            stopBlockingService(service);
+        }
 		if (notificationService != null) {
 			try {
 				notificationService.shutdown();
@@ -234,7 +261,7 @@ public class Context implements ApplicationContextAware
 		}
 		ArrayList<String> configFiles = generateConfigFileList();
 		
-		addExtensionContextsFromPropertiesFile(configFiles);
+		addExtensionContextsFromFile(configFiles);
 		addExtensionContextsFromSystemProperty(configFiles);
 		return configFiles;
 	}
@@ -248,6 +275,17 @@ public class Context implements ApplicationContextAware
 		}
 		log.debug("OPENEMPI_HOME is set to " + openEmpiHome);
 		return openEmpiHome;
+	}
+
+	public static boolean isInCLusterMode() {
+	    String value = System.getProperty(Constants.OPENEMPI_CLUSTER_MODE);
+	    if (value == null || value.isEmpty()) {
+	        return false;
+	    }
+	    if (value.equalsIgnoreCase("true")) {
+	        return true;
+	    }
+	    return false;
 	}
 
 	private static ArrayList<String> generateConfigFileList() {
@@ -272,18 +310,23 @@ public class Context implements ApplicationContextAware
 		addExtensionContextsFromCommaSeparatedList(configFiles, extensionContexts);
 	}
 
-	private static void addExtensionContextsFromPropertiesFile(ArrayList<String> configFiles) {
-		Properties props;
+	private static void addExtensionContextsFromFile(ArrayList<String> configFiles) {
 		try {
 			String filename = getOpenEmpiHome() + "/conf/" + getExtensionsContextsPropertiesFilename();
 			log.debug("Attempting to load extension contexts from " + filename);
-			props = PropertiesUtils.load(new File(filename));
+			Scanner scanner = new Scanner(new File(filename));
+			while (scanner.hasNext()) {
+			    String line = scanner.nextLine();
+			    if (line != null && line.startsWith("#")) {
+			        continue;
+			    }
+			    log.info("Adding extenstion application context from location: " + line);
+			    configFiles.add(line);
+			}
 		} catch (Exception e) {
 			log.warn("Unable to load the extension contexts properties file; will resort to System property. Error: " + e, e);
 			return;
 		}
-		String extensionContexts = props.getProperty(Constants.OPENEMPI_EXTENSION_CONTEXTS);
-		addExtensionContextsFromCommaSeparatedList(configFiles, extensionContexts);
 	}
 
 	private static String getExtensionsContextsPropertiesFilename() {
@@ -320,7 +363,7 @@ public class Context implements ApplicationContextAware
 			log.info("Scheduling tasks...");
 			@SuppressWarnings("unchecked")
 			List<ScheduledTaskEntry> list = (List<ScheduledTaskEntry>)
-					configuration.lookupConfigurationEntry(Configuration.SCHEDULED_TASK_LIST);
+					configuration.lookupConfigurationEntry(null, Configuration.SCHEDULED_TASK_LIST);
 			if (list != null && list.size() > 0) {
 				startScheduledTasks(list);
 			}
@@ -356,6 +399,19 @@ public class Context implements ApplicationContextAware
 		return getUserContext().authenticate(sessionKey);
 	}
 
+    public static Map<String, Object> getConfigurationRegistry() {
+        return clusterManager.getConfigurationRegistry();
+    }
+
+    public static Object lookupConfigurationEntry(String entityName, String key) {
+        return clusterManager.lookupConfigurationEntry(entityName, key);
+    }
+
+
+    public static void registerConfigurationEntry(String entityName, String key, Object entry) {
+        clusterManager.registerConfigurationeEntry(entityName, key, entry);
+    }
+
 	public static UserContext getUserContext() {
 		UserContext userContext = null;
 		Object[] arr = userContextHolder.get();
@@ -374,9 +430,9 @@ public class Context implements ApplicationContextAware
 		userContextHolder.set(arr);
 	}
 
-	private static void startBlockingService() {
+	private static void startBlockingService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Starting the blocking service at startup.",
-				ServiceStarterStopper.START_SERVICE, ServiceStarterStopper.BLOCKING_SERVICE);
+				ServiceStarterStopper.START_SERVICE, ServiceStarterStopper.BLOCKING_SERVICE, service);
 		Future<Object> future = threadPool.submit(task);
 		try {
 			future.get();
@@ -389,9 +445,9 @@ public class Context implements ApplicationContextAware
 		}
 	}
 
-	private static void stopBlockingService() {
+	private static void stopBlockingService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Shutting down the blocking service before system shutdown.",
-				ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.BLOCKING_SERVICE);
+				ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.BLOCKING_SERVICE, service);
 		try {
 			Future<Object> future = threadPool.submit(task);
 			future.get();
@@ -436,9 +492,9 @@ public class Context implements ApplicationContextAware
 		}		
 	}
 
-	private static void stopPersistenceService() {
+	private static void stopPersistenceService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Shutting down the persistence service before system shutdown.",
-				ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.PERSISTENCE_SERVICE);
+				ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.PERSISTENCE_SERVICE, service);
 		try {
 			Future<Object> future = threadPool.submit(task);
 			future.get();
@@ -452,10 +508,39 @@ public class Context implements ApplicationContextAware
 			throw new RuntimeException("Initialization failed while shutting down the persistence service.");
 		}		
 	}
+    
+//    private static void startRecordCacheService() {
+//        try {
+//            RecordCacheLifecycleObserver recordCacheService = (RecordCacheLifecycleObserver) Context.getRecordCacheService();
+//            if (recordCacheService != null) {
+//                recordCacheService.startup();
+//            }
+//        } catch (Exception e) {
+//            log.error("Unable to start the record cache service due to: " + e, e);
+//            System.exit(-1);
+//        }       
+//    }
+
+    private static void stopRecordCacheService(Object service) {
+        Callable<Object> task = new ServiceStarterStopper("Shutting down the record cache service before system shutdown.",
+                ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.RECORD_CACHE_SERVICE, service);
+        try {
+            Future<Object> future = threadPool.submit(task);
+            future.get();
+        } catch (RejectedExecutionException e) {
+            log.warn("Was unable to initiate a stop request on the record service: " + e, e);
+        } catch (InterruptedException e) {
+            log.error("Failed while shutting down the record cache service: " + e, e);
+            throw new RuntimeException("Initialization failed while shutting down the record cache service.");
+        } catch (ExecutionException e) {
+            log.error("Failed while shutting down the record cache service: " + e, e);
+            throw new RuntimeException("Initialization failed while shutting down the record cache service.");
+        }
+    }
 	
-	private static void startMatchingService() {
+	private static void startMatchingService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Starting the matching service at startup.",
-				ServiceStarterStopper.START_SERVICE, ServiceStarterStopper.MATCHING_SERVICE);
+				ServiceStarterStopper.START_SERVICE, ServiceStarterStopper.MATCHING_SERVICE, service);
 		Future<Object> future = threadPool.submit(task);
 		try {
 			future.get();
@@ -468,9 +553,9 @@ public class Context implements ApplicationContextAware
 		}		
 	}
 
-	private static void stopMatchingService() {
+	private static void stopMatchingService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Shutting down the matching service before system shutdown.",
-				ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.MATCHING_SERVICE);
+				ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.MATCHING_SERVICE, service);
 		try {
 			Future<Object> future = threadPool.submit(task);
 			future.get();
@@ -524,7 +609,15 @@ public class Context implements ApplicationContextAware
 	public void setRecordQueryService(RecordQueryService entityQueryService) {
 		Context.recordQueryService = entityQueryService;
 	}
-	
+
+    public static JobQueueService getJobQueueService() {
+        return jobQueueService;
+    }
+
+    public void setJobQueueService(JobQueueService jobQueueService) {
+        Context.jobQueueService = jobQueueService;
+    }
+
 	public void setApplicationContext(ApplicationContext applicationContext) {
 		Context.applicationContext = applicationContext;
 	}
@@ -556,29 +649,41 @@ public class Context implements ApplicationContextAware
 	public void setValidationService(ValidationService validationService) {
 		Context.validationService = validationService;
 	}
-
-	public synchronized static MatchingService getMatchingService() {
-		return matchingService;
+    
+	public synchronized static MatchingService getMatchingService(String entityName) {
+        return matchingServiceMap.get(entityName);
 	}
 
-	public static void registerCustomMatchingService(MatchingService matchingService) {
-		Context.matchingService = matchingService;
+	public static void registerCustomMatchingService(String entityName, MatchingService matchingService) {
+	    if (matchingServiceMap.get(entityName) == null) {
+	        matchingServiceMap.put(entityName, matchingService);
+	    }
+	    for (MatchingService service : matchingServiceList) {
+	        if (service.getMatchingServiceId() == matchingService.getMatchingServiceId()) {
+	            return;
+	        }
+	    }
+	    matchingServiceList.add(matchingService);
+	}
+
+	public static void registerCustomBlockingService(String entityName, BlockingService blockingService) {
+        if (blockingServiceMap.get(entityName) == null) {
+            blockingServiceMap.put(entityName, blockingService);
+        }
+        for (BlockingService service : blockingServiceList) {
+            if (service.getBlockingServiceId() == blockingService.getBlockingServiceId()) {
+                return;
+            }
+        }
+        blockingServiceList.add(blockingService);
 	}
 	
-	public void setMatchingService(MatchingService matchingService) {
-		Context.matchingService = matchingService;
-	}
-
-	public static void registerCustomBlockingService(BlockingService blockingService) {
-		Context.blockingService = blockingService;
+	public static ClusterManager getClusterManager() {
+	    return clusterManager;
 	}
 	
-	public static BlockingService getBlockingService() {
-		return blockingService;
-	}
-
-	public void setBlockingService(BlockingService blockingService) {
-		Context.blockingService = blockingService;
+	public static BlockingService getBlockingService(String entityName) {
+        return blockingServiceMap.get(entityName);
 	}
 	
 	public static SingleBestRecordService getSingleBestRecordService() {
@@ -671,7 +776,15 @@ public class Context implements ApplicationContextAware
 	public static ScheduledExecutorService getScheduler() {
 		return scheduler;
 	}
-	
+
+    public static DataAccessIntent getDataAccessIntent() {
+        return Context.currentIntent;
+    }
+
+    public static void registerDataAccessIntent(DataAccessIntent dataAccessIntent) {
+        Context.currentIntent = dataAccessIntent;
+    }
+
 	private static class ServiceStarterStopper implements Callable<Object>
 	{
 		private final static int START_SERVICE = 0;
@@ -679,15 +792,18 @@ public class Context implements ApplicationContextAware
 		private final static int BLOCKING_SERVICE = 2;
 		private final static int MATCHING_SERVICE = 3;
 		private final static int PERSISTENCE_SERVICE = 4;
+        private final static int RECORD_CACHE_SERVICE = 5;
 		
 		private String message;
 		private int operation;
 		private int serviceType;
+		private Object service;
 		
-		public ServiceStarterStopper(String message, int operation, int serviceType) {
+		public ServiceStarterStopper(String message, int operation, int serviceType, Object service) {
 			this.message = message;
 			this.operation = operation;
 			this.serviceType = serviceType;
+			this.service = service;
 		}
 		
 		public Object call() throws Exception {
@@ -701,19 +817,20 @@ public class Context implements ApplicationContextAware
 		
 		public Object startService() {
 			if (serviceType == BLOCKING_SERVICE) {
-				BlockingLifecycleObserver blockingService = (BlockingLifecycleObserver) Context.getBlockingService();
+				BlockingLifecycleObserver blockingService = (BlockingLifecycleObserver) service;
 				if (blockingService != null) {
 					blockingService.startup();
 				}
 				return blockingService;
 			} else if (serviceType == MATCHING_SERVICE) {
-				MatchingLifecycleObserver matchingService = (MatchingLifecycleObserver) Context.getMatchingService();
+				MatchingLifecycleObserver matchingService = (MatchingLifecycleObserver) service;
 				if (matchingService != null) {
 					matchingService.startup();
 				}
 				return matchingService;	
 			} else if (serviceType == PERSISTENCE_SERVICE) {
-				PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver) Context.getEntityDefinitionManagerService();
+				PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver)
+				        Context.getEntityDefinitionManagerService();
 				if (persistenceService != null) {
 					persistenceService.startup();
 				}
@@ -722,6 +839,13 @@ public class Context implements ApplicationContextAware
 					persistenceService.startup();
 				}
 				return persistenceService;
+//            } else if (serviceType == RECORD_CACHE_SERVICE) {
+//                RecordCacheLifecycleObserver recordCacheService = (RecordCacheLifecycleObserver)
+//                        Context.getRecordCacheService();
+//                if (recordCacheService != null) {
+//                    recordCacheService.startup();
+//                }
+//                return recordCacheService;
 			} else {
 				return null;
 			}
@@ -729,19 +853,20 @@ public class Context implements ApplicationContextAware
 		
 		public Object stopService() {
 			if (serviceType == BLOCKING_SERVICE) {
-				BlockingLifecycleObserver blockingService = (BlockingLifecycleObserver) Context.getBlockingService();
+				BlockingLifecycleObserver blockingService = (BlockingLifecycleObserver) service;
 				if (blockingService != null) {
 					blockingService.shutdown();
 				}
 				return blockingService;
 			} else if (serviceType == MATCHING_SERVICE) {
-				MatchingLifecycleObserver matchingService = (MatchingLifecycleObserver) Context.getMatchingService();
+				MatchingLifecycleObserver matchingService = (MatchingLifecycleObserver) service;
 				if (matchingService != null) {
 					matchingService.shutdown();
 				}
 				return matchingService;
 			} else if (serviceType == PERSISTENCE_SERVICE) {
-				PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver) Context.getRecordManagerService();
+				PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver) 
+				        Context.getRecordManagerService();
 				if (persistenceService != null) {
 					persistenceService.shutdown();
 				}
@@ -750,6 +875,13 @@ public class Context implements ApplicationContextAware
 					persistenceService.shutdown();
 				}
 				return persistenceService;
+//            } else if (serviceType == RECORD_CACHE_SERVICE) {
+//                RecordCacheLifecycleObserver recordCacheService = (RecordCacheLifecycleObserver)
+//                        Context.getRecordCacheService();
+//                if (recordCacheService != null) {
+//                    recordCacheService.shutdown();
+//                }
+//                return recordCacheService;
 			} else {
 				return null;
 			}

@@ -23,8 +23,8 @@ package org.openhie.openempi.matching.fellegisunter;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
@@ -45,6 +45,7 @@ import org.openhie.openempi.dao.UniversalDao;
 import org.openhie.openempi.entity.dao.EntityDao;
 import org.openhie.openempi.matching.AbstractMatchingLifecycleObserver;
 import org.openhie.openempi.matching.MatchingService;
+import org.openhie.openempi.matching.SamplingService;
 import org.openhie.openempi.model.ComparisonVector;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.LinkSource;
@@ -61,71 +62,70 @@ import org.openhie.openempi.util.ConvertUtil;
 public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObserver implements MatchingService,
         Observer
 {
-    private final static String BLOCKING_ROUNDS_REGISTRY_KEY = "blockingRounds";
-    private HashMap<String, MatchField> matchFieldByName;
-    private EntityDao entityDao;
-    private UniversalDao universalDao;
-    private String[] matchFieldNames;
-    private MatchField[] matchFields;
-    private boolean initialized = false;
-    private FellegiSunterParameters fellegiSunterParams;
+    private static final String BLOCKING_ROUNDS_REGISTRY_KEY = "blockingRounds";
     private static final Double MIN_MARGINAL_VALUE = 0.0000001;
     private static final Double MAX_MARGINAL_VALUE = 0.9999999;
-    private HashMap<Integer, ComparisonVector> vectorByValueMap = new HashMap<Integer, ComparisonVector>();
-    private List<MatchField> fields;
-    private Float falseNegativeProbability;
-    private Float falsePositiveProbability;
-    private String configurationDirectory;
-    private boolean logByVectors;
-    private double logByVectorsFraction;
-    private boolean logByWeight;
-    private String logDestination;
-    private Set<Integer> vectorsToLog;
-    private Set<String> blockingFieldList;
-    private List<String> logFieldList;
-    private double logWeightLowerBound;
-    private double logWeightUpperBound;
-    private double logByWeightFraction;
-    private Entity entity;
-    
+    private EntityDao entityDao;
+    private UniversalDao universalDao;
+    private boolean useSampling;
+    private SamplingService samplingService;
+    private Map<String,MatchingConfiguration> configByEntity = new HashMap<String,MatchingConfiguration>();
+
     public void startup() throws InitializationException {
-        try {
-            loadConfiguration();
-        } catch (Throwable t) {
-            if (t.getCause() == null || !(t.getCause() instanceof FileNotFoundException)) {
-                log.error("Failed while initializing the probabilistic matching service: " + t, t);
-            } else {
-                log.warn("Didn't find an existing configuration of the Fellegi Sunter matching algorithm; it will now be regenerated.");
+        List<Entity> entities = Context.getEntityDefinitionManagerService().loadEntities();
+        for (Entity entity : entities) {
+            MatchingService service = Context.getMatchingService(entity.getName());
+            if (service.getMatchingServiceId() != getMatchingServiceId()) {
+                continue;
             }
-            initialized = false;
+            
+            MatchingConfiguration config = new MatchingConfiguration();
             try {
-				linkRecords(entity);
-				loadConfiguration();
-                @SuppressWarnings("unchecked")
-                Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                        .lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
-                VectorConfigurationHelper.updateVectorConfiguration(configurationData, fellegiSunterParams);
-            } catch (Exception e) {
-                log.error("Failed while initializing the probabilistic matching service: " + e, e);
-                initialized = false;
+                log.info("Loading configuration for entity " + entity.getName());
+                loadConfiguration(entity, config);
+            } catch (Throwable t) {
+                configByEntity.put(entity.getName(), config);
+                if (t.getCause() == null || !(t.getCause() instanceof FileNotFoundException)) {
+                    log.error("Failed while initializing the probabilistic matching service: " + t, t);
+                } else {
+                    log.warn("Didn't find an existing configuration of the Fellegi Sunter matching algorithm; it will now be regenerated.");
+                }
+                config.setInitialized(false);
+                try {
+                    linkRecords(entity);
+                    loadConfiguration(entity, config);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
+                            .lookupConfigurationEntry(entity.getName(), ConfigurationRegistry.MATCH_CONFIGURATION);
+                    updateRegistryWithNewModel(configurationData, config.getFellegiSunterParams());
+                    VectorConfigurationHelper.updateVectorConfiguration(configurationData, config.getFellegiSunterParams());
+                } catch (Exception e) {
+                    log.error("Failed while initializing the probabilistic matching service: " + e, e);
+                    config.setInitialized(false);
+                }
             }
+            configByEntity.put(entity.getName(), config);
         }
-        Context.registerObserver(this, ObservationEventType.MATCHING_CONFIGURATION_UPDATED_EVENT);
+        Context.registerObserver(this, ObservationEventType.MATCHING_CONFIGURATION_UPDATE_EVENT);
     }
 
     public Set<RecordPair> match(Record record) throws ApplicationException {
         log.trace("Looking for matches on record " + record);
-        if (!initialized) {
-            throw new ApplicationException("Matching service has not been initialized yet.");
+        String entityName = record.getEntity().getName();
+        MatchingConfiguration config = getConfiguration(entityName);
+        loadLogFields(record.getEntity().getName(), config);
+        if (!config.isInitialized()) {
+            log.warn("The matching service has not been initialized yet for entity " + entityName);
+            throw new ApplicationException("Matching service has not been initialized yet for entity " + entityName);
         }
-        List<RecordPair> pairs = Context.getBlockingService().findCandidates(record);
+        List<RecordPair> pairs = Context.getBlockingService(entityName).findCandidates(record);
         Set<RecordPair> matches = new java.util.HashSet<RecordPair>();
-        scoreRecordPairs(pairs);
-        calculateRecordPairWeights(pairs, fellegiSunterParams);
+        scoreRecordPairs(config, pairs);
+        calculateRecordPairWeights(pairs, config.getFellegiSunterParams());
 
         // Apply Fellegi-Sunter classification rule to each pair
         for (RecordPair pair : pairs) {
-            classifyRecordPair(pair);
+            classifyRecordPair(config, pair);
             if (pair.getMatchOutcome() == RecordPair.MATCH_OUTCOME_LINKED) {
                 matches.add(pair);
             } else if (pair.getMatchOutcome() == RecordPair.MATCH_OUTCOME_POSSIBLE) {
@@ -135,9 +135,9 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
             }
         }
 
-        if (isLoggingEnabled()) {
+        if (isLoggingEnabled(config)) {
             for (RecordPair pair : pairs) {
-                logRecordPair(pair);
+                logRecordPair(config, pair);
             }
         }
         return matches;
@@ -147,17 +147,20 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         if (log.isTraceEnabled()) {
             log.trace("Looking for matches on record pair " + recordPair);
         }
-        if (!initialized) {
-            throw new ApplicationException("Matching service has not been initialized yet.");
+        String entityName = recordPair.getLeftRecord().getEntity().getName();
+        MatchingConfiguration config = getConfiguration(entityName);
+        loadLogFields(entityName, config);
+        if (!config.isInitialized()) {
+            throw new ApplicationException("Matching service has not been initialized yet for entity " + entityName);
         }
-        scoreRecordPair(recordPair);
-        calculateRecordPairWeight(recordPair, fellegiSunterParams);
+        scoreRecordPair(config, recordPair);
+        calculateRecordPairWeight(recordPair, config.getFellegiSunterParams());
 
         log.debug("Record pair weight (" + recordPair.getLeftRecord().getRecordId() + ","
                 + recordPair.getRightRecord().getRecordId() + ") is: " + recordPair.getWeight());
-        classifyRecordPair(recordPair);
-        if (isLoggingEnabled()) {
-            logRecordPair(recordPair);
+        classifyRecordPair(config, recordPair);
+        if (isLoggingEnabled(config)) {
+            logRecordPair(config, recordPair);
         }
         return recordPair;
     }
@@ -165,45 +168,78 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
 	public void linkRecords(Entity entity) {
 		log.info("Retrieving all record pairs before initializing the classification model.");
 		List<RecordPair> pairs = getRecordPairs(entity);
-        log.info("Scoring all record pairs retrieved from the blocking service.");
+        MatchingConfiguration config = getConfiguration(entity.getName());
 
-        fellegiSunterParams = new FellegiSunterParameters(getFields().size());
+        FellegiSunterParameters fellegiSunterParams = new FellegiSunterParameters(config.getFields().size());
+        config.setFellegiSunterParams(fellegiSunterParams);
+
         ProbabilisticMatchingConfigurationLoader.loadDefaultValues(fellegiSunterParams);
-        fellegiSunterParams.setMatchingFieldNames(matchFieldNames);
-        fellegiSunterParams.setMu(getFalsePositiveProbability());
-        fellegiSunterParams.setLambda(getFalseNegativeProbability());
+        fellegiSunterParams.setMatchingFieldNames(config.getMatchFieldNames());
+        fellegiSunterParams.setMu(config.getFalsePositiveProbability());
+        fellegiSunterParams.setLambda(config.getFalseNegativeProbability());
 		if (pairs.size() > 0) {
 			log.info("Scoring all record pairs retrieved from the blocking service.");
-			scoreRecordPairs(pairs);
+			scoreRecordPairs(config, pairs);
             log.info("Calculating vector frequencies.");
-            calculateVectorFrequencies(pairs, fellegiSunterParams);
+            calculateVectorFrequencies(pairs, config);
             log.info("Estimating model conditional distributions.");
-            estimateMarginalProbabilities(fellegiSunterParams);
+            estimateMarginalProbabilities(config);
             adjustProbabilityValues(fellegiSunterParams);
             log.info("Calculating weights for all record pairs.");
             calculateRecordPairWeights(pairs, fellegiSunterParams);
             log.info("Ordering record pairs using weight value.");
             orderRecordPairsByWeight(pairs);
-            calculateMarginalProbabilities(pairs, fellegiSunterParams);
+            calculateMarginalProbabilities(config, pairs, fellegiSunterParams);
             // calculateBoundsOnVectors(fellegiSunterParams);
             log.info("Calculating classification model lower and upper bounds.");
             calculateBounds(pairs, fellegiSunterParams);
 		} else {
 			createDefaultConfiguration(fellegiSunterParams);
 		}
-        FellegiSunterConfigurationManager.saveParameters(getConfigurationDirectory(), fellegiSunterParams);
-        loadLogFields();
-        initialized = true;
+        FellegiSunterConfigurationManager.saveParameters(config.getConfigurationDirectory(), entity.getName(),
+                fellegiSunterParams);
+        loadLogFields(entity.getName(), config);
+        config.setInitialized(true);
     }
 
-    private void classifyRecordPair(RecordPair recordPair) {
+	public FellegiSunterParameters getFellegiSunterParameters(String entityName) {
+	    MatchingConfiguration config = getConfiguration(entityName);
+	    if (config == null) {
+	        log.warn("Could not find a configuration for entity " + entityName);
+	        return null;
+	    }
+	    return config.getFellegiSunterParams();
+	}
+
+    public Set<String> getMatchFields(String entityName) {
+        Set<String> matchFields = new HashSet<String>();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> config = (Map<String, Object>) Context.getConfiguration()
+                .lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
+        if (config == null) {
+            log.warn("The matching service has not been initialized yet for entity " + entityName);
+            return matchFields;
+        }
+        @SuppressWarnings("unchecked")
+        List<MatchField> fieldList = (List<MatchField>) config.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
+        if (fieldList == null) {
+            log.warn("The matching service has not been initialized yet for entity " + entityName);
+            return matchFields;
+        }
+        for (MatchField field : fieldList) {
+            matchFields.add(field.getFieldName());
+        }
+        return matchFields;
+    }
+
+    private void classifyRecordPair(MatchingConfiguration config, RecordPair recordPair) {
         recordPair.setLinkSource(new LinkSource(getMatchingServiceId()));
         Integer manualClassification = lookupManualConfigurationValue(recordPair);
         if (manualClassification == null) {
             recordPair.setLinkSource(new LinkSource(getMatchingServiceId()));
-            if (recordPair.getWeight() >= fellegiSunterParams.getUpperBound()) {
+            if (recordPair.getWeight() >= config.getFellegiSunterParams().getUpperBound()) {
                 recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
-            } else if (recordPair.getWeight() <= fellegiSunterParams.getLowerBound()) {
+            } else if (recordPair.getWeight() <= config.getFellegiSunterParams().getLowerBound()) {
                 recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
             } else {
                 recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_POSSIBLE);
@@ -234,8 +270,9 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
 
     @SuppressWarnings("unchecked")
     private Integer lookupManualConfigurationValue(RecordPair recordPair) {
+        String entityName = recordPair.getLeftRecord().getEntity().getName();
         Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                .lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
+                .lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
         Map<Integer, Integer> vectorClassifications = (Map<Integer, Integer>) configurationData
                 .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_VECTOR_CLASSIFICATIONS);
         if (vectorClassifications == null) {
@@ -256,22 +293,22 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
     }
 
     private void adjustProbabilityValues(FellegiSunterParameters params) {
-        for (int i = 0; i < fellegiSunterParams.getFieldCount(); i++) {
-            if (fellegiSunterParams.getMValue(i) > MAX_MARGINAL_VALUE) {
-                logAdjustment("m", i, MAX_MARGINAL_VALUE, fellegiSunterParams.getMValue(i));
-                fellegiSunterParams.setMValue(i, MAX_MARGINAL_VALUE);
+        for (int i = 0; i < params.getFieldCount(); i++) {
+            if (params.getMValue(i) > MAX_MARGINAL_VALUE) {
+                logAdjustment("m", i, MAX_MARGINAL_VALUE, params.getMValue(i));
+                params.setMValue(i, MAX_MARGINAL_VALUE);
             }
-            if (fellegiSunterParams.getMValue(i) < MIN_MARGINAL_VALUE) {
-                logAdjustment("m", i, MIN_MARGINAL_VALUE, fellegiSunterParams.getMValue(i));
-                fellegiSunterParams.setMValue(i, MIN_MARGINAL_VALUE);
+            if (params.getMValue(i) < MIN_MARGINAL_VALUE) {
+                logAdjustment("m", i, MIN_MARGINAL_VALUE, params.getMValue(i));
+                params.setMValue(i, MIN_MARGINAL_VALUE);
             }
-            if (fellegiSunterParams.getUValue(i) > MAX_MARGINAL_VALUE) {
-                logAdjustment("u", i, MAX_MARGINAL_VALUE, fellegiSunterParams.getUValue(i));
-                fellegiSunterParams.setUValue(i, MAX_MARGINAL_VALUE);
+            if (params.getUValue(i) > MAX_MARGINAL_VALUE) {
+                logAdjustment("u", i, MAX_MARGINAL_VALUE, params.getUValue(i));
+                params.setUValue(i, MAX_MARGINAL_VALUE);
             }
-            if (fellegiSunterParams.getUValue(i) < MIN_MARGINAL_VALUE) {
-                logAdjustment("u", i, MIN_MARGINAL_VALUE, fellegiSunterParams.getUValue(i));
-                fellegiSunterParams.setUValue(i, MIN_MARGINAL_VALUE);
+            if (params.getUValue(i) < MIN_MARGINAL_VALUE) {
+                logAdjustment("u", i, MIN_MARGINAL_VALUE, params.getUValue(i));
+                params.setUValue(i, MIN_MARGINAL_VALUE);
             }
         }
     }
@@ -284,26 +321,28 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         return LinkSource.PROBABILISTIC_MATCHING_ALGORITHM_SOURCE;
     }
 
-    public FellegiSunterParameters getFellegiSunterParameters() {
-        return fellegiSunterParams;
-    }
-	
 	public List<RecordPair> getRecordPairs(Entity entity) {
-		RecordPairSource source = Context.getBlockingService().getRecordPairSource(entity);
-        List<RecordPair> pairs = new ArrayList<RecordPair>();
-        int pairCount = 0;
-        for (RecordPairIterator iter = source.iterator(); iter.hasNext();) {
-            pairs.add(iter.next());
-            pairCount++;
-            if (pairCount % 10000 == 0) {
-                log.info("Loaded " + pairCount + " pairs.");
+	    if (getSamplingService() != null && isUseSampling()) {
+	        return getSamplingService().getRecordPairs(entity);
+	    } else {
+    		RecordPairSource source = Context.getBlockingService(entity.getName()).getRecordPairSource(entity);
+            List<RecordPair> pairs = new ArrayList<RecordPair>();
+            int pairCount = 0;
+            for (RecordPairIterator iter = source.iterator(); iter.hasNext();) {
+                pairs.add(iter.next());
+                pairCount++;
+                if (pairCount % 10000 == 0) {
+                    log.info("Loaded " + pairCount + " pairs.");
+                }
             }
-        }
-        return pairs;
+            return pairs;
+	    }
     }
 
-    public void scoreRecordPair(RecordPair pair) {
+    public void scoreRecordPair(MatchingConfiguration config, RecordPair pair) {
         StringComparisonService comparisonService = Context.getStringComparisonService();
+        final MatchField[] matchFields = config.getMatchFields();
+        final String[] matchFieldNames = config.getMatchFieldNames();
         pair.setComparisonVector(new ComparisonVector(matchFields));
         for (int i = 0; i < matchFieldNames.length; i++) {
             String fieldName = matchFieldNames[i];
@@ -318,8 +357,10 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
                 + pair.getComparisonVector().getBinaryVectorString());
     }
 
-    public void scoreRecordPairs(List<RecordPair> pairs) {
+    public void scoreRecordPairs(MatchingConfiguration config, List<RecordPair> pairs) {
         StringComparisonService comparisonService = Context.getStringComparisonService();
+        final MatchField[] matchFields = config.getMatchFields();
+        final String[] matchFieldNames = config.getMatchFieldNames();
         for (RecordPair pair : pairs) {
             pair.setComparisonVector(new ComparisonVector(matchFields));
             for (int i = 0; i < matchFieldNames.length; i++) {
@@ -336,20 +377,21 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         }
     }
 
-    public void calculateVectorFrequencies(List<RecordPair> pairs, FellegiSunterParameters fellegiSunterParams) {
-        for (int i = 0; i < fellegiSunterParams.getVectorCount(); i++) {
-            fellegiSunterParams.setVectorFrequency(i, 0);
+    public void calculateVectorFrequencies(List<RecordPair> pairs, MatchingConfiguration config) {
+        FellegiSunterParameters params = config.getFellegiSunterParams();
+        for (int i = 0; i < params.getVectorCount(); i++) {
+            params.setVectorFrequency(i, 0);
         }
         for (RecordPair pair : pairs) {
             ComparisonVector vector = pair.getComparisonVector();
             if (vector.getBinaryVectorValue() == 2) {
                 log.debug(vector.getBinaryVectorString() + "=>" + vector.getScoreVectorString() + "=>"
-                        + this.getRecordPairMatchFields(pair));
+                        + getRecordPairMatchFields(config, pair));
             }
-            fellegiSunterParams.incrementVectorFrequency(vector.getBinaryVectorValue());
+            params.incrementVectorFrequency(vector.getBinaryVectorValue());
         }
         if (log.isDebugEnabled()) {
-            fellegiSunterParams.logVectorFrequencies(log);
+            params.logVectorFrequencies(log);
         }
     }
 
@@ -424,63 +466,67 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         return pairs;
     }
 
-    public void calculateMarginalProbabilities(List<RecordPair> pairs, FellegiSunterParameters fellegiSunterParams) {
+    public void calculateMarginalProbabilities(MatchingConfiguration config, List<RecordPair> pairs,
+            FellegiSunterParameters fellegiSunterParams) {
         for (RecordPair pair : pairs) {
             ComparisonVector vector = pair.getComparisonVector();
             Integer binaryVectorValue = vector.getBinaryVectorValue();
-            if (vectorByValueMap.get(binaryVectorValue) == null) {
+            if (config.getVectorByValueMap().get(binaryVectorValue) == null) {
                 log.trace("Added the vector " + vector.getBinaryVectorString() + " in map keyed by "
                         + binaryVectorValue);
-                vectorByValueMap.put(binaryVectorValue, vector);
+                config.getVectorByValueMap().put(binaryVectorValue, vector);
             }
             vector.calculateProbabilityGivenMatch(fellegiSunterParams.getMValues());
             vector.calculateProbabilityGivenNonmatch(fellegiSunterParams.getUValues());
         }
     }
 
-    public void estimateMarginalProbabilities(FellegiSunterParameters fellegiSunterParams) {
+    public void estimateMarginalProbabilities(MatchingConfiguration config) {
+        FellegiSunterParameters fellegiSunterParameters = config.getFellegiSunterParams();
         ExpectationMaximizationEstimator estimator = new ExpectationMaximizationEstimator();
-        estimator.estimateMarginalProbabilities(fellegiSunterParams, getInitialMValue(), getInitialUValue(),
-                getInitialPValue(), getMaxIterations(), getConvergenceError());
+        estimator.estimateMarginalProbabilities(fellegiSunterParameters, getInitialMValue(fellegiSunterParameters),
+                getInitialUValue(fellegiSunterParameters), getInitialPValue(fellegiSunterParameters),
+                getMaxIterations(fellegiSunterParameters), getConvergenceError(fellegiSunterParameters));
     }
 
-    private double getConvergenceError() {
+    private double getConvergenceError(FellegiSunterParameters fellegiSunterParams) {
         if (fellegiSunterParams == null || fellegiSunterParams.getConvergenceError() == 0) {
             return ProbabilisticMatchingConfigurationLoader.DEFAULT_CONVERGENCE_ERROR;
         }
         return fellegiSunterParams.getConvergenceError();
     }
 
-    private int getMaxIterations() {
+    private int getMaxIterations(FellegiSunterParameters fellegiSunterParams) {
         if (fellegiSunterParams == null || fellegiSunterParams.getMaxIterations() == 0) {
             return ProbabilisticMatchingConfigurationLoader.DEFAULT_MAX_EM_ITERATIONS;
         }
         return fellegiSunterParams.getMaxIterations();
     }
 
-    private double getInitialPValue() {
+    private double getInitialPValue(FellegiSunterParameters fellegiSunterParams) {
         if (fellegiSunterParams == null || fellegiSunterParams.getPInitialValue() == 0) {
             return ProbabilisticMatchingConfigurationLoader.DEFAULT_P_INITIAL_VALUE;
         }
         return fellegiSunterParams.getPInitialValue();
     }
 
-    private double getInitialUValue() {
+    private double getInitialUValue(FellegiSunterParameters fellegiSunterParams) {
         if (fellegiSunterParams == null || fellegiSunterParams.getUInitialValue() == 0) {
             return ProbabilisticMatchingConfigurationLoader.DEFAULT_U_INITIAL_VALUE;
         }
         return fellegiSunterParams.getUInitialValue();
     }
 
-    private double getInitialMValue() {
+    private double getInitialMValue(FellegiSunterParameters fellegiSunterParams) {
         if (fellegiSunterParams == null || fellegiSunterParams.getMInitialValue() == 0) {
             return ProbabilisticMatchingConfigurationLoader.DEFAULT_M_INITIAL_VALUE;
         }
         return fellegiSunterParams.getMInitialValue();
     }
 
-    public String getRecordPairMatchFields(RecordPair pair) {
+    public String getRecordPairMatchFields(MatchingConfiguration config, RecordPair pair) {
         StringBuffer sb = new StringBuffer("{ ");
+        String[] matchFieldNames = config.getMatchFieldNames();
         for (int i = 0; i < matchFieldNames.length; i++) {
             String fieldName = matchFieldNames[i];
             Object value1 = pair.getLeftRecord().get(fieldName);
@@ -493,6 +539,7 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         return sb.append(" }").toString();
     }
 
+/*
     public void calculateBoundsOnVectors(FellegiSunterParameters fellegiSunterParams) {
         List<ComparisonVector> list = new java.util.ArrayList<ComparisonVector>(vectorByValueMap.values().size());
         for (ComparisonVector vector : vectorByValueMap.values()) {
@@ -572,7 +619,7 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         fellegiSunterParams.setLowerBound(theOne.getVectorWeight());
         log.trace("Set the lower bound to: " + theOne.getVectorWeight());
     }
-
+*/
     public void calculateBounds(List<RecordPair> pairs, FellegiSunterParameters fellegiSunterParams) {
         double sum = 0;
         int index = 0;
@@ -608,19 +655,22 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
     }
 
     @SuppressWarnings("unchecked")
-    private void loadConfiguration() {
+    private void loadConfiguration(Entity entity, MatchingConfiguration config) {
         Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                .lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
-        loadConfiguration(configurationData);
-        loadLogFields();
+                .lookupConfigurationEntry(entity.getName(), ConfigurationRegistry.MATCH_CONFIGURATION);
+        loadConfiguration(configurationData, config);
+        loadLogFields(entity.getName(), config);
+        Context.getConfiguration().registerConfigurationEntry(entity.getName(),
+                ConfigurationRegistry.MATCH_CONFIGURATION, configurationData);
+        configByEntity.put(entity.getName(), config);
     }
 
     @SuppressWarnings("unchecked")
-    private void loadLogFields() {
+    private void loadLogFields(String entityName, MatchingConfiguration config) {
         Map<String, Object> blockingConfData = (Map<String, Object>) Context.getConfiguration()
-                .lookupConfigurationEntry(ConfigurationRegistry.BLOCKING_CONFIGURATION);
+                .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
         Object obj = blockingConfData.get(BLOCKING_ROUNDS_REGISTRY_KEY);
-        blockingFieldList = new java.util.HashSet<String>();
+        Set<String> blockingFieldList = new java.util.HashSet<String>();
         if (obj != null) {
             List<BlockingRound> blockingRounds = (List<BlockingRound>) obj;
             for (BlockingRound round : blockingRounds) {
@@ -628,143 +678,167 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
                     blockingFieldList.add(field.getFieldName());
                 }
             }
-            log.info("Loaded blocking fields for logging of " + blockingFieldList.toString());
+            if (log.isTraceEnabled()) {
+                log.trace("Loaded blocking fields for logging of " + blockingFieldList.toString());
+            }
         }
+        config.setBlockingFieldList(blockingFieldList);
 
-        List<MatchField> matchFields = getFields();
-        logFieldList = new ArrayList<String>();
+        List<MatchField> matchFields = config.getFields();
+        List<String> logFieldList = new ArrayList<String>();
         for (MatchField field : matchFields) {
             logFieldList.add(field.getFieldName());
         }
-        log.info("Loaded matching fields for logging of " + logFieldList.toString());
+        if (log.isTraceEnabled()) {
+            log.trace("Loaded matching fields for logging of " + logFieldList.toString());
+        }
+        config.setLogFieldList(logFieldList);
+    }
+
+    private void updateRegistryWithNewModel(Map<String, Object> data, FellegiSunterParameters params) {
+        data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_M_VALUES_KEY, params.getMValues());
+        data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_U_VALUES_KEY, params.getUValues());
+        data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_P_VALUE_KEY, params.getPValue());
+        data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOWER_BOUND_KEY, params.getLowerBound());
+        data.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_UPPER_BOUND_KEY, params.getUpperBound());        
     }
 
     @SuppressWarnings("unchecked")
-    private void loadConfiguration(Map<String, Object> configurationData) {
-        fields = (List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
-        falseNegativeProbability = (Float) configurationData
-                .get(ProbabilisticMatchingConstants.FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY);
-        falsePositiveProbability = (Float) configurationData
-                .get(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY);
-        configurationDirectory = (String) configurationData
-                .get(ProbabilisticMatchingConstants.CONFIGURATION_DIRECTORY_REGISTRY_KEY);
-        if (fields == null || fields.size() == 0) {
+    private MatchingConfiguration loadConfiguration(Map<String, Object> configurationData, MatchingConfiguration config) {
+        config.setFields((List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY));
+        config.setFalseNegativeProbability((Float) configurationData
+                .get(ProbabilisticMatchingConstants.FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY));
+        config.setFalsePositiveProbability((Float) configurationData
+                .get(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY));
+        config.setConfigurationDirectory((String) configurationData
+                .get(ProbabilisticMatchingConstants.CONFIGURATION_DIRECTORY_REGISTRY_KEY));
+        if (config.getFields() == null || config.getFields().size() == 0) {
             log.error("Probabilistic matching service has not been configured properly; no match fields have been defined.");
             throw new RuntimeException("Probabilistic maching service has not been configured properly.");
         }
-        if (falseNegativeProbability == null) {
+        if (config.getFalseNegativeProbability() == null) {
             log.warn("The false negative probability has not been configured; using default value of: "
                     + ProbabilisticMatchingConstants.DEFAULT_FALSE_NEGATIVE_PROBABILITY);
-            this.falseNegativeProbability = ProbabilisticMatchingConstants.DEFAULT_FALSE_NEGATIVE_PROBABILITY;
+            config.setFalseNegativeProbability(ProbabilisticMatchingConstants.DEFAULT_FALSE_NEGATIVE_PROBABILITY);
         }
-        if (falsePositiveProbability == null) {
+        if (config.getFalsePositiveProbability() == null) {
             log.warn("The false positive probability has not been configured; using default value of: "
                     + ProbabilisticMatchingConstants.DEFAULT_FALSE_POSITIVE_PROBABILITY);
-            this.falsePositiveProbability = ProbabilisticMatchingConstants.DEFAULT_FALSE_POSITIVE_PROBABILITY;
+            config.setFalsePositiveProbability(ProbabilisticMatchingConstants.DEFAULT_FALSE_POSITIVE_PROBABILITY);
         }
-        if (configurationDirectory == null) {
+        if (config.getConfigurationDirectory() == null) {
             log.warn("The configuration directory has not been configured; using default value of: "
                     + Context.getOpenEmpiHome());
-            this.configurationDirectory = Context.getOpenEmpiHome();
+            config.setConfigurationDirectory(Context.getOpenEmpiHome());
         }
-        matchFieldByName = new HashMap<String, MatchField>();
+        Map<String,MatchField> matchFieldByName = new HashMap<String, MatchField>();
 
-        matchFieldNames = new String[fields.size()];
-        matchFields = new MatchField[fields.size()];
+        String[] matchFieldNames = new String[config.getFields().size()];
+        MatchField[] matchFields = new MatchField[config.getFields().size()];
         int index = 0;
-        for (MatchField field : fields) {
+        for (MatchField field : config.getFields()) {
             matchFieldNames[index] = field.getFieldName();
             matchFields[index] = field;
             matchFieldByName.put(field.getFieldName(), field);
             index++;
         }
+        config.setMatchFieldNames(matchFieldNames);
+        config.setMatchFieldByName(matchFieldByName);
+        config.setMatchFields(matchFields);
         log.debug("Matching service " + getClass().getName() + " will perform matching using " + toString());
 
         if (configurationData.containsKey(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_KEY)
                 && (Boolean) configurationData
                         .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_KEY)) {
-            logByVectors = true;
-            vectorsToLog = (Set<Integer>) configurationData
-                    .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_VECTORS_KEY);
-            logByVectorsFraction = ((Double) configurationData
+            config.setLogByVectors(true);
+            config.setVectorsToLog((Set<Integer>) configurationData
+                    .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_VECTORS_KEY));
+            config.setLogByVectorsFraction(((Double) configurationData
                     .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_FRACTION_KEY))
-                    .doubleValue();
+                    .doubleValue());
         } else {
-            logByVectors = false;
+            config.setLogByVectors(false);
         }
 
         if (configurationData.containsKey(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_WEIGHT_KEY)
                 && (Boolean) configurationData
                         .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_WEIGHT_KEY)) {
-            logByWeight = true;
-            logWeightLowerBound = ((Double) configurationData
+            config.setLogByWeight(true);
+            config.setLogWeightLowerBound(((Double) configurationData
                     .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_WEIGHT_LOWER_BOUND_KEY))
-                    .doubleValue();
-            logWeightUpperBound = ((Double) configurationData
+                    .doubleValue());
+            config.setLogWeightUpperBound(((Double) configurationData
                     .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_WEIGHT_UPPER_BOUND_KEY))
-                    .doubleValue();
-            logByWeightFraction = ((Double) configurationData
+                    .doubleValue());
+            config.setLogByWeightFraction(((Double) configurationData
                     .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_WEIGHT_FRACTION_KEY))
-                    .doubleValue();
+                    .doubleValue());
 
         } else {
-            logByWeight = false;
+            config.setLogByWeight(false);
         }
-		String entityName = (String) configurationData.get(ConfigurationRegistry.ENTITY_NAME);
 
+        String entityName = (String) configurationData.get(ConfigurationRegistry.ENTITY_NAME);
 		if (entityName == null) {
 			log.error("The entity that the configuration of the matching algorithm applies to has not been defined.");
 			throw new RuntimeException("The entity that the configuration of the matching algorithm applies to has not been defined.");
 		}
+		config.setEntityName(entityName);
+
 		List<Entity> entityList = Context.getEntityDefinitionManagerService().findEntitiesByName(entityName);
 		if (entityList == null || entityList.size() == 0) {
 			log.error("The entity that the configuration of the matching algorithm points to is unknown.");
 			throw new RuntimeException("The entity that the configuration of the matching algorithm points to is unknown.");
 		}
-		// TODO: Currently picks up the first entry in the list but eventually we will need to deal with versioning.
-		entity = entityList.get(0);
-        if (configurationData.containsKey(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_KEY)
+
+		if (configurationData.containsKey(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_KEY)
                 || configurationData
                         .containsKey(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_BY_WEIGHT_KEY)) {
-            logDestination = ((String) configurationData
-                    .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION));
-            if (logDestination == null) {
-                logDestination = Constants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_FILE;
+            config.setLogDestination(((String) configurationData
+                    .get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION)));
+            if (config.getLogDestination() == null) {
+                config.setLogDestination(Constants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_FILE);
             } else {
-                logDestination = Constants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_DB;
+                config.setLogDestination(Constants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_DB);
             }
-        }		
-        fellegiSunterParams = FellegiSunterConfigurationManager.loadParameters(getConfigurationDirectory());
-        ProbabilisticMatchingConfigurationLoader.loadDefaultValues(fellegiSunterParams);
+        }
+        config.setFellegiSunterParams(FellegiSunterConfigurationManager
+                .loadParameters(config.getConfigurationDirectory(), entityName));
+        ProbabilisticMatchingConfigurationLoader.loadDefaultValues(config.getFellegiSunterParams());
 
-        VectorConfigurationHelper.updateVectorConfiguration(configurationData, fellegiSunterParams);
-        initialized = true;
+        VectorConfigurationHelper.updateVectorConfiguration(configurationData, config.getFellegiSunterParams());
+        config.setInitialized(true);
+        return config;
     }
 
-    private boolean isLoggingEnabled() {
-        if (logByVectors || logByWeight)
+    private boolean isLoggingEnabled(MatchingConfiguration config) {
+        if (config.isLogByVectors() || config.isLogByWeight()) {
             return true;
+        }
         return false;
     }
 
-    private void logRecordPair(RecordPair pair) {
+    private void logRecordPair(MatchingConfiguration config, RecordPair pair) {
         double randomValue = Math.random();
-        if (logByVectors == true && randomValue < logByVectorsFraction
-                && vectorsToLog.contains(new Integer(pair.getComparisonVector().getBinaryVectorValue()))) {
-            logRecordPairToDestination(pair);
+        if (config.isLogByVectors() == true && randomValue < config.getLogByVectorsFraction()
+                && config.getVectorsToLog().contains(new Integer(pair.getComparisonVector().getBinaryVectorValue()))) {
+            logRecordPairToDestination(config, pair);
         }
-        if (logByWeight == true && randomValue < logByWeightFraction && pair.getWeight() >= logWeightLowerBound
-                && pair.getWeight() <= logWeightUpperBound) {
+        if (config.isLogByWeight() == true && randomValue < config.getLogByWeightFraction() 
+                && pair.getWeight() >= config.getLogWeightLowerBound()
+                && pair.getWeight() <= config.getLogWeightUpperBound()) {
             log.info("logRecordPair: " + logMatchStatus(pair) + "Weight -> " + pair.getWeight() + " -> "
-                    + pair.getComparisonVector().getBinaryVectorString() + " -> " + getPairValues(pair));
-            logRecordPairToDestination(pair);
+                    + pair.getComparisonVector().getBinaryVectorString() + " -> " + getPairValues(config, pair));
+            logRecordPairToDestination(config, pair);
         }
     }
 
-    private void logRecordPairToDestination(RecordPair pair) {
-        if (logDestination.equalsIgnoreCase(Constants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_FILE)) {
-            log.info("logRecordPair: " + logMatchStatus(pair) + "Weight -> " + pair.getWeight() + "Vector -> "
-                    + pair.getComparisonVector().getBinaryVectorString() + " -> " + getPairValues(pair));
+    private void logRecordPairToDestination(MatchingConfiguration config, RecordPair pair) {
+        if (config.getLogDestination().equalsIgnoreCase(Constants.PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_FILE)) {
+            if (log.isDebugEnabled()) {
+                log.debug("logRecordPair: " + logMatchStatus(pair) + "Weight -> " + pair.getWeight() + "Vector -> "
+                        + pair.getComparisonVector().getBinaryVectorString() + " -> " + getPairValues(config, pair));
+            }
         } else {
             LoggedLink loggedLink = getLoggedLinkFromRecordPair(pair);
             universalDao.save(loggedLink);
@@ -794,30 +868,22 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         return "[ ] ";
     }
 
-    private Set<String> getBlockingLoggingFields() {
-        return blockingFieldList;
-    }
-
-    private List<String> getLoggingFields() {
-        return logFieldList;
-    }
-
-    private String getPairValues(RecordPair pair) {
+    private String getPairValues(MatchingConfiguration config, RecordPair pair) {
         StringBuffer sb = new StringBuffer();
-        logRecordBlockingFields(sb, pair.getLeftRecord(), getBlockingLoggingFields());
+        logRecordBlockingFields(sb, pair.getLeftRecord(), config.getBlockingFieldList());
         sb.append("[");
-        logRecordMatchFields(sb, pair.getLeftRecord(), getLoggingFields());
+        logRecordMatchFields(sb, pair.getLeftRecord(), config.getLogFieldList());
         sb.append("] versus [");
         // logRecordBlockingFields(sb, pair.getRightRecord(),
         // getBlockingLoggingFields());
         // sb.append("[");
-        logRecordMatchFields(sb, pair.getRightRecord(), getLoggingFields());
+        logRecordMatchFields(sb, pair.getRightRecord(), config.getLogFieldList());
         sb.append("]");
         return sb.toString();
     }
 
     private void logRecordBlockingFields(StringBuffer sb, Record rec, Set<String> fields) {
-        if (fields.size() == 0) {
+        if (fields != null && fields.size() == 0) {
             return;
         }
         sb.append("{");
@@ -851,6 +917,10 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         }
     }
 
+    private MatchingConfiguration getConfiguration(String entityName) {
+        return configByEntity.get(entityName);
+    }
+
     public EntityDao getEntityDao() {
         return entityDao;
     }
@@ -867,56 +937,41 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         this.universalDao = universalDao;
     }
 
-    public List<MatchField> getFields() {
-        return fields;
+    public boolean isUseSampling() {
+        return useSampling;
     }
 
-    public void setFields(List<MatchField> fields) {
-        this.fields = fields;
+    public void setUseSampling(boolean useSampling) {
+        this.useSampling = useSampling;
     }
 
-    public float getFalseNegativeProbability() {
-        return falseNegativeProbability;
+    public SamplingService getSamplingService() {
+        return samplingService;
     }
 
-    public void setFalseNegativeProbability(float falseNegativeProbability) {
-        this.falseNegativeProbability = falseNegativeProbability;
-    }
-
-    public float getFalsePositiveProbability() {
-        return falsePositiveProbability;
-    }
-
-    public void setFalsePositiveProbability(float falsePositiveProbability) {
-        this.falsePositiveProbability = falsePositiveProbability;
-    }
-
-    public String getConfigurationDirectory() {
-        return configurationDirectory;
-    }
-
-    public void setConfigurationDirectory(String configurationDirectory) {
-        this.configurationDirectory = configurationDirectory;
+    public void setSamplingService(SamplingService samplingService) {
+        this.samplingService = samplingService;
     }
 
     public static void main(String[] args) {
         String baseDirectory = Context.getOpenEmpiHome();
-        System.out.println(FellegiSunterConfigurationManager.loadParameters(baseDirectory + "/" + "conf"));
+        System.out.println(FellegiSunterConfigurationManager.loadParameters(baseDirectory + "/" + "conf", "person"));
     }
 
     public void shutdown() {
         log.info("Shutting down the probabilistic matching service.");
     }
 
-    public void initializeRepository() throws ApplicationException {
-        FellegiSunterConfigurationManager.removeParametersFile(getConfigurationDirectory());
+    public void initializeRepository(String entityName) throws ApplicationException {
+        MatchingConfiguration config = configByEntity.get(entityName);
+        FellegiSunterConfigurationManager.removeParametersFile(config.getConfigurationDirectory(), entityName);
         startup();
     }
 
     @Override
     public void update(Observable o, Object eventData) {
         if (!(o instanceof EventObservable) || eventData == null || !(eventData instanceof Map) || 
-                ((EventObservable) o).getType() != ObservationEventType.MATCHING_CONFIGURATION_UPDATED_EVENT) {
+                ((EventObservable) o).getType() != ObservationEventType.MATCHING_CONFIGURATION_UPDATE_EVENT) {
             log.trace("Received notification for event that was not expected.");
             return;
         }
@@ -924,19 +979,30 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         Map<String, Object> data = (Map<String, Object>) eventData;
         log.info("The configuration of the matching algorithm was changed by the user.");
 
-        loadConfiguration(data);
+        MatchingConfiguration config = new MatchingConfiguration();
+        loadConfiguration(data, config);
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntityByName(config.getEntityName());
+        if (entity == null) {
+            log.error("Received an update request for a change in the configuration for an unknown entity: "
+                    + config.getEntityName());
+            return;
+        }
+        configByEntity.put(entity.getName(), config);
+
         try {
-            fellegiSunterParams = FellegiSunterConfigurationManager.loadParameters(getConfigurationDirectory());
-            ProbabilisticMatchingConfigurationLoader.loadDefaultValues(fellegiSunterParams);
-            initialized = true;
+            FellegiSunterConfigurationManager.loadParameters(config.getConfigurationDirectory(),
+                    config.getEntityName());
+            ProbabilisticMatchingConfigurationLoader.loadDefaultValues(config.getFellegiSunterParams());
+            config.setInitialized(true);
         } catch (Throwable t) {
             log.error("Failed while initializing the probabilistic matching service: " + t, t);
-            initialized = false;
+            config.setInitialized(false);
             try {
                 linkRecords(entity);
+                updateRegistryWithNewModel(data, config.getFellegiSunterParams());
             } catch (Exception e) {
                 log.error("Failed while initializing the probabilistic matching service: " + e, e);
-                initialized = false;
+                config.setInitialized(false);
             }
         }
     }
@@ -947,7 +1013,7 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
 	 * will allow the system to start-up (get past the initialization of the probabilistic algorithm)
 	 * so, that we can load the data, analyze the statistics, and re-run the probabilistic algorithm to
 	 * get  a more reasonable estimation of the probabilistic model.
-	 * 
+	 *
 	 * @param params
 	 */
 	private void createDefaultConfiguration(FellegiSunterParameters params) {
@@ -957,5 +1023,149 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
 			params.setMValue(i, 0.5);
 			params.setUValue(i,  0.5);
 		}
+	}
+
+	private class MatchingConfiguration
+	{
+	    private String[] matchFieldNames;
+	    private MatchField[] matchFields;
+	    private boolean initialized = false;
+	    private FellegiSunterParameters fellegiSunterParams;
+	    private HashMap<Integer, ComparisonVector> vectorByValueMap = new HashMap<Integer, ComparisonVector>();
+	    private List<MatchField> fields = new ArrayList<MatchField>();
+	    private Float falseNegativeProbability;
+	    private Float falsePositiveProbability;
+	    private String configurationDirectory;
+	    private boolean logByVectors;
+	    private double logByVectorsFraction;
+	    private boolean logByWeight;
+	    private String logDestination;
+	    private Set<Integer> vectorsToLog;
+	    private Set<String> blockingFieldList;
+	    private List<String> logFieldList;
+	    private double logWeightLowerBound;
+	    private double logWeightUpperBound;
+	    private double logByWeightFraction;
+	    private String entityName;
+
+        public void setMatchFieldByName(Map<String, MatchField> matchFieldByName) {
+        }
+        public String[] getMatchFieldNames() {
+            return matchFieldNames;
+        }
+        public void setMatchFieldNames(String[] matchFieldNames) {
+            this.matchFieldNames = matchFieldNames;
+        }
+        public MatchField[] getMatchFields() {
+            return matchFields;
+        }
+        public void setMatchFields(MatchField[] matchFields) {
+            this.matchFields = matchFields;
+        }
+        public boolean isInitialized() {
+            return initialized;
+        }
+        public void setInitialized(boolean initialized) {
+            this.initialized = initialized;
+        }
+        public FellegiSunterParameters getFellegiSunterParams() {
+            return fellegiSunterParams;
+        }
+        public void setFellegiSunterParams(FellegiSunterParameters fellegiSunterParams) {
+            this.fellegiSunterParams = fellegiSunterParams;
+        }
+        public HashMap<Integer, ComparisonVector> getVectorByValueMap() {
+            return vectorByValueMap;
+        }
+        public List<MatchField> getFields() {
+            return fields;
+        }
+        public void setFields(List<MatchField> fields) {
+            this.fields = fields;
+        }
+        public Float getFalseNegativeProbability() {
+            return falseNegativeProbability;
+        }
+        public void setFalseNegativeProbability(Float falseNegativeProbability) {
+            this.falseNegativeProbability = falseNegativeProbability;
+        }
+        public Float getFalsePositiveProbability() {
+            return falsePositiveProbability;
+        }
+        public void setFalsePositiveProbability(Float falsePositiveProbability) {
+            this.falsePositiveProbability = falsePositiveProbability;
+        }
+        public String getConfigurationDirectory() {
+            return configurationDirectory;
+        }
+        public void setConfigurationDirectory(String configurationDirectory) {
+            this.configurationDirectory = configurationDirectory;
+        }
+        public boolean isLogByVectors() {
+            return logByVectors;
+        }
+        public void setLogByVectors(boolean logByVectors) {
+            this.logByVectors = logByVectors;
+        }
+        public double getLogByVectorsFraction() {
+            return logByVectorsFraction;
+        }
+        public void setLogByVectorsFraction(double logByVectorsFraction) {
+            this.logByVectorsFraction = logByVectorsFraction;
+        }
+        public boolean isLogByWeight() {
+            return logByWeight;
+        }
+        public void setLogByWeight(boolean logByWeight) {
+            this.logByWeight = logByWeight;
+        }
+        public String getLogDestination() {
+            return logDestination;
+        }
+        public void setLogDestination(String logDestination) {
+            this.logDestination = logDestination;
+        }
+        public Set<Integer> getVectorsToLog() {
+            return vectorsToLog;
+        }
+        public void setVectorsToLog(Set<Integer> vectorsToLog) {
+            this.vectorsToLog = vectorsToLog;
+        }
+        public Set<String> getBlockingFieldList() {
+            return blockingFieldList;
+        }
+        public void setBlockingFieldList(Set<String> blockingFieldList) {
+            this.blockingFieldList = blockingFieldList;
+        }
+        public List<String> getLogFieldList() {
+            return logFieldList;
+        }
+        public void setLogFieldList(List<String> logFieldList) {
+            this.logFieldList = logFieldList;
+        }
+        public double getLogWeightLowerBound() {
+            return logWeightLowerBound;
+        }
+        public void setLogWeightLowerBound(double logWeightLowerBound) {
+            this.logWeightLowerBound = logWeightLowerBound;
+        }
+        public double getLogWeightUpperBound() {
+            return logWeightUpperBound;
+        }
+        public void setLogWeightUpperBound(double logWeightUpperBound) {
+            this.logWeightUpperBound = logWeightUpperBound;
+        }
+        public double getLogByWeightFraction() {
+            return logByWeightFraction;
+        }
+        public void setLogByWeightFraction(double logByWeightFraction) {
+            this.logByWeightFraction = logByWeightFraction;
+        }
+        public String getEntityName() {
+            return entityName;
+        }
+        public void setEntityName(String entityName) {
+            this.entityName = entityName;
+        }
 	}
 }

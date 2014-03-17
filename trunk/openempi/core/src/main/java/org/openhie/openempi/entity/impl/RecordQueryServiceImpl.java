@@ -127,6 +127,14 @@ public class RecordQueryServiceImpl extends RecordCommonServiceImpl implements R
         return entityDao.loadRecordLinks(entityDef, recordId);
     }
 
+    public List<RecordLink> loadRecordLinks(Entity entity, Long recordId, RecordLinkState state) {
+        Entity entityDef = getEntityDefinition(entity);
+        if (entityDef == null || recordId == null) {
+            return null;
+        }
+        return entityDao.loadRecordLinks(entityDef, recordId, state);
+    }
+
     public List<RecordLink> findRecordLinksBySource(Entity entity, LinkSource linkSource, RecordLinkState state) {
         Entity entityDef = getEntityDefinition(entity);
         if (entityDef == null || linkSource == null) {

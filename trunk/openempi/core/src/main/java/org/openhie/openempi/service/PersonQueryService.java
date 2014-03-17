@@ -25,7 +25,6 @@ import java.util.List;
 import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
-import org.openhie.openempi.model.LoggedLink;
 import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.PersonIdentifier;
 import org.openhie.openempi.model.PersonLink;

@@ -20,21 +20,21 @@
  */
 package org.openhie.openempi.entity.dao.orientdb;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.jfree.util.Log;
+import org.apache.log4j.Logger;
+import org.openhie.openempi.entity.Constants;
 
 public class SchemaManagerFactory
 {
+    private static Logger log = Logger.getLogger(SchemaManagerFactory.class);
+    
     public static SchemaManager createSchemaManager(ConnectionManager connectionManager) {
-        if (SchemaManager.REMOTE_STORAGE_MODE.equalsIgnoreCase(connectionManager.getStorageMode())) {
+        if (Constants.REMOTE_STORAGE_MODE.equalsIgnoreCase(connectionManager.getStorageMode())) {
             return new SchemaManagerRemote(connectionManager);
-        } else if (SchemaManager.PLOCAL_STORAGE_MODE.equalsIgnoreCase(connectionManager.getStorageMode()) ||
-                SchemaManager.LOCAL_STORAGE_MODE.equalsIgnoreCase(connectionManager.getStorageMode())) {
+        } else if (Constants.PLOCAL_STORAGE_MODE.equalsIgnoreCase(connectionManager.getStorageMode()) ||
+                Constants.LOCAL_STORAGE_MODE.equalsIgnoreCase(connectionManager.getStorageMode())) {
             return new SchemaManagerLocal(connectionManager);
         }
-        Log.info("Received request to create a schema manager of unknown storage mode: " + 
+        log.info("Received request to create a schema manager of unknown storage mode: " + 
                 connectionManager.getStorageMode());
         throw new RuntimeException("Unable to create a schema manager of unknown storage mode");
     }

@@ -29,12 +29,12 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.entity.DataAccessIntent;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
-import org.openhie.openempi.entity.IntentMassiveInsert;
 import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.RecordQueryService;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
+import org.openhie.openempi.model.IntentMassiveInsert;
 import org.openhie.openempi.model.Record;
 
 public class SpringEntityLoaderManager implements EntityLoaderManager

@@ -236,7 +236,7 @@ class PixFeedHandler extends BaseHandler implements Application {
 					new PixUpdateNotificationRequest(actor, matching);
 				PixUpdateNotifier.getInstance().accept(request);
 			}			
-		}catch (PixManagerException e) {
+		} catch (PixManagerException e) {
 			throw new PixPdqException(e);
 		} 
 		

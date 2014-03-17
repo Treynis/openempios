@@ -25,7 +25,6 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -39,6 +38,7 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "entity_attribute_group_attribute")
 @GenericGenerator(name = "entity_attribute_group_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "entity_attribute_group_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")})
 public class EntityAttributeGroupAttribute extends BaseObject implements Serializable
 {

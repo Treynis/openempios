@@ -25,12 +25,11 @@ import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -43,6 +42,7 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "report_parameter")
 @GenericGenerator(name = "report_parameter_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "report_parameter_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")})
 public class ReportParameter extends BaseObject implements Serializable
 {

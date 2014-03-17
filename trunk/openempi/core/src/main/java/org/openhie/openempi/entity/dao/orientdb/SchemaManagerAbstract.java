@@ -22,37 +22,37 @@ package org.openhie.openempi.entity.dao.orientdb;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
 
 import org.apache.log4j.Logger;
+import org.openhie.openempi.context.Context;
+import org.openhie.openempi.entity.Constants;
 import org.openhie.openempi.model.AttributeDatatype;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.EntityAttribute;
 import org.openhie.openempi.model.EntityAttributeDatatype;
+import org.openhie.openempi.notification.EventObservable;
+import org.openhie.openempi.notification.ObservationEventType;
 
 import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OClassImpl;
+import com.orientechnologies.orient.core.metadata.schema.OProperty;
 import com.orientechnologies.orient.core.metadata.schema.OPropertyImpl;
 import com.orientechnologies.orient.core.metadata.schema.OSchemaProxy;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.storage.OStorage;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 
-public abstract class SchemaManagerAbstract implements SchemaManager
+public abstract class SchemaManagerAbstract extends Constants implements SchemaManager, Observer
 {
-    protected final static String GRAPH_DATABASE_TYPE = "graph";
-    protected final static String RECORD_LINK_TYPE = "recordLink";
-    protected final static String IDENTIFIER_TYPE = "identifier";
-    protected final static String VERTEX_CLASS_NAME = "V";
-    protected final static String EDGE_CLASS_NAME = "E";
-
     protected Logger log = Logger.getLogger(getClass());
     protected static Map<String,Object> params = new HashMap<String,Object>();    
     protected Map<String, EntityStore> storeByName = new HashMap<String, EntityStore>();
@@ -64,55 +64,64 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         for (InternalAttribute attribute : INTERNAL_ATTRIBUTES) {
             internalAttributeMap.put(attribute.getName(), attribute);
         }
+        InternalAttribute clusterAttribute = new InternalAttribute(Constants.ORIENTDB_CLUSTER_ID_KEY, null, false); 
+        internalAttributeMap.put(clusterAttribute.getName(), clusterAttribute);
     }
    
     SchemaManagerAbstract(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
+        Context.registerObserver(this, ObservationEventType.ENTITY_ADD_EVENT);
+        Context.registerObserver(this, ObservationEventType.ENTITY_ATTRIBUTE_UPDATE_EVENT);        
     }
     
     public void initializeSchema(Entity entity, EntityStore entityStore) {
-        OGraphDatabase db = null;
+        OrientBaseGraph db = null;
         try {
-            db = connectionManager.connect(entityStore);
-            if (!isEntityClassDefined(db, entity.getName())) {
+            db = connectionManager.connectInitial(entityStore);            
+            if (!isClassDefined(db, entity.getName())) {
+                createDatabase(entityStore, db);
                 initializeClasses(entity, entityStore, db);
             }
             storeClusterIds(entityStore, db);
         } catch (Exception e) {
-            try {
-                db = initializeStore(entity, entityStore);
-                initializeClasses(entity, entityStore, db);
-                storeClusterIds(entityStore, db);
-            } catch (Exception ei) {
-                log.error("Failed while initializing the store: " + ei, ei);
-            }
+            log.error("Failed while initializing the store: " + e, e);
         } finally {
             if (db != null) {
-                db.close();
+                db.getRawGraph().close();
             }
         }
     }
 
-    private boolean isEntityClassDefined(OGraphDatabase db, String entityName) {
-        Collection<OClass> classes = db.getMetadata().getSchema().getClasses();
+    public boolean isClassDefined(OrientBaseGraph db, String className) {
+        Collection<OClass> classes = db.getRawGraph().getMetadata().getSchema().getClasses();
         log.debug("The repository currently has " + classes.size() + " classes defined:");
         for (OClass oclass : classes) {
             log.info("Class name: " + oclass.getName() + " in cluster " + oclass.getDefaultClusterId());
-            if (oclass.getName().equalsIgnoreCase(entityName)) {
+            if (oclass.getName().equalsIgnoreCase(className)) {
                 return true;
             }
         }
         return false;
     }
-
-    private OGraphDatabase initializeStore(Entity entity, EntityStore entityStore) {
-        log.info("Creating a store for entity " + entity.getName() + " in location " + entityStore.getStoreName());
-        
-        OGraphDatabase db = createDatabase(entityStore);
-        return db;
-    }
     
-    public abstract OGraphDatabase createDatabase(EntityStore store);
+    public void update(Observable o, Object eventData) {
+        if (!(o instanceof EventObservable) || eventData == null || !(eventData instanceof Entity)) {
+            log.warn("Received unexpected event with data of " + eventData);
+            return;
+        }
+        Entity entity = (Entity) eventData;
+        EventObservable event = (EventObservable) o;
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        if (event.getType() == ObservationEventType.ENTITY_ADD_EVENT) {
+            log.debug("A new entity was added; we need to initialize the schema for it: " + entity);
+            log.info("Initializing schema for new entity " + entity.getName());
+            initializeSchema(entity, entityStore);
+        } else if (event.getType() == ObservationEventType.ENTITY_ATTRIBUTE_UPDATE_EVENT) {
+            log.debug("An entity was modified; we need to update the schema for it: " + entity);
+            log.info("Synchronizing schema with updated entity " + entity.getName());
+            synchronizeSchema(entity, entityStore);
+        }
+    }
     
     public void shutdownStore(Entity entity) {
         log.info("Shutting down store for entity: " + entity.getName());
@@ -124,9 +133,9 @@ public abstract class SchemaManagerAbstract implements SchemaManager
 
         try {
             connectionManager.shutdown(entityStore);
-            final OStorage stg = Orient.instance().getStorage(entityStore.getStoreUrl());
+            final OStorage stg = Orient.instance().getStorage(entityStore.getStorageName());
             if (stg != null) {
-                stg.close(true);
+                stg.close();
             }
         } catch (Exception e) {
             log.warn("Failed while shutting down the store: " + e, e);
@@ -148,12 +157,109 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         return true;
     }
     
-    private void initializeClasses(Entity entity, EntityStore entityStore, OGraphDatabase db) {
+    private void synchronizeSchema(Entity entity, EntityStore entityStore) {
+        OrientBaseGraph db = null;
+        try { 
+            db = connectionManager.connectInitial(entityStore);
+            String className = entityStore.getEntityName();
+            OClassImpl vertexClass = (OClassImpl) findGraphClass(db, className);
+            if (vertexClass == null) {
+                log.error("Unable to find the class that corresponds to the entity " + entity.getName() + 
+                        " during an update.");
+                return;
+            }
+            
+            Map<String,OPropertyImpl> classPropertiesByName = new HashMap<String,OPropertyImpl>();
+            
+            for (OProperty property : vertexClass.declaredProperties()) {
+                classPropertiesByName.put(property.getName(), (OPropertyImpl) property);
+            }
+            
+            for (EntityAttribute attribute : entity.getAttributes()) {
+                OPropertyImpl property = classPropertiesByName.get(attribute.getName());
+                if (property != null) {
+                    continue;
+                }
+                OType type = getOrientdbType(attribute.getDatatype());
+                vertexClass.addPropertyInternal(attribute.getName(), type, null, null);
+                log.debug("Adding field " + attribute.getName() + " to class " + className);
+                vertexClass.saveInternal();
+
+                if (attribute.getIndexed()) {
+                    refreshSchema(db);
+                    Collection<String> attributes = new ArrayList<String>();
+                    attributes.add(attribute.getName());
+                    String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
+                    createIndex(db, indexNamePrefix, entity.getName(), attributes);
+                }
+            }
+            vertexClass.saveInternal();
+            
+        } catch (Exception e) {
+            log.error("Failed while initializing the store: " + e, e);
+        } finally {
+            if (db != null) {
+                db.getRawGraph().close();
+            }
+        }        
+    }
+
+    public void dropClass(OrientBaseGraph db, String className) {
+        if (className == null) {
+            return;
+        }
+        OClass classInternal = findGraphClass(db, className);
+        if (classInternal == null)  {
+            log.warn("An attempt was made to drop a class that does not exist: " + className);
+            return;
+        }
+        db.command( new OCommandSQL("drop class " + className) ).execute();
+//        ((OSchemaProxy) db.getMetadata().getSchema()).dropClassInternal(className);
+        log.info("Class " + className + " was dropped.");
+    }
+    
+    public void createClass(OrientBaseGraph db, Entity entity, String baseClassName) {
+        if (baseClassName == null) {
+            baseClassName = VERTEX_CLASS_NAME;
+        }
+        if (findGraphClass(db, entity.getName()) != null) {
+            log.warn("The class " + entity.getName() + " already exists.");
+            return;
+        }
+        OClass baseClass = findGraphClass(db, baseClassName);
+        if (baseClass == null) {
+            log.error("Unable to find base class named: " + baseClassName);
+            throw new RuntimeException("Invalid base class name " + baseClassName);
+        }
+        String className = entity.getName();
+        final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
+                .createClassInternal(className, baseClass, null);
+        log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
+        sourceClass.saveInternal();
+        String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
+        for (EntityAttribute attribute : entity.getAttributes()) {
+            String fieldName = attribute.getName();
+            OType type = getOrientdbType(attribute.getDatatype());
+            addAttributeToClass(className, sourceClass, fieldName, type);
+        }
+        sourceClass.saveInternal();
+        refreshSchema(db);
+        for (EntityAttribute attribute : entity.getAttributes()) {
+            String fieldName = attribute.getName();
+            if (attribute.getIndexed().booleanValue()) {
+                List<String> attribs = new ArrayList<String>();
+                attribs.add(fieldName);
+                createIndex(db, indexNamePrefix, className, attribs);
+            }
+        }
+    }
+    
+    private void initializeClasses(Entity entity, EntityStore entityStore, OrientBaseGraph db) {
         int[] clusterIds = null;
         String className = entityStore.getEntityName();
-        OClass vertexClass = findGraphSuperclass(db, VERTEX_CLASS_NAME);
-        final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getMetadata().getSchema()).createClassInternal(
-                className, vertexClass, clusterIds);
+        OClass vertexClass = findGraphClass(db, VERTEX_CLASS_NAME);
+        final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
+                .createClassInternal(className, vertexClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
         sourceClass.saveInternal();
         entityStore.setEntityClass(sourceClass);
@@ -168,8 +274,8 @@ public abstract class SchemaManagerAbstract implements SchemaManager
 
         // Create schema for storing associated identifiers
         className = IDENTIFIER_TYPE;
-        final OClassImpl idClass = (OClassImpl) ((OSchemaProxy) db.getMetadata().getSchema()).createClassInternal(
-                className, vertexClass, null);
+        final OClassImpl idClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
+                .createClassInternal(className, vertexClass, null);
         log.info("Class " + className + " has been assigned cluster " + idClass.getDefaultClusterId());
         idClass.saveInternal();
         entityStore.setIdentifierClass(idClass);
@@ -178,15 +284,15 @@ public abstract class SchemaManagerAbstract implements SchemaManager
 
         // Create schema for storing links
         className = RECORD_LINK_TYPE;
-        OClass edgeClass = findGraphSuperclass(db, EDGE_CLASS_NAME);
-        final OClassImpl linkClass = (OClassImpl) ((OSchemaProxy) db.getMetadata().getSchema()).createClassInternal(
-                className, edgeClass, null);
+        OClass edgeClass = findGraphClass(db, EDGE_CLASS_NAME);
+        final OClassImpl linkClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
+                .createClassInternal(className, edgeClass, null);
         log.info("Class " + className + " has been assigned cluster " + linkClass.getDefaultClusterId());
         linkClass.saveInternal();
 
         addAttributesToClass(className, linkClass, LINK_ATTRIBUTES);
 
-        createIndexes(entity, db, sourceClass, idClass);
+        createIndexes(entity, db);
 
         log.info("Finished initializing graph classes.");
     }
@@ -199,7 +305,7 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         log.info("Added attributes to graph entity: " + className);
     }
 
-    public void createIndexes(Entity entity, OGraphDatabase db) {
+    public void createIndexes(Entity entity, OrientBaseGraph db) {
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         if (entityStore == null) {
             log.warn("Unable to create indexes because the entity information is not known.");
@@ -213,12 +319,13 @@ public abstract class SchemaManagerAbstract implements SchemaManager
             log.warn("Unable to create indexes because the identifier class information is not known.");
             return;
         }
-        createIndexes(entity, db, (OClassImpl) findGraphSuperclass(db, entity.getName()),
-                (OClassImpl) findGraphSuperclass(db, IDENTIFIER_TYPE));
+//        createCompoundIndexes(entity, db);
+        createIndexPerAttribute(entity, db);
     }
 
-    private void listClasses(OGraphDatabase db) {
-        final List<OClass> classes = new ArrayList<OClass>(db.getMetadata().getSchema().getClasses());
+    /*
+    private void listClasses(OrientGraph db) {
+        final List<OClass> classes = new ArrayList<OClass>(db.getRawGraph().getMetadata().getSchema().getClasses());
         long count = 0, totalElements = 0;
         Collections.sort(classes, new Comparator<OClass>() {
           public int compare(OClass o1, OClass o2) {
@@ -238,7 +345,7 @@ public abstract class SchemaManagerAbstract implements SchemaManager
                 clusters.append(cls.getClusterIds()[i]);
               }
 
-            count = db.countClass(cls.getName());
+            count = db.getRawGraph().countClass(cls.getName());
             totalElements += count;
 
             final String superClass = cls.getSuperClass() != null ? cls.getSuperClass().getName() : "";
@@ -248,6 +355,7 @@ public abstract class SchemaManagerAbstract implements SchemaManager
           }
         }
     }
+    */
     
     protected String format(final String iValue, final int iMaxSize) {
       if (iValue == null)
@@ -258,7 +366,71 @@ public abstract class SchemaManagerAbstract implements SchemaManager
       return iValue;
     }
     
-    private void createIndexes(Entity entity, OGraphDatabase db, OClassImpl sourceClass, OClassImpl idClass) {
+    private void createIndexPerAttribute(Entity entity, OrientBaseGraph db) {
+        refreshSchema(db);
+        String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
+        for (EntityAttribute attribute : entity.getAttributes()) {
+            if (attribute.getIndexed()) {
+                Collection<String> attribs = new ArrayList<String>();
+                attribs.add(attribute.getName());
+                createIndex(db, indexNamePrefix, entity.getName(), attribs);
+            }
+        }
+        for (InternalAttribute attribute : INTERNAL_ATTRIBUTES) {
+            if (attribute.getIndexed()) {
+                Collection<String> attribs = new ArrayList<String>();
+                attribs.add(attribute.getName());
+                createIndex(db, indexNamePrefix, entity.getName(), attribs);
+            }
+        }
+        indexNamePrefix = INDEX_NAME_PREFIX + IDENTIFIER_TYPE;        
+        for (InternalAttribute attribute : IDENTIFIER_ATTRIBUTES) {
+            if (attribute.getIndexed()) {
+                Collection<String> attribs = new ArrayList<String>();
+                attribs.add(attribute.getName());
+                createIndex(db, indexNamePrefix, IDENTIFIER_TYPE, attribs);
+            }
+        }
+    }
+            
+            
+    private void createIndex(OrientBaseGraph db, String indexNamePrefix, String entityName, Collection<String> attribs) {
+        StringBuilder sql = new StringBuilder("CREATE INDEX ");
+        sql.append(indexNamePrefix)
+            .append("-")
+            .append(nameFromAttributes(attribs))
+            .append(" ON ")
+            .append(entityName)
+            .append(" (");
+        
+        boolean firstAttribute = true;
+        for (String attribute : attribs) {
+            if (!firstAttribute) {
+                sql.append(", ");
+             } else {
+                 firstAttribute = false;
+             }
+            sql.append(attribute);
+        }
+        sql.append(")  NOTUNIQUE");
+        log.warn("Creating index: " + sql);
+        db.command(new OCommandSQL(sql.toString())).execute(new Object[] {});
+    }
+
+    private String nameFromAttributes(Collection<String> attribs) {
+        StringBuffer sb = new StringBuffer();
+        int index = 0;
+        for (String attrib : attribs) {
+            sb.append(attrib);
+            if (index < attribs.size()-1) {
+                sb.append("-");
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+    private void createCompoundIndexes(Entity entity, OrientGraph db) {
         refreshSchema(db);
         String indexNamePrefix = SchemaManager.INDEX_NAME_PREFIX + entity.getName();
 
@@ -323,15 +495,15 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         if (hasIndexedAttribute) {
             db.command(new OCommandSQL(sql.toString())).execute(new Object[] {});
         }
+    }*/
+
+    private void refreshSchema(OrientBaseGraph db) {
+        db.getRawGraph().getStorage().reload();
+        db.getRawGraph().getMetadata().getSchema().reload();
+        db.getRawGraph().getMetadata().getIndexManager().reload();
     }
 
-    private void refreshSchema(OGraphDatabase db) {
-        db.getStorage().reload();
-        db.getMetadata().getSchema().reload();
-        db.getMetadata().getIndexManager().reload();
-    }
-
-    public void removeIndexes(Entity entity, OGraphDatabase db) {
+    public void removeIndexes(Entity entity, OrientBaseGraph db) {
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         if (entityStore == null) {
             log.warn("Unable to remove indexes because the entity information is not known.");
@@ -347,19 +519,19 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         }
         for (OIndex<?> index : entityStore.getEntityClass().getClassIndexes()) {
             log.warn("Droping index " + index.getName());
-            db.getMetadata().getIndexManager().dropIndex(index.getName());
+            db.getRawGraph().getMetadata().getIndexManager().dropIndex(index.getName());
         }
         for (OIndex<?> index : entityStore.getIdentifierClass().getClassIndexes()) {
             log.warn("Droping index " + index.getName());
-            db.getMetadata().getIndexManager().dropIndex(index.getName());
+            db.getRawGraph().getMetadata().getIndexManager().dropIndex(index.getName());
         }
-        db.getStorage().reload();
-        db.getMetadata().getSchema().reload();
-        db.getMetadata().getIndexManager().reload();
+        db.getRawGraph().getStorage().reload();
+        db.getRawGraph().getMetadata().getSchema().reload();
+        db.getRawGraph().getMetadata().getIndexManager().reload();
     }
 
-    private OClass findGraphSuperclass(OGraphDatabase db, String className) {
-        Collection<OClass> classes = db.getMetadata().getSchema().getClasses();
+    private OClass findGraphClass(OrientBaseGraph db, String className) {
+        Collection<OClass> classes = db.getRawGraph().getMetadata().getSchema().getClasses();
         log.debug("The repository currently has " + classes.size() + " classes defined:");
         for (OClass oclass : classes) {
             if (oclass.getName().equalsIgnoreCase(className)) {
@@ -373,6 +545,7 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         OPropertyImpl prop = (OPropertyImpl) sourceClass.getProperty(fieldName);
         if (prop != null) {
             log.warn("Property '" + className + "." + fieldName + "' already exists.");
+            return;
         }
 
         prop = sourceClass.addPropertyInternal(fieldName, type, null, null);
@@ -380,8 +553,8 @@ public abstract class SchemaManagerAbstract implements SchemaManager
         sourceClass.saveInternal();
     }
 
-    private void storeClusterIds(EntityStore entityStore, OGraphDatabase db) {
-        Collection<OClass> classes = db.getMetadata().getSchema().getClasses();
+    private void storeClusterIds(EntityStore entityStore, OrientBaseGraph db) {
+        Collection<OClass> classes = db.getRawGraph().getMetadata().getSchema().getClasses();
         log.debug("The repository currently has " + classes.size() + " classes defined:");
         for (OClass oclass : classes) {
             log.info("Class name: " + oclass.getName() + " in cluster " + oclass.getDefaultClusterId());
@@ -420,6 +593,10 @@ public abstract class SchemaManagerAbstract implements SchemaManager
             return OType.DATE;
         case TIMESTAMP:
             return OType.DATETIME;
+        case LINKSET:
+            return OType.LINKSET;
+        case EMBEDDEDSET:
+            return OType.EMBEDDEDSET;
         }
         return null;
     }

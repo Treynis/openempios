@@ -20,24 +20,24 @@
  */
 package org.openhie.openempi.model;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.SequenceGenerator;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -45,21 +45,26 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "data_profile_attribute")
 @GenericGenerator(name = "data_profile_attribute_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "data_profile_attribute_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")})
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class DataProfileAttribute extends BaseObject
+public class DataProfileAttribute extends BaseObject implements Serializable
 {
 	private static final long serialVersionUID = -5805814946755578692L;
 
-	public static final int INTEGER_DATA_TYPE = 0;
-	public static final int STRING_DATA_TYPE = 1;
-	public static final int DATE_DATA_TYPE = 2;
-	public static final int LONG_DATA_TYPE = 3;
-	public static final int FLOAT_DATA_TYPE = 4;
-	public static final int DOUBLE_DATA_TYPE = 5;
-	
+	public static final int INTEGER_DATA_TYPE = 1;
+    public static final int SHORT_DATA_TYPE = 2;
+    public static final int LONG_DATA_TYPE = 3;
+    public static final int DOUBLE_DATA_TYPE = 4;
+    public static final int FLOAT_DATA_TYPE = 5;
+    public static final int STRING_DATA_TYPE = 6;
+    public static final int BOOLEAN_DATA_TYPE = 7;
+    public static final int DATE_DATA_TYPE = 8;
+    public static final int TIMESTAMP_DATA_TYPE = 9;
+    
 	private Integer attributeId;
+	private DataProfile dataProfile;
 	private String attributeName;
 	private Integer datatypeId;
 	private Double averageLength;
@@ -81,7 +86,6 @@ public class DataProfileAttribute extends BaseObject
 	private Double uValue;
 	private Double averageTokenFrequency;
 	private Integer blockingPairs;
-	private Integer dataSourceId;
 
 	private Set<DataProfileAttributeValue> attributeValues = new HashSet<DataProfileAttributeValue>();
 
@@ -94,7 +98,7 @@ public class DataProfileAttribute extends BaseObject
 	
 	public DataProfileAttribute(String attributeName, int datatypeId) {
 		this.attributeName = attributeName;
-		this.datatypeId = dataSourceId;
+		this.datatypeId = datatypeId;
 	}
 	
 	public DataProfileAttribute(Integer attributeId, Integer datatypeId) {
@@ -114,7 +118,17 @@ public class DataProfileAttribute extends BaseObject
 		this.attributeId = attributeId;
 	}
 
-	@Column(name = "attribute_name")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "data_profile_id", nullable = false)
+	public DataProfile getDataProfile() {
+        return dataProfile;
+    }
+
+    public void setDataProfile(DataProfile dataProfile) {
+        this.dataProfile = dataProfile;
+    }
+
+    @Column(name = "attribute_name")
 	@XmlElement
 	public String getAttributeName() {
 		return attributeName;
@@ -323,16 +337,6 @@ public class DataProfileAttribute extends BaseObject
 	public void setBlockingPairs(Integer blockingPairs) {
 		this.blockingPairs = blockingPairs;
 	}
-
-	@Column(name = "data_source_id")
-	@XmlElement
-	public Integer getDataSourceId() {
-		return dataSourceId;
-	}
-
-	public void setDataSourceId(Integer dataSourceId) {
-		this.dataSourceId = dataSourceId;
-	}
 	
 	@Transient
 	public Set<DataProfileAttributeValue> getAttributeValues() {
@@ -370,13 +374,14 @@ public class DataProfileAttribute extends BaseObject
 
 	@Override
 	public String toString() {
-		return "DataProfileAttribute [attributeId=" + attributeId + "attributeName=" + attributeName + ", datatypeId=" + datatypeId + ", averageLength="
+		return "DataProfileAttribute [attributeId=" + attributeId + ", dataProfile=" + dataProfile.getDataProfileId()
+		        + ", attributeName=" + attributeName + ", datatypeId=" + datatypeId + ", averageLength="
 				+ averageLength + ", minimumLength=" + minimumLength + ", maximumLength=" + maximumLength
 				+ ", averageValue=" + averageValue + ", minimumValue=" + minimumValue + ", maximumValue="
 				+ maximumValue + ", variance=" + variance + ", standardDeviation=" + standardDeviation 
 				+ ", rowCount=" + rowCount
 				+ ", distinctCount=" + distinctCount + ", duplicateCount=" + duplicateCount + ", uniqueCount="
-				+ uniqueCount + ", nullCount=" + nullCount + ", dataSourceId=" + dataSourceId + ", attributeValues="
+				+ uniqueCount + ", nullCount=" + nullCount + ", attributeValues="
 				+ attributeValues + "]";
 	}
 

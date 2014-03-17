@@ -37,8 +37,6 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-import org.hibernate.annotations.Cascade;
-
 /**
  * This class is used to represent available roles in the database.
  *

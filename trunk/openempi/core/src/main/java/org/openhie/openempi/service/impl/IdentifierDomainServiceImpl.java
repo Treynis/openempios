@@ -112,7 +112,7 @@ public class IdentifierDomainServiceImpl extends BaseServiceImpl implements Iden
             throw new ApplicationException("Identifier domain record to be added already exists in the system.");
         }
         saveIdentifierDomain(identifierDomain);
-        Context.notifyObserver(ObservationEventType.IDENTIFIER_DOMAIN_UPDATED_EVENT, identifierDomain);
+        Context.notifyObserver(ObservationEventType.IDENTIFIER_DOMAIN_UPDATE_EVENT, identifierDomain);
 
         return identifierDomain;
     }
@@ -136,7 +136,7 @@ public class IdentifierDomainServiceImpl extends BaseServiceImpl implements Iden
         }
         try {
             identifierDomainDao.removeIdentifierDomain(idFound);
-            Context.notifyObserver(ObservationEventType.IDENTIFIER_DOMAIN_UPDATED_EVENT, idFound);
+            Context.notifyObserver(ObservationEventType.IDENTIFIER_DOMAIN_UPDATE_EVENT, idFound);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             log.warn("Attempted to delete an identifier domain that is still referenced by identifiers: " + e, e);
             throw new ApplicationException("Cannot delete identifier domain as it is still in use.");
@@ -173,7 +173,7 @@ public class IdentifierDomainServiceImpl extends BaseServiceImpl implements Iden
         idFound.setUniversalIdentifier(identifierDomain.getUniversalIdentifier());
         idFound.setUniversalIdentifierTypeCode(identifierDomain.getUniversalIdentifierTypeCode());
         saveIdentifierDomain(idFound);
-        Context.notifyObserver(ObservationEventType.IDENTIFIER_DOMAIN_UPDATED_EVENT, idFound);
+        Context.notifyObserver(ObservationEventType.IDENTIFIER_DOMAIN_UPDATE_EVENT, idFound);
         return idFound;
     }
 

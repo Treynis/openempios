@@ -20,19 +20,21 @@
  */
 package org.openhie.openempi.matching.exactmatching;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.openhie.openempi.ApplicationException;
-import org.openhie.openempi.Constants;
 import org.openhie.openempi.InitializationException;
 import org.openhie.openempi.configuration.ConfigurationRegistry;
 import org.openhie.openempi.configuration.MatchField;
+import org.openhie.openempi.configuration.MatchRule;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.matching.AbstractMatchingLifecycleObserver;
 import org.openhie.openempi.matching.MatchingService;
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.LinkSource;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.model.RecordPair;
@@ -40,62 +42,73 @@ import org.openhie.openempi.stringcomparison.StringComparisonService;
 
 public class DeterministicExactMatchingService extends AbstractMatchingLifecycleObserver implements MatchingService
 {
-	private List<MatchField> matchFields;
+    private Map<String,List<MatchRule>> matchRulesByEntityName = new HashMap<String,List<MatchRule>>();
 	private StringComparisonService comparisonService;
 
 	public void startup() throws InitializationException {
-		@SuppressWarnings("unchecked")
-		Map<String,Object> configurationData = (Map<String,Object>) Context.getConfiguration()
-				.lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
-		Object obj = configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
-		if (obj == null) {
-			log.error("Deterministic exact matching service has not been configured properly; no match fields have been defined.");
-			throw new RuntimeException("Deterministic exact maching service has not been configured properly.");
-		}
-		@SuppressWarnings("unchecked")
-		List<MatchField> matchFields = (List<MatchField>) obj;
-		for (MatchField field : matchFields) {
-			log.debug("Matching service " + getClass().getName() + " will perform matching using " + field);
-			if (field.getComparatorFunction() != null && comparisonService == null) {
-				comparisonService = Context.getStringComparisonService();
-			}
-		}
-		this.matchFields = matchFields;
-		log.info("Loaded Exact Matching configuration for entity " + configurationData.get(ConfigurationRegistry.ENTITY_NAME));
+	    List<Entity> entities = Context.getEntityDefinitionManagerService().loadEntities();
+	    for (Entity entity : entities) {
+	        MatchingService service = Context.getMatchingService(entity.getName());
+	        if (service.getMatchingServiceId() != getMatchingServiceId()) {
+	            continue;
+	        }
+
+            @SuppressWarnings("unchecked")
+            Map<String,Object> configurationData = (Map<String,Object>) Context.getConfiguration()
+                    .lookupConfigurationEntry(entity.getName(), ConfigurationRegistry.MATCH_CONFIGURATION);
+            Object obj = configurationData.get(ExactMatchingConstants.EXACT_MATCHING_RULES_REGISTRY_KEY);
+        	if (obj == null) {
+        		log.error("Deterministic exact matching service has not been configured properly; no match rules have been defined.");
+        		throw new RuntimeException("Deterministic exact maching service has not been configured properly.");
+        	}
+
+        	@SuppressWarnings("unchecked")
+        	List<MatchRule> rules = (List<MatchRule>) obj;
+            matchRulesByEntityName.put(entity.getName(), rules);
+            comparisonService = Context.getStringComparisonService();
+        	log.info("Loaded Exact Matching configuration for entity " + entity.getName());
+	    }
 	}
-	
+
 	public int getMatchingServiceId() {
 		return LinkSource.EXACT_MATCHING_ALGORITHM_SOURCE;
 	}
 
 	public Set<RecordPair> match(Record record) {
 		log.debug("Looking for matches on record " + record);
-		List<RecordPair> candidates = Context.getBlockingService().findCandidates(record);
+		List<RecordPair> candidates = Context.getBlockingService(record.getEntity().getName()).findCandidates(record);
 		Set<RecordPair> matches = new java.util.HashSet<RecordPair>();
 		for (RecordPair entry : candidates) {
 			// No need to compare a record pair that consists of two references to the same record.
-			if (entry.getLeftRecord().getRecordId() != null && entry.getLeftRecord().getRecordId().longValue() == entry.getRightRecord().getRecordId().longValue()) {
+			if (entry.getLeftRecord().getRecordId() != null &&
+			        entry.getLeftRecord().getRecordId().longValue() ==
+			        entry.getRightRecord().getRecordId().longValue()) {
 				continue;
 			}
 			log.debug("Potential matching record pair found: " + entry);
-			boolean overallMatch = true;
-			
-			for (MatchField matchField : getMatchFields()) {
-				boolean fieldsMatch = isExactMatch(matchField, entry.getLeftRecord(), entry.getRightRecord());
-				log.debug("Comparison of records on field " + matchField + " returned " + fieldsMatch);
-				if (!fieldsMatch) {
-					overallMatch = false;
-					break;
-				}
-			}
-			
-			if (overallMatch) {
-				log.debug("Adding to matches entry: " + entry);
-				entry.setWeight(1.0);
-				entry.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
-				entry.setLinkSource(new LinkSource(getMatchingServiceId()));
-				entry.setVector((int) Math.pow(2.0, getMatchFields().size()) - 1);
-				matches.add(entry);
+
+	        String entityName = record.getEntity().getName();
+	        final List<MatchRule> rules = matchRulesByEntityName.get(entityName);
+	        if (rules == null) {
+	            log.error("There is no match fule configuration for entity " + entityName);
+	            throw new RuntimeException("No match rules have been configured for entity " + entityName);
+	        }
+
+	        for (MatchRule rule : rules) {
+	            List<MatchField> matchFieldList = rule.getFields();
+	            for (MatchField matchField : matchFieldList) {
+	                boolean fieldsMatch = isExactMatch(matchField, entry.getLeftRecord(), entry.getRightRecord());
+	                log.debug("Comparison of records on field " + matchField + " returned " + fieldsMatch);
+    				if (!fieldsMatch) {
+    				    break;
+    				}
+                    log.debug("Adding to matches entry: " + entry);
+                    entry.setWeight(1.0);
+                    entry.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
+                    entry.setLinkSource(new LinkSource(getMatchingServiceId()));
+                    entry.setVector((int) Math.pow(2.0, matchFieldList.size()) - 1);
+                    matches.add(entry);
+	            }
 			}
 		}
 		return matches;
@@ -108,42 +121,48 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 		if (recordPair == null || recordPair.getLeftRecord() == null || recordPair.getRightRecord() == null) {
 			return recordPair;
 		}
-		
+
 		recordPair.setLinkSource(new LinkSource(getMatchingServiceId()));
-		
+
 		// No need to compare a record pair that consists of two references to the same record.
 		if (recordPair.getLeftRecord().getRecordId() != null && 
 				recordPair.getLeftRecord().getRecordId().longValue() == recordPair.getRightRecord().getRecordId().longValue()) {
 				recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
 				return recordPair;
 		}
-		boolean overallMatch = true;
-		for (MatchField matchField : getMatchFields()) {
-			boolean fieldsMatch = isExactMatch(matchField, recordPair.getLeftRecord(), recordPair.getRightRecord());
-			if (log.isTraceEnabled()) {
-				log.debug("Comparison of records on field " + matchField + " returned " + fieldsMatch);
-			}
-			if (!fieldsMatch) {
-				overallMatch = false;
-				recordPair.setWeight(0D);
-				recordPair.setLinkSource(new LinkSource(getMatchingServiceId()));
-				recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
-				return recordPair;
-			}
-		}
-			
-		if (overallMatch) {
-			log.debug("Record pair should create a link: " + recordPair);
+		
+		String entityName = recordPair.getLeftRecord().getEntity().getName();
+		final List<MatchRule> rules = matchRulesByEntityName.get(entityName);
+        if (rules == null) {
+            log.error("There is no match fule configuration for entity " + entityName);
+            throw new RuntimeException("No match rules have been configured for entity " + entityName);
+        }
+        
+		for (MatchRule rule : rules) {
+	        List<MatchField> matchFieldList = rule.getFields();
+    		for (MatchField matchField : matchFieldList) {
+    			boolean fieldsMatch = isExactMatch(matchField, recordPair.getLeftRecord(), recordPair.getRightRecord());
+    			if (log.isTraceEnabled()) {
+    				log.debug("Comparison of records on field " + matchField + " returned " + fieldsMatch);
+    			}
+    			if (!fieldsMatch) {
+    				recordPair.setWeight(0D);
+    				recordPair.setLinkSource(new LinkSource(getMatchingServiceId()));
+    				recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
+    				break;
+    			}
+    		}
+			log.debug("Record pair should create a link: " + recordPair + " based on rule " + rule);
 			recordPair.setWeight(1.0);
 			recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
-			recordPair.setVector((int) Math.pow(2.0, getMatchFields().size()) - 1);
-		} else {
-			log.debug("Record pair should not create a link: " + recordPair);
-			recordPair.setWeight(0.0);
-			recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
-			// TODO: We need to fix this; it should calculate the vector even if it is not a match
-			recordPair.setVector(0);
-		}
+			recordPair.setVector((int) Math.pow(2.0, matchFieldList.size()) - 1);
+			return recordPair;	
+    	}
+		log.debug("Record pair should not create a link: " + recordPair);
+		recordPair.setWeight(0.0);
+		recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
+		// TODO: We need to fix this; it should calculate the vector even if it is not a match
+		recordPair.setVector(0);
 		return recordPair;
 	}
 
@@ -157,7 +176,7 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 			return false;
 		}
 		if (matchField.getComparatorFunction() == null) {
-			return lVal.equals(rVal);	
+			return lVal.equals(rVal);
 		}
 		String functionName = matchField.getComparatorFunction().getFunctionName();
 		double distance = comparisonService.score(functionName, lVal, rVal);
@@ -172,24 +191,36 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 		return false;
 	}
 
-	public List<MatchField> getMatchFields() {
+	public Set<String> getMatchFields(String entityName) {
+        Set<String> matchFields = new HashSet<String>();
+        @SuppressWarnings("unchecked")
+        Map<String,Object> config = (Map<String,Object>) Context.getConfiguration()
+                .lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
+        if (config == null) {
+            log.error("Deterministic exact matching service has not been configured properly; "
+                    + "no match rules have been defined.");
+            return matchFields;
+        }
+        @SuppressWarnings("unchecked")
+        List<MatchRule> rules = (List<MatchRule>) config.get(ExactMatchingConstants.EXACT_MATCHING_RULES_REGISTRY_KEY);
+        if (rules == null) {
+            log.error("Deterministic exact matching service has not been configured properly; "
+                    + "no match rules have been defined.");
+            return matchFields;
+        }
+        for (MatchRule rule : rules) {
+            for (MatchField field : rule.getFields()) {
+                matchFields.add(field.getFieldName());
+            }
+        }
 		return matchFields;
-	}
-
-	public void setMatchFieldNames(List<MatchField> matchFields) {
-		this.matchFields = matchFields;
 	}
 
 	public void shutdown() {
 		log.info("Shutting down deterministic matching service.");
 	}
 
-	public void initializeRepository() throws ApplicationException {
-		log.info("The deterministic matching service is initializing the repository.");
-	}
-
-	@Override
-	public String toString() {
-		return new ToStringBuilder(this).append("matchFields", matchFields).toString();
+	public void initializeRepository(String entityName) throws ApplicationException {
+		log.info("The deterministic matching service is initializing the repository for entity " + entityName);
 	}
 }

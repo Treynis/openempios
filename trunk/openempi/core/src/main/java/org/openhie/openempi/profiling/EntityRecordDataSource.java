@@ -20,8 +20,10 @@
  */
 package org.openhie.openempi.profiling;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
 import org.openhie.openempi.entity.dao.EntityDao;
@@ -33,158 +35,161 @@ import org.openhie.openempi.model.Record;
 
 public class EntityRecordDataSource extends AbstractRecordDataSource
 {
-	public static final int REPOSITORY_RECORD_DATA_SOURCE_ID = 0;
-	
-	private String entityName;	
-	private Entity entityDef = null;
-	
-	private EntityDefinitionManagerService entityDefinitionService;
-	
-	private Integer recordBlockSize;
-	private EntityDao entityDao;
+    public static final int REPOSITORY_RECORD_DATA_SOURCE_ID = -1;
 
-	public EntityRecordDataSource() {
-	}
-	
-	public Iterator<Record> iterator() {
-		return new RecordIterator(recordBlockSize);
-	}	
+    private Entity entity;
+    private EntityDao entityDao;
+    private Set<Entity> initializedEntities = new HashSet<Entity>();
+    private Entity entityDef = null;
 
-	public int getRecordDataSourceId() {
-		return REPOSITORY_RECORD_DATA_SOURCE_ID;
-	}
+    private EntityDefinitionManagerService entityDefinitionService;
 
-	private int GetDataProfileAttributeType(EntityAttribute attrib) {
-		switch(AttributeDatatype.getById(attrib.getDatatype().getDatatypeCd())) {
-			case INTEGER:
-				return DataProfileAttribute.INTEGER_DATA_TYPE;
-			case LONG:
-				return DataProfileAttribute.LONG_DATA_TYPE;
-			case DOUBLE:
-				return DataProfileAttribute.DOUBLE_DATA_TYPE;
-			case FLOAT:
-				return DataProfileAttribute.FLOAT_DATA_TYPE;
-			case DATE:
-				return DataProfileAttribute.DATE_DATA_TYPE;
-			case STRING:
-				return DataProfileAttribute.STRING_DATA_TYPE;
-			case TIMESTAMP:
-				return DataProfileAttribute.DATE_DATA_TYPE;
-			case SHORT:
-				return DataProfileAttribute.INTEGER_DATA_TYPE;
-			case BOOLEAN:
-				return DataProfileAttribute.INTEGER_DATA_TYPE;
-		}
-		return 0;
-	}
-	
-	public List<AttributeMetadata> getAttributeMetadata() {
-		java.util.List<AttributeMetadata> metadata = new java.util.ArrayList<AttributeMetadata>();
-		entityDef = getEntity();
-		for (EntityAttribute attrib : entityDef.getAttributes()) {
-			if (attrib.getDateVoided() == null) {
-				metadata.add( new AttributeMetadata(attrib.getName(),GetDataProfileAttributeType(attrib)) );
-			}
-		}
-		return metadata;
-	}
+    private Integer recordBlockSize;
 
-	public String getEntityName() {
-		return entityName;
-	}
+    public EntityRecordDataSource() {
+    }
 
-	public void setEntityName(String entityName) {
-		this.entityName = entityName;
-	}
-	
-	private Entity getEntity() {
-		if (entityDef == null) {
-			List<Entity> entityDefs = entityDefinitionService.findEntitiesByName(entityName);
-			if( entityDefs != null && entityDefs.size()>0 ) {
-				entityDef = entityDefs.get(0);
-			}
-		}
-		return entityDef;
-	}
-	
-	public EntityDefinitionManagerService getEntityDefinitionService() {
-		return entityDefinitionService;
-	}
-	public void setEntityDefinitionService(EntityDefinitionManagerService entityDefinitionService) {
-		this.entityDefinitionService = entityDefinitionService;
-	}
-	
-	public EntityDao getEntityDao() {
-		return entityDao;
-	}
+    public void init(Entity entity) {
+        this.entity = entity;
+    }
 
-	public void setEntityDao(EntityDao entityDao) {
-		this.entityDao = entityDao;
-	}
-	
-	public Integer getRecordBlockSize() {
-		return recordBlockSize;
-	}
+    public Iterator<Record> iterator() {
+        return new RecordIterator(recordBlockSize);
+    }
 
-	public void setRecordBlockSize(Integer recordBlockSize) {
-		this.recordBlockSize = recordBlockSize;
-	}
-	
-	public boolean isEmpty()
-	{
-		boolean isEmpty = false;
-		
-		if((entityDao.getRecordCount(getEntity())).longValue() == 0)
-			isEmpty = true;
-		
-		return isEmpty;
-	}
+    public int getRecordDataSourceId() {
+        return REPOSITORY_RECORD_DATA_SOURCE_ID;
+    }
 
-	private class RecordIterator implements Iterator<Record>
-	{
-		private int blockSize;
-		java.util.List<Record> records;
-		int currentIndex;
-		int startIndex;
-		
-		public RecordIterator(int blockSize) {
-			this.blockSize = blockSize;
-			startIndex = 0;
-			currentIndex = -1;
-		}
-		
-		public boolean hasNext() {
-			if (records != null && currentIndex < records.size()) {
-				return true;
-			}
-			return loadBlockOfRecords(blockSize);
-		}
+    private int getDataProfileAttributeType(EntityAttribute attrib) {
+        switch (AttributeDatatype.getById(attrib.getDatatype().getDatatypeCd())) {
+        case INTEGER:
+            return DataProfileAttribute.INTEGER_DATA_TYPE;
+        case LONG:
+            return DataProfileAttribute.LONG_DATA_TYPE;
+        case DOUBLE:
+            return DataProfileAttribute.DOUBLE_DATA_TYPE;
+        case FLOAT:
+            return DataProfileAttribute.FLOAT_DATA_TYPE;
+        case DATE:
+            return DataProfileAttribute.DATE_DATA_TYPE;
+        case STRING:
+            return DataProfileAttribute.STRING_DATA_TYPE;
+        case TIMESTAMP:
+            return DataProfileAttribute.TIMESTAMP_DATA_TYPE;
+        case SHORT:
+            return DataProfileAttribute.SHORT_DATA_TYPE;
+        case BOOLEAN:
+            return DataProfileAttribute.BOOLEAN_DATA_TYPE;
+        }
+        return 0;
+    }
 
-		private boolean loadBlockOfRecords(int blockSize) {
-			try {
-				log.debug("Loading records from " + startIndex + " to " + (startIndex + blockSize));
-				records = entityDao.findRecordsByAttributes(entityDef, new Record(new Object()), startIndex, blockSize);
-				if (records.size() == 0) {
-					return false;
-				}
-				currentIndex = 0;
-				startIndex += blockSize;
-				return true;
-			} catch (Exception e) {
-				log.error("Failed while loading a block of records from the repository: " + e, e);
-				return false;
-			}
-		}
+    public List<AttributeMetadata> getAttributeMetadata() {
+        java.util.List<AttributeMetadata> metadata = new java.util.ArrayList<AttributeMetadata>();
+        entityDef = getEntity();
+        if (entityDef != null) {
+            for (EntityAttribute attrib : entityDef.getAttributes()) {
+                if (attrib.getDateVoided() == null) {
+                    metadata.add(new AttributeMetadata(attrib.getName(), getDataProfileAttributeType(attrib)));
+                }
+            }
+        }
+        return metadata;
+    }
 
-		public Record next() {
-			return records.get(currentIndex++);
-		}
+    private Entity getEntity() {
+        return entityDefinitionService.getEntityByName(entity.getName());
+    }
 
-		public void remove() {
-		}
-	}
-	
-	public void close(String message) {
-		// TODO Auto-generated method stub		
-	}
+    public EntityDefinitionManagerService getEntityDefinitionService() {
+        return entityDefinitionService;
+    }
+
+    public void setEntityDefinitionService(EntityDefinitionManagerService entityDefinitionService) {
+        this.entityDefinitionService = entityDefinitionService;
+    }
+
+    public Integer getRecordBlockSize() {
+        return recordBlockSize;
+    }
+
+    public void setRecordBlockSize(Integer recordBlockSize) {
+        this.recordBlockSize = recordBlockSize;
+    }
+
+    public boolean isEmpty() {
+        boolean isEmpty = false;
+
+        if ((getEntityDao(entity).getRecordCount(getEntity())).longValue() == 0) {
+            isEmpty = true;
+        }
+
+        return isEmpty;
+    }
+
+    private class RecordIterator implements Iterator<Record>
+    {
+        private int blockSize;
+        java.util.List<Record> records;
+        int currentIndex;
+        int startIndex;
+
+        public RecordIterator(int blockSize) {
+            this.blockSize = blockSize;
+            startIndex = 0;
+            currentIndex = -1;
+        }
+
+        public boolean hasNext() {
+            if (records != null && currentIndex < records.size()) {
+                return true;
+            }
+            return loadBlockOfRecords(blockSize);
+        }
+
+        private boolean loadBlockOfRecords(int blockSize) {
+            try {
+                log.debug("Loading records from " + startIndex + " to " + (startIndex + blockSize));
+                records = getEntityDao(entity).findRecordsByAttributes(entityDef, new Record(new Object()), startIndex, blockSize);
+                if (records.size() == 0) {
+                    return false;
+                }
+                currentIndex = 0;
+                startIndex += blockSize;
+                return true;
+            } catch (Exception e) {
+                log.error("Failed while loading a block of records from the repository: " + e, e);
+                return false;
+            }
+        }
+
+        public Record next() {
+            return records.get(currentIndex++);
+        }
+
+        public void remove() {
+        }
+    }
+
+    private synchronized EntityDao getEntityDao(Entity entity) {
+        boolean found = initializedEntities.contains(entity);
+        if (!found) {
+            entityDao.initializeStore(entity);
+            initializedEntities.add(entity);
+        }
+        return entityDao;
+    }
+
+    public void close(String message) {
+        // TODO Auto-generated method stub
+    }
+
+    public EntityDao getEntityDao() {
+        return entityDao;
+    }
+
+    public void setEntityDao(EntityDao entityDao) {
+        this.entityDao = entityDao;
+    }
 }

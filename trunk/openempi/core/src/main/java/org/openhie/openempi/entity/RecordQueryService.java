@@ -57,6 +57,8 @@ public interface RecordQueryService
 
     List<Record> loadAllRecordsPaged(Entity entity, Record record, int firstResult, int maxResults);
 
+    List<RecordLink> loadRecordLinks(Entity entity, Long recordId, RecordLinkState state);
+
     List<RecordLink> loadRecordLinks(Entity entity, RecordLinkState state, int firstResult, int maxResults);
 
     List<RecordLink> findRecordLinksBySource(Entity entity, LinkSource linkSource, RecordLinkState state);

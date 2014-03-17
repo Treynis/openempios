@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.openhie.openempi.ApplicationException;
-import org.openhie.openempi.entity.DataAccessIntent;
 import org.openhie.openempi.entity.RecordCacheManager;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.LinkSource;
@@ -39,68 +39,82 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 
 public interface EntityDao
 {
-    void initializeStore(Entity entity);
+    public void initializeStore(Entity entity);
 
-    void shutdownStore(Entity entity);
+    public void shutdownStore(Entity entity);
 
-    List<Record> loadRecords(Entity entity, int firstResult, int maxResults);
+    public List<Record> loadRecords(Entity entity, int firstResult, int maxResults);
 
-    Record loadRecord(Entity entity, Long id);
-
-    List<Long> getAllRecordIds(Entity entity);
-
-    Record updateRecord(Entity entity, Record record) throws ApplicationException;
-
-    void updateRecords(Entity entity, List<Record> records) throws ApplicationException;
-
-    void deleteRecord(Entity entity, Record record) throws ApplicationException;
-
-    void removeRecord(Entity entity, Record record) throws ApplicationException;
-
-    Record saveRecord(Entity entity, Record record);
-
-    Set<Record> saveRecords(Entity entity, Collection<Record> record);
-
-    List<Record> findRecordsByAttributes(Entity entityDef, Record record);
-
-    Long getRecordCount(Entity entity);
-
-    Long getRecordCount(Entity entity, Record record);
-
-    Long getRecordLinkCount(Entity entity, RecordLinkState state);
-
-    Long getRecordCount(Entity entity, Identifier identifier);
-
-    List<Record> findRecordsByAttributes(Entity entity, Record record, int firstResult, int maxResults);
-
-    List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier);
-
-    List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier, int firstResult, int maxResults);
+    public Record loadRecord(Entity entity, Long id);
     
-    List<Record> findRecordsWithoutIdentifierInDomain(Entity entity, IdentifierDomain domain, boolean hasLinks,
+    public Object loadObject(Entity entity, String recordId);
+    
+    public List<Long> getAllRecordIds(Entity entity);
+
+    public Record updateRecord(Entity entity, Record record) throws ApplicationException;
+
+    public void updateRecords(Entity entity, List<Record> records) throws ApplicationException;
+
+    public void deleteRecord(Entity entity, Record record) throws ApplicationException;
+
+    public void removeRecord(Entity entity, Record record) throws ApplicationException;
+
+    public Record saveRecord(Entity entity, Record record);
+
+    public Set<Record> saveRecords(Entity entity, Collection<Record> record);
+
+    public List<Record> findRecordsByAttributes(Entity entityDef, Record record);
+
+    public Long getRecordCount(Entity entity);
+
+    public Long getRecordCount(Entity entity, Record record);
+
+    public Long getRecordLinkCount(Entity entity, RecordLinkState state);
+
+    public Long getRecordCount(Entity entity, Identifier identifier);
+
+    public List<Record> findRecordsByAttributes(Entity entity, Record record, int firstResult, int maxResults);
+
+    public List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier);
+
+    public List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier, int firstResult, int maxResults);
+    
+    public List<Record> findRecordsWithoutIdentifierInDomain(Entity entity, IdentifierDomain domain, boolean hasLinks,
             int firstResult, int maxResult);
 
-    List<ODocument> executeQuery(Entity entity, String query);
-
-    RecordCacheManager getEntityCacheManager();
-
-    RecordLink saveRecordLink(RecordLink link);
-
-    List<RecordLink> saveRecordLinks(List<RecordLink> link);
-
-    RecordLink loadRecordLink(Entity entityDef, String recordLinkId);
-
-    List<RecordLink> loadRecordLinks(Entity entity, RecordLinkState state, int firstResult, int maxResults);
-
-    List<RecordLink> loadRecordLinks(Entity entity, Long recordId);
+    public void saveData(Entity entity, String className, Record record);
     
-    List<Record> loadRecordLinksById(Entity entity, Long recordId);
-    
-    List<RecordLink> getRecordLinksBySource(Entity entity, LinkSource linkSource, RecordLinkState state);
+    public List<ODocument> executeQuery(Entity entity, String query);
 
-    void removeRecordLink(RecordLink link);
+    public void executeQueryAsync(Entity entity, String query, AsyncQueryCallback callback);
+
+    public RecordCacheManager getEntityCacheManager();
+
+    public RecordLink saveRecordLink(RecordLink link);
+
+    public List<RecordLink> saveRecordLinks(List<RecordLink> link);
+
+    public RecordLink loadRecordLink(Entity entityDef, String recordLinkId);
+
+    public List<RecordLink> loadRecordLinks(Entity entity, RecordLinkState state, int firstResult, int maxResults);
+
+    public List<RecordLink> loadRecordLinks(Entity entity, Long recordId);
+
+    public List<RecordLink> loadRecordLinks(Entity entity, Long recordId, RecordLinkState state);
     
-    int removeRecordLinksBySource(Entity entity, LinkSource linkSource, RecordLinkState state);
+    public List<Record> loadRecordLinksById(Entity entity, Long recordId);
     
-    void declareIntent(Entity entity, DataAccessIntent intent);
+    public List<RecordLink> getRecordLinksBySource(Entity entity, LinkSource linkSource, RecordLinkState state);
+
+    public void removeRecordLink(RecordLink link);
+    
+    public int removeRecordLinksBySource(Entity entity, LinkSource linkSource, RecordLinkState state);
+    
+    public void declareIntent(Entity entity, DataAccessIntent intent);
+    
+    public void createClass(Entity baseEntity, Entity classEntity, String baseClass) throws ApplicationException;
+    
+    public boolean classExists(Entity baseEntity, String className) throws ApplicationException;
+    
+    public void dropClass(Entity baseEntity, String className) throws ApplicationException;
 }

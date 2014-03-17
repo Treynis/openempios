@@ -39,6 +39,7 @@
 			<xsd:sequence>
 				<xsd:element name="name" type="xsd:string" />
 				<xsd:element name="display-name" type="xsd:string" />
+				<xsd:element name="description" type="xsd:string" />
 				<xsd:element name="version-id" minOccurs="1" type="xsd:int"/>
 				<xsd:element name="groups" type="emd:GroupsType" minOccurs="0" />
 				<xsd:element name="attributes" type="emd:AttributesType" minOccurs="0"/>
@@ -74,6 +75,8 @@
 			<xsd:element name="data-type-code" minOccurs="1" type="xsd:int"/>
 			<xsd:element name="display-order" minOccurs="1" type="xsd:int"/>
 			<xsd:element name="indexed" minOccurs="1" type="xsd:boolean"/>
+			<xsd:element name="searchable" minOccurs="1" type="xsd:boolean"/>
+			<xsd:element name="case-insensitive" minOccurs="0" type="xsd:boolean"/>
 			<xsd:element name="group-name" minOccurs="0" type="xsd:token"/>
 			<xsd:element name="is-custom" minOccurs="1" type="xsd:boolean"/>
 			<xsd:element name="source-name" minOccurs="1" type="xsd:token"/>

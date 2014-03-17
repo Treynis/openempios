@@ -31,6 +31,7 @@
         <mapping class="org.openhie.openempi.model.AuditEventType"/>
         <mapping class="org.openhie.openempi.model.AuditEvent"/>
         <mapping class="org.openhie.openempi.model.AuditEventEntry"/>
+        <mapping class="org.openhie.openempi.model.DataProfile"/>
         <mapping class="org.openhie.openempi.model.DataProfileAttribute"/>
         <mapping class="org.openhie.openempi.model.DataProfileAttributeValue"/>
         <mapping class="org.openhie.openempi.model.EthnicGroup"/>
@@ -45,7 +46,10 @@
         <mapping class="org.openhie.openempi.model.IdentifierUpdateEntry"/>
         <mapping class="org.openhie.openempi.model.IdentifierUpdateEvent"/>
         <mapping class="org.openhie.openempi.model.IdentifierDomain"/>
-        <mapping class="org.openhie.openempi.model.IdentifierDomainAttribute"/>
+        <mapping class="org.openhie.openempi.model.JobType"/>
+        <mapping class="org.openhie.openempi.model.JobStatus"/>
+        <mapping class="org.openhie.openempi.model.JobEntry"/>
+        <mapping class="org.openhie.openempi.model.JobEntryEventLog"/>        
         <mapping class="org.openhie.openempi.model.Language"/>
         <mapping class="org.openhie.openempi.model.LinkSource"/>
         <mapping class="org.openhie.openempi.model.LoggedLink"/>

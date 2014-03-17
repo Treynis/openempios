@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.PropertyConfigurator;
@@ -45,9 +44,9 @@ import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.configuration.Component.ComponentType;
 import org.openhie.openempi.configuration.Component.ExtensionInterface;
 import org.openhie.openempi.configuration.xml.BlockingConfigurationType;
-import org.openhie.openempi.configuration.xml.FileLoaderConfigurationType;
 import org.openhie.openempi.configuration.xml.MatchingConfigurationType;
 import org.openhie.openempi.configuration.xml.MpiConfigDocument;
+import org.openhie.openempi.configuration.xml.MpiConfigDocument.MpiConfig;
 import org.openhie.openempi.configuration.xml.ScheduledTask;
 import org.openhie.openempi.configuration.xml.ScheduledTasks;
 import org.openhie.openempi.configuration.xml.SingleBestRecordType;
@@ -57,42 +56,57 @@ import org.openhie.openempi.configuration.xml.mpicomponent.ExtensionType.Interfa
 import org.openhie.openempi.configuration.xml.mpicomponent.MpiComponentDefinitionDocument;
 import org.openhie.openempi.configuration.xml.mpicomponent.MpiComponentType;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.loader.FileLoaderConfigurationService;
 import org.openhie.openempi.matching.MatchingService;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.User;
+import org.openhie.openempi.service.Parameterizable;
 import org.openhie.openempi.service.impl.BaseServiceImpl;
 import org.openhie.openempi.singlebestrecord.SingleBestRecordService;
 
 public class Configuration extends BaseServiceImpl implements ConfigurationRegistry
 {
 	protected static final Log log = LogFactory.getLog(Configuration.class);
-	
+
 	private String configFile;
 	private MpiConfigDocument configuration;
 	private GlobalIdentifier globalIdentifier;
-	private List<CustomField> customFields;
 	private AdminConfiguration adminConfiguration;
 	
-	private Map<String, Object> configurationRegistry;
+	private Map<String, Object> defaultConfigurationRegistry;
 	private Map<String, Component> extensionRegistry;
-	
+	private Map<String, ConfigurationLoader> loaderByEntity;
+
 	public void init() {
 		configureLoggingEnvironment();
-		configurationRegistry = new HashMap<String, Object>();
-		extensionRegistry = new HashMap<String, Component>();
+		defaultConfigurationRegistry = new HashMap<String,Object>();
+		extensionRegistry = new HashMap<String,Component>();
+		loaderByEntity = new HashMap<String,ConfigurationLoader>();
 		try {
 			configuration = loadConfigurationFromSource();
 			validateConfiguration(configuration);
 			processConfiguration(configuration);
+//			setupRecordCache();
 			log.info("System configuration: " + this.toString());
 		} catch (Exception e) {
 			log.error("Failed while locating and parsing the configuration file. System is shutting down due to: " + e, e);
 			throw new RuntimeException("Failed while locating and parsing the configuration file. System is shutting down.");
 		}
 	}
-	
-	private void configureLoggingEnvironment() {
+
+//    private void setupRecordCache() {
+//        Object obj = Context.getApplicationContext().getBean(Constants.RECORD_CACHE_SERVICE);
+//        if (obj == null) {
+//            log.error("No record cache has been defined in the system.");
+//            return;
+//        }
+//        if (!(obj instanceof RecordCacheService)) {
+//            log.error("The configured record cache service does not support the required interface.");
+//        }
+//        RecordCacheService service = (RecordCacheService) obj;
+//        Context.registerCustomRecordCacheService(service);
+//    }
+
+    private void configureLoggingEnvironment() {
 		String openEmpiHome = Context.getOpenEmpiHome();
 		if (openEmpiHome != null && openEmpiHome.length() > 0) {
 			String loggingConfigurationFile = openEmpiHome + "/conf/log4j.properties";
@@ -100,33 +114,31 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 			log.info("Set the logging configuration file to " + loggingConfigurationFile);
 		}
 	}
-	
+
 	public BlockingConfigurationType getBlockingConfiguration() {
 		return configuration.getMpiConfig().getBlockingConfigurationArray(0);
 	}
-	
-	public BlockingConfigurationType saveBlockingConfiguration(BlockingConfigurationType blocking) {
-		configuration.getMpiConfig().setBlockingConfigurationArray(0, blocking);
-		return configuration.getMpiConfig().getBlockingConfigurationArray(0);
-	}
-	
+
 	private void processConfiguration(MpiConfigDocument configuration) {
 		globalIdentifier = processGlobalIdentifier(configuration);
 		processScheduledTasks(configuration);
-//		customFields = processCustomFields(configuration);
+
 		try {
-			BlockingService service = processBlockingConfiguration(configuration);
-			if (service == null) {
-				setupNaiveBlockingService();
-			}
+		    BlockingService service = null;
+		    service = processBlockingConfiguration(configuration);
+            if (service == null) {
+                setupNaiveBlockingService("*");
+            }
 		} catch (Exception e) {
 			log.error("Was unable to load the blocking configuration: " + e, e);
 		}
+
 		try {
-			processMatchConfiguration(configuration);
+		    processMatchConfiguration(configuration);
 		} catch (Exception e) {
 			log.warn("Was unable to load the matching service configuration: " + e, e);
 		}
+
 		try {
 			processSingleBestRecordConfiguration(configuration);
 		} catch (Exception e) {
@@ -137,34 +149,40 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 
 	private List<ScheduledTaskEntry> processScheduledTasks(MpiConfigDocument configuration) {
 		checkConfiguration(configuration);
-		
+
 		List<ScheduledTaskEntry> list = new ArrayList<ScheduledTaskEntry>();
-		registerConfigurationEntry(ConfigurationRegistry.SCHEDULED_TASK_LIST, list);
-		
 		ScheduledTasks tasks = configuration.getMpiConfig().getScheduledTasks();
 		if (tasks == null) {
 			log.warn("No scheduled tasks have been specified in the configuration.");
 			return list;
 		}
-		
-		for (int i=0; i < tasks.sizeOfScheduledTaskArray(); i++) {
+
+		for (int i = 0; i < tasks.sizeOfScheduledTaskArray(); i++) {
 			org.openhie.openempi.configuration.xml.ScheduledTask taskXml = tasks.getScheduledTaskArray(i);
 			ScheduledTaskEntry entry = buildScheduledTaskFromXml(taskXml);
 			if (entry != null) {
 				list.add(entry);
 			}
 		}
+        registerConfigurationEntry(null, ConfigurationRegistry.SCHEDULED_TASK_LIST, list);
 		return list;
 	}
 
 	private ScheduledTaskEntry buildScheduledTaskFromXml(ScheduledTask taskXml) {
 		ScheduledTaskEntry taskEntry = new ScheduledTaskEntry();
+		String entityName = taskXml.getEntityName();
 		taskEntry.setTaskName(taskXml.getTaskName());
 		taskEntry.setTaskImplementation(taskXml.getTaskImplementation());
 		Object taskImplementation = Context.getApplicationContext().getBean(taskEntry.getTaskImplementation());
 		if (taskImplementation == null || !(taskImplementation instanceof Runnable)) {
 			log.error("Encounter an invalid scheduled task entry that will be ignored due to an unknown implementation classs.: " + taskXml);
 			return null;
+		}
+		if (taskImplementation instanceof Parameterizable) {
+		    Parameterizable takesParameters = (Parameterizable) taskImplementation;
+		    Map<String,Object> params = new HashMap<String,Object>();
+		    params.put(Constants.ENTITY_NAME_KEY, entityName);
+		    takesParameters.setParameters(params);
 		}
 		taskEntry.setRunableTask((Runnable) taskImplementation);
 		taskEntry.setTimeUnit(getTimeUnit(taskXml.getTimeUnit()));
@@ -221,11 +239,11 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		return TimeUnit.SECONDS;
 	}
 
-	private void setupNaiveBlockingService() {
+	private void setupNaiveBlockingService(String entityName) {
 		log.warn("Was unable to load the blocking service configuration; using the naive blocking service as a fallback mechanism.");
 		BlockingService blockingService = (BlockingService) 
 				Context.getApplicationContext().getBean(Constants.NAIVE_BLOCKING_SERVICE);
-		Context.registerCustomBlockingService(blockingService);		
+		Context.registerCustomBlockingService(entityName, blockingService);		
 	}
 
 	private AdminConfiguration processAdminConfiguration(MpiConfigDocument configuration) {
@@ -315,37 +333,51 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		}
         return globalIdentifier.getIdentifierDomain();
 	}
-	
+
+    public MpiConfig getMpiConfig() {
+        return configuration.getMpiConfig();
+    }
+
 	private BlockingService processBlockingConfiguration(MpiConfigDocument configuration) {
 		checkConfiguration(configuration);
 		
-		BlockingConfigurationType obj = configuration.getMpiConfig().getBlockingConfigurationArray(0);
-		if (obj == null) {
-			log.warn("No blocking service configuration has been specified.");
-			return null;
+		if (configuration.getMpiConfig().getBlockingConfigurationArray() == null) {
+		    return null;
 		}
-		log.debug("Object is of type: " + obj.getDomNode().getNamespaceURI());
-		String namespaceUriStr = obj.getDomNode().getNamespaceURI();
-		URI namespaceURI = getNamespaceURI(namespaceUriStr);
-
-		String resourcePath = generateComponentResourcePath(namespaceURI);
-		Component component = loadAndRegisterComponentFromNamespaceUri(resourcePath);
 		
-		String configurationLoaderBean = getExtensionBeanNameFromComponent(component);
-		
-		ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(configurationLoaderBean);
-		loader.loadAndRegisterComponentConfiguration(this, obj);
-		
-		Component.Extension extension = component.getExtensionByExtensionInterface(ExtensionInterface.IMPLEMENTATION);
-		if (extension == null) {
-			log.error("Encountered a custom blocking component with no implementation extension: " + component);
-			throw new InitializationException("Unable to locate an implementation component for custom blocking component " + component.getName());
+		int count = configuration.getMpiConfig().getBlockingConfigurationArray().length;
+		BlockingService blockingService=null;
+		for (int i=0; i < count; i++) {
+    		BlockingConfigurationType obj = configuration.getMpiConfig().getBlockingConfigurationArray(i);
+    		if (obj == null) {
+    			log.warn("No blocking service configuration has been specified.");
+    			return null;
+    		}
+    		log.debug("Object is of type: " + obj.getDomNode().getNamespaceURI());
+    		String namespaceUriStr = obj.getDomNode().getNamespaceURI();
+    		URI namespaceURI = getNamespaceURI(namespaceUriStr);
+    
+    		String resourcePath = generateComponentResourcePath(namespaceURI);
+    		Component component = loadAndRegisterComponentFromNamespaceUri(resourcePath);
+    		
+    		String configurationLoaderBean = getExtensionBeanNameFromComponent(component);
+    		
+    		ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(configurationLoaderBean);
+    		loader.loadAndRegisterComponentConfiguration(this, obj);
+    		
+    		Component.Extension extension = component.getExtensionByExtensionInterface(ExtensionInterface.IMPLEMENTATION);
+    		if (extension == null) {
+    			log.error("Encountered a custom blocking component with no implementation extension: " + component);
+    			throw new InitializationException("Unable to locate an implementation component for custom blocking component " + component.getName());
+    		}
+    		log.debug("Registering implementation of blocking component named " + extension.getName() + " and implementation key " +
+    				extension.getImplementationKey());
+    		blockingService = (BlockingService) Context.getApplicationContext().getBean(extension.getImplementationKey());
+    		
+    		String entity = loader.getComponentEntity();
+    		log.info("Registering blocking service " + blockingService + " for entity " + entity);
+            Context.registerCustomBlockingService(entity, blockingService);
 		}
-		log.debug("Registering implementation of blocking component named " + extension.getName() + " and implementation key " +
-				extension.getImplementationKey());
-		BlockingService blockingService = (BlockingService) 
-			Context.getApplicationContext().getBean(extension.getImplementationKey());
-		Context.registerCustomBlockingService(blockingService);
 		return blockingService;
 	}
 	
@@ -379,55 +411,56 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 			Context.getApplicationContext().getBean(extension.getImplementationKey());
 		Context.registerCustomSingleBestRecordService(singleBestRecordService);
 	}
-	
-	public MatchingConfigurationType saveMatchingConfiguration(MatchingConfigurationType matchingConfiguration) {
-		configuration.getMpiConfig().setMatchingConfigurationArray(0, matchingConfiguration);
-		return configuration.getMpiConfig().getMatchingConfigurationArray(0);
-	}
 
-	public ConfigurationLoader getBlockingConfigurationLoader() {
-		Component component = lookupExtensionComponentByComponentType(ComponentType.BLOCKING);
-		String loaderBeanName = getExtensionBeanNameFromComponent(component);
-		ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(loaderBeanName);
+	public ConfigurationLoader getBlockingConfigurationLoader(String entityName) {
+		ConfigurationLoader loader = lookupConfigurationLoader(ComponentType.BLOCKING, entityName);
 		return loader;
 	}
 
-	public ConfigurationLoader getMatchingConfigurationLoader() {
-		Component component = lookupExtensionComponentByComponentType(ComponentType.MATCHING);
-		String loaderBeanName = getExtensionBeanNameFromComponent(component);
-		ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(loaderBeanName);
+	public ConfigurationLoader getMatchingConfigurationLoader(String entityName) {
+        ConfigurationLoader loader = lookupConfigurationLoader(ComponentType.MATCHING, entityName);
 		return loader;
 	}
 
 	private void processMatchConfiguration(MpiConfigDocument configuration) {
-		
-		MatchingConfigurationType obj = configuration.getMpiConfig().getMatchingConfigurationArray(0);
-		if (obj == null) {
-			log.warn("No matching service configuration has been specified.");
-			return;
-		}
-		log.debug("Object is of type: " + obj.getDomNode().getNamespaceURI());
-		String namespaceUriStr = obj.getDomNode().getNamespaceURI();
-		URI namespaceURI = getNamespaceURI(namespaceUriStr);
+        if (configuration.getMpiConfig().getMatchingConfigurationArray() == null) {
+            return;
+        }
 
-		String resourcePath = generateComponentResourcePath(namespaceURI);
-		Component component = loadAndRegisterComponentFromNamespaceUri(resourcePath);
-		
-		String configurationLoaderBean = getExtensionBeanNameFromComponent(component);
-		
-		ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(configurationLoaderBean);
-		loader.loadAndRegisterComponentConfiguration(this, obj);
-		
-		Component.Extension extension = component.getExtensionByExtensionInterface(ExtensionInterface.IMPLEMENTATION);
-		if (extension == null) {
-			log.error("Encountered a custom matching component with no implementation extension: " + component);
-			throw new InitializationException("Unable to locate an implementation component for custom matching component " + component.getName());
-		}
-		log.debug("Registering implementation of matching component named " + extension.getName() + " and implementation key " +
-				extension.getImplementationKey());
-		MatchingService matchingService = (MatchingService) 
-			Context.getApplicationContext().getBean(extension.getImplementationKey());
-		Context.registerCustomMatchingService(matchingService);		
+        int count = configuration.getMpiConfig().getMatchingConfigurationArray().length;
+        for (int i = 0; i < count; i++) {
+    		MatchingConfigurationType obj = configuration.getMpiConfig().getMatchingConfigurationArray(i);
+    		if (obj == null) {
+    			log.warn("No matching service configuration has been specified.");
+    			return;
+    		}
+    		log.debug("Object is of type: " + obj.getDomNode().getNamespaceURI());
+    		String namespaceUriStr = obj.getDomNode().getNamespaceURI();
+    		URI namespaceURI = getNamespaceURI(namespaceUriStr);
+
+    		String resourcePath = generateComponentResourcePath(namespaceURI);
+    		Component component = loadAndRegisterComponentFromNamespaceUri(resourcePath);
+
+    		String configurationLoaderBean = getExtensionBeanNameFromComponent(component);
+
+    		ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(configurationLoaderBean);
+    		loader.loadAndRegisterComponentConfiguration(this, obj);
+
+    		Component.Extension extension = component.getExtensionByExtensionInterface(ExtensionInterface.IMPLEMENTATION);
+    		if (extension == null) {
+    			log.error("Encountered a custom matching component with no implementation extension: " + component);
+    			throw new InitializationException("Unable to locate an implementation component for custom matching component " + component.getName());
+    		}
+    		log.debug("Registering implementation of matching component named " + extension.getName() + " and implementation key " +
+    				extension.getImplementationKey());
+
+            String entity = loader.getComponentEntity();
+
+    		MatchingService matchingService = (MatchingService)
+    			Context.getApplicationContext().getBean(extension.getImplementationKey());
+            log.info("Registering matching service " + matchingService + " for entity " + entity);
+    		Context.registerCustomMatchingService(entity, matchingService);
+        }
 	}
 
 	public String getExtensionBeanNameFromComponent(Component component) {
@@ -526,101 +559,6 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		}
 	}
 
-//	/**
-//	 * TODO Need to implement validation of the custom field names. The convention is that custom fields can range
-//	 * from custom1 to custom5 but currently there is no code here to check and make sure that the fields specified follow
-//	 * the convention and there is no duplication (custom1 specified twice for example).
-//	 * 
-//	 * @param customFieldXml
-//	 * @return
-//	 */
-//	private CustomField buildCustomFieldFromXml(org.openhie.openempi.configuration.xml.CustomField customFieldXml) {
-//		CustomField customField = new CustomField();
-//		String fieldName = customFieldXml.getFieldName();
-//		customField.setFieldName(fieldName);
-//		if (!ConvertUtil.isValidCustomFieldName(fieldName)) {
-//			log.error("Not valid custom field name: " + fieldName);
-//			throw new InitializationException("Not valid custom field name: " + fieldName);
-//		}
-//		if (customFieldsByName.containsKey(fieldName)) {
-//			log.error("Duplicate custom field name in configuration: " + fieldName);
-//			throw new InitializationException("Duplicate custom field name in configuration: " + fieldName);
-//		}
-//		customField.setSourceFieldName(customFieldXml.getSourceFieldName());
-//		TransformationFunction function = customFieldXml.getTransformationFunction();
-//		customField.setTransformationFunctionName(function.getFunctionName());
-//		if (function.isSetParameters() && function.getParameters().getParameterArray().length > 0) {
-//			for (org.openhie.openempi.configuration.xml.Parameter parameter : function.getParameters().getParameterArray()) {
-//				log.debug("Adding parameter (" + parameter.getName() + "," + parameter.getValue() + ") to transformation function " + 
-//						function.getFunctionName());
-//				customField.addConfigurationParameter(parameter.getName(), parameter.getValue());
-//			}
-//		}
-//		return customField;
-//	}
-//
-//	private List<CustomField> processCustomFields(MpiConfigDocument configuration) {
-//		checkConfiguration(configuration);
-//		
-//		customFieldsByName = new HashMap<String,CustomField>();
-//		registerConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELDS_MAP, customFieldsByName);
-//
-//		ArrayList<CustomField> list = new ArrayList<CustomField>();
-//		registerConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELDS_LIST, list);
-//		
-//		CustomFields customFields = configuration.getMpiConfig().getCustomFields();
-//		if (customFields == null) {
-//			log.warn("No custom fields have been specified in the configuration.");
-//			return list;
-//		}
-//		
-//		for (int i=0; i < customFields.sizeOfCustomFieldArray(); i++) {
-//			org.openhie.openempi.configuration.xml.CustomField customFieldXml = customFields.getCustomFieldArray(i);
-//			CustomField customField = buildCustomFieldFromXml(customFieldXml);
-//			if (customField != null) {
-//				customFieldsByName.put(customField.getFieldName(), customField);
-//				list.add(customField);
-//			}
-//		}
-//		return list;
-//	}
-//
-//	public void saveAndRegisterCustomFieldsConfiguration(List<CustomField> customFieldsConfiguration) {
-//		customFields = customFieldsConfiguration;
-//		customFieldsByName.clear();
-//		for (CustomField customField : customFields) {
-//			customFieldsByName.put(customField.getFieldName(), customField);
-//		}
-//		org.openhie.openempi.configuration.xml.CustomFields customFieldsType = buildCustomFieldsFragment(customFields);
-//		log.debug("Built custom-field segment: " + customFieldsType.toString());
-//		configuration.getMpiConfig().setCustomFields(customFieldsType);
-//		saveConfiguration();
-//		registerConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELDS_MAP, customFieldsByName);
-//		registerConfigurationEntry(ConfigurationRegistry.CUSTOM_FIELDS_LIST, customFields);
-//	}
-//
-//	private org.openhie.openempi.configuration.xml.CustomFields buildCustomFieldsFragment(List<CustomField> customFieldsConfiguration) {
-//		org.openhie.openempi.configuration.xml.CustomFields customFieldsType =
-//			org.openhie.openempi.configuration.xml.CustomFields.Factory.newInstance();
-//		for (CustomField customField : customFieldsConfiguration) {
-//			org.openhie.openempi.configuration.xml.CustomField customFieldXml =
-//				customFieldsType.addNewCustomField();
-//			customFieldXml.setFieldName(customField.getFieldName());
-//			customFieldXml.setSourceFieldName(customField.getSourceFieldName());
-//			TransformationFunction function = customFieldXml.addNewTransformationFunction();
-//			function.setFunctionName(customField.getTransformationFunctionName());
-//			if (customField.hasConfigurationParameters()) {
-//				org.openhie.openempi.configuration.xml.Parameters params = function.addNewParameters();
-//				for (String paramName : customField.getConfigurationParameters().keySet()) {
-//					org.openhie.openempi.configuration.xml.Parameter param = params.addNewParameter();
-//					param.setName(paramName);
-//					param.setValue(customField.getConfigurationParameters().get(paramName));
-//				}
-//			}
-//		}
-//		return customFieldsType;
-//	}
-
 	private void checkConfiguration(MpiConfigDocument configuration) {
 		if (configuration == null) {
 			log.error("The configuration of the system has not been initialized.");
@@ -650,7 +588,7 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		    }
 		}			
 	}
-
+	
 	private MpiConfigDocument loadConfigurationFromSource() throws XmlException, IOException {
 		File file = getDefaultConfigurationFile();
 		log.debug("Checking for presence of the configuration in file: " + file.getAbsolutePath());
@@ -671,7 +609,7 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 
 	public void saveConfiguration() {
 		File file = getDefaultConfigurationFile();
-		log.debug("Storing current configuration in file: " + file.getAbsolutePath());
+		log.info("Storing current configuration in file: " + file.getAbsolutePath());
 		try {
 			XmlOptions opts = new XmlOptions();
 			opts.setSavePrettyPrint();
@@ -685,7 +623,7 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 
 	private File getDefaultConfigurationFile() {
 		File dir = new File(Context.getOpenEmpiHome() + "/conf");
-		System.out.println(System.getProperty("OPENEMPI_HOME"));
+		log.info("OPENEMPI_HOME = " + System.getProperty("OPENEMPI_HOME"));
 		File file = new File(dir, getConfigurationFilename());
 		return file;
 	}
@@ -698,15 +636,45 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		return configFile;
 	}
 	
-	public Object lookupConfigurationEntry(String key) {
-		log.debug("Looking up configuration entry with key " + key);
-		return configurationRegistry.get(key);
+	public Object lookupConfigurationEntry(String entityName, String key) {
+	    if (entityName == null) {
+	        log.info("Looking up configuration entry with key " + key + " in default registry.");
+	        return defaultConfigurationRegistry.get(key);	        
+	    }
+	    return Context.lookupConfigurationEntry(entityName, key);
+	}
+    
+    public void registerConfigurationEntry(String entityName, String key, Object entry) {
+        if (entityName == null) {
+            log.info("Registering configuration entry " + entry + " with key " + key +
+                    " in the default registry.");
+            defaultConfigurationRegistry.put(key, entry);
+        } else {
+            Context.registerConfigurationEntry(entityName, key, entry);
+        }
+    }
+
+	public void registerConfigurationLoader(ComponentType type, String entityName, ConfigurationLoader loader) {
+	    log.info("Registering configuration loader " + loader + " of component type " + type + 
+	            " for entity " + entityName);
+	    String key = generateLoaderKey(type, entityName);
+	    loaderByEntity.put(key,  loader);	    
 	}
 
-	public void registerConfigurationEntry(String key, Object entry) {
-		log.debug("Registering configuration entry " + entry + " with key " + key);
-		configurationRegistry.put(key, entry);
+	public ConfigurationLoader lookupConfigurationLoader(ComponentType type, String entityName) {
+        log.info("Looking up configuration loader of component type " + type + 
+                " for entity " + entityName);
+        String key = generateLoaderKey(type, entityName);
+        ConfigurationLoader loader = loaderByEntity.get(key);
+        log.info("Found configuration loader " + loader + " of component type " + type + 
+                " for entity " + entityName);
+	    return loader;
 	}
+	
+    private String generateLoaderKey(ComponentType type, String entityName) {
+        String key = type.componentTypeName() + "-" + entityName;
+        return key;
+    }
 	
 	public String getConfigFile() {
 		return configFile;
@@ -714,14 +682,6 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 
 	public void setConfigFile(String configFile) {
 		this.configFile = configFile;
-	}
-
-	public List<CustomField> getCustomFields() {
-		return customFields;
-	}
-
-	public void setCustomFields(List<CustomField> customFields) {
-		this.customFields = customFields;
 	}
 
 	public AdminConfiguration getAdminConfiguration() {
@@ -734,12 +694,5 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 
 	public GlobalIdentifier getGlobalIdentifier() {
 		return globalIdentifier;
-	}
-
-	@Override
-	public String toString() {
-		return new ToStringBuilder(this)
-			.append("customFields", customFields)
-			.toString();
 	}
 }

@@ -86,6 +86,7 @@ public class UserManagerImpl extends UniversalManagerImpl implements UserManager
     
     public String createSession(User user) {
     	String sessionKey = SessionGenerator.generateSessionId();
+    	log.warn("Got a session key of " + sessionKey);
     	UserSession userSession = new UserSession(sessionKey, user, new java.util.Date());
     	userSessionDao.saveUserSession(userSession);
     	return sessionKey;

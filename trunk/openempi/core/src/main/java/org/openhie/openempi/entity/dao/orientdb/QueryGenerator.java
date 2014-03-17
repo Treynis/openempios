@@ -122,19 +122,28 @@ public class QueryGenerator
 		}
 		return query.toString();
 	}
-	
-	public static String generateQueryForRecordLinkByRecordId(String recordId) {
-		StringBuffer query = new StringBuffer("select from recordLink where in = " + recordId);
+
+	public static String generateQueryForRecordLinks(Entity entity, String recordId) {
+	    // select from (traverse bothe() from 11:3077) where source = 3 and @class = 'recordLink';
+		StringBuffer query = new StringBuffer("select from (traverse bothe() from ");
+        query.append(recordId)
+            .append(") where @class = '")
+            .append(Constants.RECORD_LINK_TYPE)
+            .append("' and state = 'M'");
 		return query.toString();
 	}
 
-	public static String generateQueryForRecordLinks(Entity entity, String recordId) {
-		StringBuffer query = new StringBuffer("select from (traverse ");
-		query.append(entity.getName()).append(".in_, recordLink.out from ");
-		query.append(recordId);
-		query.append(") where @class = 'recordLink' and state = 'M'");
-		return query.toString();
-	}
+	public static String generateQueryForRecordLinks(Entity entity, String recordId, RecordLinkState state) {
+        StringBuffer query = new StringBuffer("select from (traverse bothe() from ");
+        query.append(recordId)
+            .append(") where @class = '")
+            .append(Constants.RECORD_LINK_TYPE)
+            .append("'");
+        if (state != null) {
+            query.append(" and state = '").append(state.getState()).append("'");
+        }
+        return query.toString();
+    }
 
 	private static void addPagingModifiersToQuery(int firstResult, int maxResults, StringBuffer query) {
 		// Add paging modifiers
@@ -199,7 +208,7 @@ public class QueryGenerator
 	}	
 	
 	public static String generateRecordIdQuery(Entity entity) {
-		String query = "select @rid from " + entity.getName();
+		String query = "select @rid from " + entity.getName() + " where dateVoided is null";
 		return query;
 	}
 
@@ -286,18 +295,18 @@ public class QueryGenerator
         query.append(entity.getName()).append(" where dateVoided is null ");
         if (identifierDomainId != null ) {
             query
-                .append(" and identifierSet contains (")
+                .append(" and (identifierSet.size() = 0 or identifierSet contains (")
                 .append(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY)
-                .append(" <> :")
+                .append(" = :")
                 .append(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY)
-                .append(")");
+                .append(") = 0 ) ");
             params.put(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, identifierDomainId);
         }
 
         if (hasLinks) {
-            query.append(" and in_ is not null");
+            query.append(" and ").append(Constants.VERTEX_IN_PROPERTY).append(" is not null");
         } else {
-            query.append(" and in_ is null");
+            query.append(" and ").append(Constants.VERTEX_IN_PROPERTY).append(" is null");
         }
         
         addPagingModifiersToQuery(firstResult, maxResults, query);

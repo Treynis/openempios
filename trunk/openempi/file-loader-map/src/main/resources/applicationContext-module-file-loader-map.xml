@@ -28,10 +28,12 @@
 
 	<bean id="flexibleDataLoader" class="org.openhie.openempi.loader.FlexibleFileLoader">
 		<property name="taskExecutor" ref="taskExecutorFileLoaderMap" />
+		<property name="numLoaderThreads" value="3" />
+		<property name="recordChunkSize" value="500" />
 	</bean>
 
 	<bean id="taskExecutorFileLoaderMap" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
-		<property name="corePoolSize" value="10" />
+		<property name="corePoolSize" value="5" />
 		<property name="maxPoolSize" value="50" />
 		<property name="queueCapacity" value="1" />
 		<property name="rejectedExecutionHandler" ref="generalCallerRunsPolicyFileLoaderMap"/>

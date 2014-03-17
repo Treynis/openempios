@@ -23,6 +23,7 @@ package org.openhie.openempi.profiling;
 import java.util.List;
 
 import org.openhie.openempi.dao.DataProfileAttributeDao;
+import org.openhie.openempi.model.DataProfile;
 import org.openhie.openempi.model.DataProfileAttribute;
 import org.openhie.openempi.model.DataProfileAttributeValue;
 import org.openhie.openempi.service.impl.BaseServiceImpl;
@@ -30,9 +31,17 @@ import org.openhie.openempi.service.impl.BaseServiceImpl;
 public class DataProfileServiceImpl extends BaseServiceImpl implements DataProfileService
 {
 	private DataProfileAttributeDao dataProfileAttributeDao;
-	
-	public List<DataProfileAttribute> getDataProfileAttributes(int sourceId) {
-		return dataProfileAttributeDao.getDataProfileAttributes(sourceId);
+
+    public List<DataProfile> getDataProfiles() {
+        return dataProfileAttributeDao.getDataProfiles();
+    }
+
+    public void removeDataProfile(int dataProfileId) {
+        dataProfileAttributeDao.removeDataProfile(dataProfileId);
+    }
+
+	public List<DataProfileAttribute> getDataProfileAttributes(int dataProfileId) {
+		return dataProfileAttributeDao.getDataProfileAttributes(dataProfileId);
 	}
 
 	public List<DataProfileAttributeValue> getTopDataProfileAttributeValues(int attributeId, int topCount) {

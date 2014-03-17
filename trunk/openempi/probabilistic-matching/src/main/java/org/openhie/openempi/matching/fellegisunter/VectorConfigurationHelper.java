@@ -79,22 +79,25 @@ public class VectorConfigurationHelper
 		@SuppressWarnings("unchecked")
 		Map<Integer,Integer> vectorClassifications = (Map<Integer,Integer>) configurationData.
 				get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_VECTOR_CLASSIFICATIONS);
-		if (vectorClassifications == null) {
-			return;
+		if (vectorClassifications != null) {
+    		for (VectorConfiguration vector : vectors) {
+    			Integer classification = (Integer) vectorClassifications.get(vector.getVectorValue());
+    			if (classification == null) {
+    				continue;
+    			}
+    			if (classification.intValue() == Constants.MATCH_CLASSIFICATION) {
+    				vector.setManualClassification(Constants.MATCH_CLASSIFICATION);
+    			} else if (classification.intValue() == Constants.NON_MATCH_CLASSIFICATION) {
+    				vector.setManualClassification(Constants.NON_MATCH_CLASSIFICATION);
+    			} else if (classification.intValue() == Constants.PROBABLE_MATCH_CLASSIFICATION) {
+    				vector.setManualClassification(Constants.PROBABLE_MATCH_CLASSIFICATION);
+    			}
+    		}
 		}
-		for (VectorConfiguration vector : vectors) {
-			Integer classification = (Integer) vectorClassifications.get(vector.getVectorValue());
-			if (classification == null) {
-				continue;
-			}
-			if (classification.intValue() == Constants.MATCH_CLASSIFICATION) {
-				vector.setManualClassification(Constants.MATCH_CLASSIFICATION);
-			} else if (classification.intValue() == Constants.NON_MATCH_CLASSIFICATION) {
-				vector.setManualClassification(Constants.NON_MATCH_CLASSIFICATION);
-			} else if (classification.intValue() == Constants.PROBABLE_MATCH_CLASSIFICATION) {
-				vector.setManualClassification(Constants.PROBABLE_MATCH_CLASSIFICATION);
-			}
-		}
+		configurationData.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_VECTOR_CONFIGURATION,
+		        vectors);
+		configurationData.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_VECTOR_CLASSIFICATIONS,
+		        vectorClassifications);
 	}
 
 	private static void classifyVector(VectorConfiguration vector, FellegiSunterParameters params) {

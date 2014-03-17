@@ -27,12 +27,14 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
-import com.orientechnologies.orient.core.db.graph.OGraphDatabasePool;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientGraph;
+import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory;
+import com.tinkerpop.blueprints.impls.orient.OrientGraphNoTx;
 
 public class ConnectionManager
 {
-    private static Map<String,OGraphDatabasePool> connectionPoolByEntity = new HashMap<String,OGraphDatabasePool>();
+    private static Map<String,OrientGraphFactory> connectionPoolByEntity = new HashMap<String,OrientGraphFactory>();
     protected Logger log = Logger.getLogger(getClass());
 
     private int minPoolConnections;
@@ -46,26 +48,28 @@ public class ConnectionManager
     public ConnectionManager() {
     }
     
-    OGraphDatabase connectInitial(EntityStore entityStore) {
+    OrientBaseGraph connectInitial(EntityStore entityStore) {
         try {
             long startTime = new Date().getTime();
-            OGraphDatabase connection = new OGraphDatabase(entityStore.getStoreUrl());
-            connection.open(getServerUsername(), getServerPassword());
+            OrientBaseGraph db = new OrientGraphNoTx(entityStore.getStoreUrl());
             long endTime = new Date().getTime();
             if (log.isTraceEnabled()) {
                 log.trace("Obtained a connection from the pool in " + (endTime - startTime) + " msec.");
             }
-            return connection;
+            if (db.isClosed()) {
+                db.getRawGraph().open(getServerUsername(), getServerPassword());
+            }
+            return db;
         } catch (RuntimeException e) {
             throw e;
-        }
-        
+        }   
     }
-    OGraphDatabase connect(EntityStore entityStore) {
+    
+    OrientGraph connect(EntityStore entityStore) {
         try {
             long startTime = new Date().getTime();
-            OGraphDatabasePool pool = getConnectionPool(entityStore, getUsername(), getPassword());
-            OGraphDatabase connection = pool.acquire();
+            OrientGraphFactory pool = getConnectionPool(entityStore, getUsername(), getPassword());
+            OrientGraph connection = pool.getTx();
             long endTime = new Date().getTime();
             if (log.isTraceEnabled()) {
                 log.trace("Obtained a connection from the pool in " + (endTime - startTime) + " msec.");
@@ -77,21 +81,21 @@ public class ConnectionManager
     }
     
     void shutdown(EntityStore store) {
-        OGraphDatabasePool pool = connectionPoolByEntity.get(store.getEntityName());
+        OrientGraphFactory pool = connectionPoolByEntity.get(store.getEntityName());
         if (pool != null) {
             log.info("Shutting down the connection pool to OrientDB for entity " + store.getEntityName());
             pool.close();
         }        
     }
     
-    private synchronized OGraphDatabasePool getConnectionPool(EntityStore store, String username, String password) {
-        OGraphDatabasePool connectionPool = connectionPoolByEntity.get(store.getEntityName());
+    private synchronized OrientGraphFactory getConnectionPool(EntityStore store, String username, String password) {
+        OrientGraphFactory connectionPool = connectionPoolByEntity.get(store.getEntityName());
         if (connectionPool == null) {
             OGlobalConfiguration.CLIENT_CHANNEL_MAX_POOL.setValue(120);
             OGlobalConfiguration.MVRBTREE_TIMEOUT.setValue(20000);
             OGlobalConfiguration.STORAGE_RECORD_LOCK_TIMEOUT.setValue(20000);
-            connectionPool = new OGraphDatabasePool(store.getStoreUrl(), username, password);
-            connectionPool.setup(minPoolConnections, maxPoolConnections);
+            connectionPool = new OrientGraphFactory(store.getStoreUrl(), username, password);
+            connectionPool.setupPool(minPoolConnections, maxPoolConnections);
             connectionPoolByEntity.put(store.getEntityName(), connectionPool);
         }
         return connectionPool;
@@ -149,4 +153,50 @@ public class ConnectionManager
     public void setStorageMode(String storageMode) {
         this.storageMode = storageMode;
     }
+/*    
+    public static void main(String[] args) {
+        ConnectionManager connMgr = new ConnectionManager();
+        connMgr.setServerUsername("admin");
+        connMgr.setServerPassword("admin");
+        connMgr.setUsername("admin");
+        connMgr.setPassword("admin");
+        connMgr.setMaxPoolConnections(10);
+        connMgr.setMinPoolConnections(1);
+        EntityStore store = new EntityStore("person", "person-db", "plocal:/mnt/sysnet/person-db", "person-db");
+        OrientGraph graph = connMgr.connect(store);
+        graph.getRawGraph().begin();
+        Map<String,Object> properties = new HashMap<String,Object>();
+        
+        Set<Vertex> ids = new HashSet<Vertex>();
+        properties.put("identifier", "101");
+        properties.put("identifierDomainId", 10);
+        ids.add(graph.addVertex("class:identifier", properties));
+        properties.put("identifier", "102");
+        properties.put("identifierDomainId", 10);
+        ids.add(graph.addVertex("class:identifier", properties));
+        properties.clear();
+        properties.put("identifierSet", ids);
+        properties.put("givenName", "Odysseas");
+        properties.put("familyName", "Pentakalos");
+        Vertex vertex = graph.addVertex("class:person", properties);
+        OrientVertex oVertex = (OrientVertex) vertex;
+        
+        ORID orid = oVertex.getIdentity();
+        Object result = graph.getVertex(orid);
+        Object id = graph.getRawGraph().load(oVertex.getIdentity());
+        
+        graph.getRawGraph().commit();
+        Map<String,String> params = new HashMap<String,String>();
+        params.put("givenName", "Robert");
+        Object obj = graph.getRawGraph()
+                .command(new OSQLSynchQuery<ODocument>("select count(*) from person where dateVoided is null and givenName = :givenName"))
+                .execute(params);
+        List<ODocument> odocs = (List<ODocument>) obj;
+        for (ODocument odoc : odocs) {
+            System.out.println(odoc);
+        }
+        List<ODocument> results = graph.getRawGraph().query(new OSQLSynchQuery<ODocument>("select from person where dateVoided is null and givenName = 'Robert'"));
+        System.out.println("Results are: " + results.size());
+        graph.getRawGraph().close();
+    }*/
 }

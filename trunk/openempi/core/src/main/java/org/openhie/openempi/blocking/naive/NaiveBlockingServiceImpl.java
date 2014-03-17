@@ -34,6 +34,7 @@ import org.openhie.openempi.model.RecordPair;
 
 public class NaiveBlockingServiceImpl extends AbstractBlockingLifecycleObserver implements BlockingService
 {
+    private final static int NAIVE_BLOCKING_ALGORITHM_ID = 0;
 	private EntityDao entityDao;
 
 	public void startup() throws InitializationException {
@@ -98,7 +99,11 @@ public class NaiveBlockingServiceImpl extends AbstractBlockingLifecycleObserver 
 		return counts;
 	}
 	
-	public 	EntityDao getEntityDao() {
+    public int getBlockingServiceId() {
+        return NAIVE_BLOCKING_ALGORITHM_ID;
+    }
+
+    public 	EntityDao getEntityDao() {
 		return entityDao;
 	}
 

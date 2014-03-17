@@ -86,7 +86,7 @@ public class HL7v25ToBaseConvertor {
     IBaseDescription description;
     IPixPdqAdapter adapter;
 
-    public HL7v25ToBaseConvertor(Message in, IBaseDescription connection, IPixPdqAdapter adapter) {
+    public HL7v25ToBaseConvertor(Message in, IBaseDescription description, IPixPdqAdapter adapter) {
     	this.description = description;
         this.adapter = adapter;
     	try {

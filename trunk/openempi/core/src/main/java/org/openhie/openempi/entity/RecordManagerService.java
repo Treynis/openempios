@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.InitializationException;
+import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.Identifier;

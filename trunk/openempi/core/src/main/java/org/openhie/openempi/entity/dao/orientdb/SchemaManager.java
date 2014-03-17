@@ -23,19 +23,11 @@ package org.openhie.openempi.entity.dao.orientdb;
 import org.openhie.openempi.entity.Constants;
 import org.openhie.openempi.model.Entity;
 
-import com.orientechnologies.orient.core.db.graph.OGraphDatabase;
 import com.orientechnologies.orient.core.metadata.schema.OType;
+import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 
 public interface SchemaManager
 {
-    final static String LOCAL_STORAGE_MODE = "local";
-    final static String PLOCAL_STORAGE_MODE = "plocal";
-    final static String REMOTE_STORAGE_MODE = "remote";
-    final static String DATA_DIRECTORY_KEY = "dataDirectory";
-    final static String INDEX_NAME_PREFIX = "idx-";
-    final static String VERTEX_CLASS_NAME = "V";
-    final static String EDGE_CLASS_NAME = "E";
-
     static final InternalAttribute DATE_CHANGED_PROPERTY = new InternalAttribute(
             Constants.DATE_CHANGED_PROPERTY, OType.DATETIME, false);
     static final InternalAttribute DATE_CREATED_PROPERTY = new InternalAttribute(
@@ -50,8 +42,8 @@ public interface SchemaManager
             Constants.ENTITY_VERSION_ID_PROPERTY, OType.LONG, false);
     static final InternalAttribute IDENTIFIER_PROPERTY = new InternalAttribute(Constants.IDENTIFIER_PROPERTY,
             OType.STRING, true);
-    static final InternalAttribute IDENTIFIER_SET_PROPERTY = new InternalAttribute(
-            Constants.IDENTIFIER_SET_PROPERTY, OType.LINKSET, false);
+//    static final InternalAttribute IDENTIFIER_SET_PROPERTY = new InternalAttribute(
+//            Constants.IDENTIFIER_EDGE_TYPE, OType.LINKSET, false);
     static final InternalAttribute IDENTIFIER_DOMAIN_ID_PROPERTY = new InternalAttribute(
             Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, OType.INTEGER, false);
     static final InternalAttribute LINK_SOURCE_PROPERTY = new InternalAttribute(Constants.LINK_SOURCE_PROPERTY,
@@ -62,8 +54,6 @@ public interface SchemaManager
             OType.INTEGER, false);
     static final InternalAttribute LINK_WEIGHT_PROPERTY = new InternalAttribute(Constants.LINK_WEIGHT_PROPERTY,
             OType.DOUBLE, true);
-    static final InternalAttribute OTHER_EDGE_PROPERTY = new InternalAttribute(Constants.OTHER_EDGE_PROPERTY,
-            OType.LINK, false);
     static final InternalAttribute USER_CHANGED_BY_PROPERTY = new InternalAttribute(
             Constants.USER_CHANGED_BY_PROPERTY, OType.LONG, false);
     static final InternalAttribute USER_CREATED_BY_PROPERTY = new InternalAttribute(
@@ -74,24 +64,31 @@ public interface SchemaManager
             Constants.USER_VOIDED_BY_PROPERTY, OType.LONG, false);
 
     static final InternalAttribute[] INTERNAL_ATTRIBUTES = { DATE_CHANGED_PROPERTY, DATE_CREATED_PROPERTY,
-            DATE_VOIDED_PROPERTY, ENTITY_VERSION_ID_PROPERTY, IDENTIFIER_SET_PROPERTY, USER_CHANGED_BY_PROPERTY,
-            USER_CREATED_BY_PROPERTY, USER_VOIDED_BY_PROPERTY, };
+            DATE_VOIDED_PROPERTY, ENTITY_VERSION_ID_PROPERTY, // IDENTIFIER_SET_PROPERTY,
+            USER_CHANGED_BY_PROPERTY, USER_CREATED_BY_PROPERTY, USER_VOIDED_BY_PROPERTY, 
+            };
 
     static final InternalAttribute[] IDENTIFIER_ATTRIBUTES = { IDENTIFIER_PROPERTY,
             IDENTIFIER_DOMAIN_ID_PROPERTY, ENTITY_PROPERTY, USER_CREATED_BY_PROPERTY, USER_VOIDED_BY_PROPERTY,
             DATE_CREATED_PROPERTY, DATE_VOIDED_PROPERTY };
 
     static final InternalAttribute[] LINK_ATTRIBUTES = { DATE_CREATED_PROPERTY, DATE_REVIEWED_PROPERTY,
-            OTHER_EDGE_PROPERTY, LINK_STATE_PROPERTY, LINK_VECTOR_PROPERTY, LINK_WEIGHT_PROPERTY, LINK_SOURCE_PROPERTY,
+            LINK_STATE_PROPERTY, LINK_VECTOR_PROPERTY, LINK_WEIGHT_PROPERTY, LINK_SOURCE_PROPERTY,
             USER_CREATED_BY_PROPERTY, USER_REVIEWED_BY_PROPERTY };
     
-    public OGraphDatabase createDatabase(EntityStore store);
+    public void createDatabase(EntityStore store, OrientBaseGraph db);
 
-    public void createIndexes(Entity entity, OGraphDatabase db);
+    public void createIndexes(Entity entity, OrientBaseGraph db);
     
     public ConnectionManager getConnectionManager();
     
     public EntityStore getEntityStoreByName(String entityName);
+    
+    public void createClass(OrientBaseGraph db, Entity entity, String baseClassName);
+
+    public void dropClass(OrientBaseGraph db, String className);
+    
+    public boolean isClassDefined(OrientBaseGraph db, String className);
     
     public Object getParameter(String key);
 
@@ -99,7 +96,7 @@ public interface SchemaManager
     
     public boolean isInternalAttribute(String fieldName);
     
-    public void removeIndexes(Entity entity, OGraphDatabase db);
+    public void removeIndexes(Entity entity, OrientBaseGraph db);
     
     public void setParameter(String key, Object value);
     

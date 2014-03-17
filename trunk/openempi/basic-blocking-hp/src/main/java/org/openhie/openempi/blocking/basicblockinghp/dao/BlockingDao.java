@@ -38,23 +38,25 @@
 package org.openhie.openempi.blocking.basicblockinghp.dao;
 
 import java.util.List;
-
-import net.sf.ehcache.Cache;
+import java.util.Set;
 
 import org.openhie.openempi.configuration.BlockingRound;
 import org.openhie.openempi.model.Entity;
-import org.openhie.openempi.model.NameValuePair;
 import org.openhie.openempi.model.Record;
  
 public interface BlockingDao
 {
-	public List<NameValuePair> getDistinctKeyValuePairs(Entity entity, List<String> fields);
-
 	public Long getRecordPairCount(Entity entity, BlockingRound round);
 
 	public List<Long> getAllRecordIds(Entity entity);
 	
-	public Record loadRecord(Entity entity, Cache recordCache, Long recordId);
+	public Long loadBlockDataCount(Entity entity, BlockingRoundClass roundClass);
 	
-	public void loadAllRecords(Entity entity, Cache recordCache, List<String> fieldNames);
+	public Set<Long> loadBlockData(Entity entity, String blockRecordId);
+	
+	public Set<String> loadBlockRecordIds(Entity entity, BlockingRoundClass roundClass);
+	
+	public Record loadBlockData(Entity entity, BlockingRoundClass roundClass, String blockingKeyValue);
+	
+	public void saveBlockData(Entity entity, BlockingRoundClass roundClass, Record record);
 }

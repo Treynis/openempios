@@ -33,6 +33,7 @@ import org.openhie.openempi.configuration.xml.singlebestrecord.SingleBestRecordT
 public class SingleBestRecordConfigurationLoader implements ConfigurationLoader
 {
 	private Log log = LogFactory.getLog(getClass());
+	private String entityName;
 	
 	@Override
 	public void loadAndRegisterComponentConfiguration(ConfigurationRegistry registry, Object configurationFragment) throws InitializationException {
@@ -43,6 +44,7 @@ public class SingleBestRecordConfigurationLoader implements ConfigurationLoader
 		}
 		
 		SingleBestRecordType sbr = (SingleBestRecordType) configurationFragment;
+		entityName  = sbr.getEntityName();
 		SingleBestRecordConfiguration conf = new SingleBestRecordConfiguration(sbr.getImplementationName(),
 				sbr.getImplementationDescription());
 		for (Rule rule : sbr.getRuleset().getRuleArray()) {
@@ -54,8 +56,8 @@ public class SingleBestRecordConfigurationLoader implements ConfigurationLoader
 			SingleBestRecordRule sbrRule = new SingleBestRecordRule(rule.getFieldName(), condition);
 			conf.addRule(sbrRule);
 		}
-		log.debug("Loaded configuration: " + conf);
-		registry.registerConfigurationEntry(ConfigurationRegistry.SINGLE_BEST_RECORD_CONFIGURATION, conf);
+		log.debug("Loaded configuration: " + conf + " for entity " + entityName);
+		registry.registerConfigurationEntry(entityName, ConfigurationRegistry.SINGLE_BEST_RECORD_CONFIGURATION, conf);
 	}
 
 	private RuleCondition getRuleCondition(Rule rule) {
@@ -77,4 +79,8 @@ public class SingleBestRecordConfigurationLoader implements ConfigurationLoader
 
 	}
 
+    @Override
+    public String getComponentEntity() {
+        return entityName;
+    }
 }

@@ -37,8 +37,8 @@ public class FellegiSunterConfigurationManager
 	private static final String FELLEGI_SUNTER_CONFIG_FILE_NAME = "FellegiSunterConfiguration.ser";
 	protected static final Log log = LogFactory.getLog(FellegiSunterConfigurationManager.class);
 
-	public static void saveParameters(String configDirectory, FellegiSunterParameters params) {
-		File filename = getConfigurationFile(configDirectory);
+	public static void saveParameters(String configDirectory, String entityName, FellegiSunterParameters params) {
+		File filename = getConfigurationFile(configDirectory, entityName);
 		log.debug("Attempting to save the Fellegi-Sunter configuration file into: " + filename);
 		try {
 			ObjectOutputStream ois = new ObjectOutputStream(
@@ -52,8 +52,8 @@ public class FellegiSunterConfigurationManager
 		}		
 	}
 
-	public static FellegiSunterParameters loadParameters(String configDirectory) {
-		File filename = getConfigurationFile(configDirectory);
+	public static FellegiSunterParameters loadParameters(String configDirectory, String entityName) {
+		File filename = getConfigurationFile(configDirectory, entityName);
 		log.debug("Attempting to load the configuration file for the migration log from: " + filename);
 		try {
 			ObjectInputStream ois = new ObjectInputStream(new BufferedInputStream(new FileInputStream(filename)));
@@ -66,8 +66,8 @@ public class FellegiSunterConfigurationManager
 		}
 	}
 	
-	public static void removeParametersFile(String configDirectory) {
-		File filename = getConfigurationFile(configDirectory);
+	public static void removeParametersFile(String configDirectory, String entityName) {
+		File filename = getConfigurationFile(configDirectory, entityName);
 		if (filename != null && filename.exists()) {
 			log.info("Removing the Fellegi-Sunter configuration file: " + filename.getAbsolutePath());
 			boolean deleteOutcome = filename.delete();
@@ -75,9 +75,10 @@ public class FellegiSunterConfigurationManager
 		}
 	}
 
-	private static File getConfigurationFile(String configDirectory) {
+	private static File getConfigurationFile(String configDirectory, String entityName) {
 		File directory = getConfigFileDirectory(configDirectory);
-		File filename = new File(directory, FELLEGI_SUNTER_CONFIG_FILE_NAME);
+		String name = entityName + "_" + FELLEGI_SUNTER_CONFIG_FILE_NAME;
+		File filename = new File(directory, name);
 		return filename;
 	}
 
@@ -140,7 +141,7 @@ public class FellegiSunterConfigurationManager
 	
 	public static void main(String[] args) {
 		String openEmpiHome = getOpenempiHome();
-		FellegiSunterParameters params = FellegiSunterConfigurationManager.loadParameters(openEmpiHome + "/conf");
+		FellegiSunterParameters params = FellegiSunterConfigurationManager.loadParameters(openEmpiHome + "/conf", "person");
 		FellegiSunterConfigurationManager.printConfigurationParameters(params);
 	}
 

@@ -30,8 +30,15 @@
 		class="org.openhie.openempi.matching.fellegisunter.ProbabilisticMatchingConfigurationLoader">
 	</bean>
  
-	<bean id="probabilisticMatchingService" class="org.openhie.openempi.matching.fellegisunter.ProbabilisticMatchingService">
+	<bean id="probabilisticMatchingService" class="org.openhie.openempi.matching.fellegisunter.ProbabilisticMatchingService"
+	 	scope="prototype">
 		<property name="entityDao" ref="entityDao" />
 		<property name="universalDao" ref="universalDao" />
+		<property name="useSampling" value="true" />
+		<property name="samplingService" ref="samplingService" />
+	</bean>
+	
+	<bean id="samplingService" class="org.openhie.openempi.matching.fellegisunter.BinarySamplingServiceImpl">
+		<property name="selectionProbability" value="0.2"/>
 	</bean>
 </beans>

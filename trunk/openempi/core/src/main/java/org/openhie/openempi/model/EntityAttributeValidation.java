@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (C) 2002-2012 "SYSNET International, Inc."
+O * Copyright (C) 2002-2012 "SYSNET International, Inc."
  * support@sysnetint.com [http://www.sysnetint.com]
  *
  * This file is part of OpenEMPI.
@@ -27,7 +27,6 @@ import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -42,6 +41,7 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "entity_attribute_validation")
 @GenericGenerator(name = "entity_attribute_validation_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "entity_attribute_validation_seq"),
+        @Parameter(name = "increment_size", value = "10"),
         @Parameter(name = "optimizer", value = "hilo")})
 public class EntityAttributeValidation extends BaseObject implements Serializable
 {

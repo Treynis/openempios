@@ -73,4 +73,13 @@ public interface BlockingService
 	 * the same for the second round of blocking.
 	 */
 	public List<Long> getRecordPairCount(Entity entity);
+	
+	/**
+     * The getBlockingServiceId method returns a unique identifier for the blocking algorithm.
+     * The purpose of this identifier is to allow a site to identify which blocking algorithm
+     * is being utilized by an instance of OpenEMPI. 
+     * 
+     * @return The unique identifier of the particular Matching Algorithm
+     */
+    public int getBlockingServiceId();
 }

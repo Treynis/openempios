@@ -29,13 +29,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.openhie.openempi.util.BaseSpringApp;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.model.AttributeDatatype;
 import org.openhie.openempi.model.DataProfileAttribute;
 import org.openhie.openempi.model.Entity;
-import org.openhie.openempi.model.EntityAttribute;
-import org.openhie.openempi.model.EntityAttributeDatatype;
+import org.openhie.openempi.util.BaseSpringApp;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -93,6 +90,13 @@ public class DataProfilerLoader extends BaseSpringApp
 		} catch (IOException e) {
 			log.error("Failed while loading the input file. Error: " + e);
 			throw new RuntimeException("Failed while loading the input file.");
+		} finally {
+		    if (reader != null) {
+		        try {
+                    reader.close();
+                } catch (IOException e) {
+                }
+		    }
 		}
 	}
 	
