@@ -46,7 +46,6 @@ import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
 import org.openhie.openempi.model.User;
 
-import com.orientechnologies.common.collection.OCollection;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORID;
@@ -171,7 +170,6 @@ public class EntityDaoOrientdb implements EntityDao
     }
     */
     private Vertex saveRecordAndIdentifiers(Entity entity, Record record, OrientGraph db) {
-        db.getRawGraph().begin();
         populateInternalPropertiesForCreate(entity, record);
         Map<String, Object> properties = new HashMap<String, Object>();
         for (String property : record.getPropertyNames()) {
@@ -232,7 +230,6 @@ public class EntityDaoOrientdb implements EntityDao
         OrientGraph db = null;
         try {
             db = connect(entityStore);
-            db.getRawGraph().begin();
             ORID orid = extractORID(entityStore, record);
             Object obj = db.getRawGraph().load(orid);
             if (obj == null) {
@@ -246,7 +243,7 @@ public class EntityDaoOrientdb implements EntityDao
             ODocument odoc = (ODocument) obj;
             odoc.field(Constants.DATE_VOIDED_PROPERTY, now);
             odoc.field(Constants.USER_VOIDED_BY_PROPERTY, deletedBy.getId());
-            Set<ODocument> identifiers = getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
+            Set<ODocument> identifiers = OrientdbConverter.getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
             if (identifiers != null && identifiers.size() > 0) {
                 for (ODocument idoc : identifiers) {
                     idoc.field(Constants.DATE_VOIDED_PROPERTY, now);
@@ -274,7 +271,6 @@ public class EntityDaoOrientdb implements EntityDao
         OrientGraph db = null;
         try {
             db = connect(entityStore);
-            db.getRawGraph().begin();
             ORID orid = extractORID(entityStore, record);
             Object obj = db.getRawGraph().load(orid);
             if (obj == null) {
@@ -284,7 +280,7 @@ public class EntityDaoOrientdb implements EntityDao
                 return;
             }
             ODocument odoc = (ODocument) obj;
-            Set<ODocument> identifiers = getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
+            Set<ODocument> identifiers = OrientdbConverter.getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
             if (identifiers != null && identifiers.size() > 0) {
                 for (ODocument idoc : identifiers) {
                     idoc.delete();
@@ -311,7 +307,6 @@ public class EntityDaoOrientdb implements EntityDao
             db = connect(entityStore);
             User changedBy = Context.getUserContext().getUser();
             Date now = new Date();
-            db.getRawGraph().begin();
             for (Record record : records) {
                 ORID orid = extractORID(entityStore, record);
                 Object obj = db.getRawGraph().load(orid);
@@ -344,7 +339,6 @@ public class EntityDaoOrientdb implements EntityDao
         OrientGraph db = null;
         try {
             db = connect(entityStore);
-            db.getRawGraph().begin();
             ORID orid = extractORID(entityStore, record);
             ODocument obj = db.getRawGraph().load(orid);
             if (obj == null) {
@@ -377,7 +371,6 @@ public class EntityDaoOrientdb implements EntityDao
         OrientGraph db = null;
         try {
             db = connect(entityStore);
-            db.getRawGraph().begin();
             className = getClassName(className);
             if (record.getRecordId() == null) {
                 Map<String,Object> props = new HashMap<String,Object>();
@@ -437,6 +430,7 @@ public class EntityDaoOrientdb implements EntityDao
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Record loadRecord(Entity entity, Long id) {
         OrientGraph db = null;
         EntityStore entityStore = getEntityStoreByName(entity.getName());
@@ -456,12 +450,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.debug("Result is " + result);
             
             return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, result.iterator().next());
-/*            List<ODocument> result = db.query(new OSQLSynchQuery<ODocument>(query));
-            if (result == null || result.size() == 0) {
-                return null;
-            }
-            return OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, result.get(0));
-            */
+
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
@@ -1150,7 +1139,6 @@ public class EntityDaoOrientdb implements EntityDao
     private void updateLinkEdges(OrientGraph db, EntityStore entityStore, RecordLink link) {
         String recordLinkId = addClusterIdIfMissing(entityStore, RECORD_LINK_TYPE, link.getRecordLinkId());
         try {
-            db.getRawGraph().begin();
             ORecordId orid = new ORecordId(recordLinkId);
             OrientEdge edge  = db.getEdge(orid);
             if (edge == null) {
@@ -1171,7 +1159,6 @@ public class EntityDaoOrientdb implements EntityDao
     }
 
     private void saveLinkAsEdge(OrientGraph db, EntityStore entityStore, RecordLink link) {
-        db.getRawGraph().begin();
         ORID leftOrid = extractORID(entityStore, link.getLeftRecord());
         ORID rightOrid = extractORID(entityStore, link.getRightRecord());
         OrientVertex leftNode = db.getVertex(leftOrid);
@@ -1253,7 +1240,7 @@ public class EntityDaoOrientdb implements EntityDao
 
 
     private void updateIdentifiers(OrientGraph db, ODocument odoc, List<Identifier> newIds, Date now) {
-        Set<ODocument> oldIdentifiers = getIdentifiers(odoc.field(Constants.IDENTIFIER_EDGE_TYPE));
+        Set<ODocument> oldIdentifiers = OrientdbConverter.getIdentifiers(odoc.field(Constants.IDENTIFIER_EDGE_TYPE));
         Map<Long, ODocument> oldIdMap = buildMapFromDocumentList(oldIdentifiers);
         Map<Long, Identifier> newIdMap = buildMapFromList(newIds);
 
@@ -1299,25 +1286,6 @@ public class EntityDaoOrientdb implements EntityDao
             }
         }
         odoc.field(Constants.IDENTIFIER_EDGE_TYPE, oldIdentifiers);
-    }
-    
-    @SuppressWarnings("unchecked")
-    private Set<ODocument> getIdentifiers(Object obj) {
-        Set<ODocument> idoc = new HashSet<ODocument>();
-        if (obj == null) {
-            return idoc;
-        }
-        if (obj instanceof OCollection<?>) {
-            OCollection<OIdentifiable> col = (OCollection<OIdentifiable>) obj;
-            for (OIdentifiable iobj : col) {
-                idoc.add((ODocument) iobj);
-            }
-            return idoc;
-        } else if (obj instanceof ODocument) {
-            idoc.add((ODocument) obj);
-        }
-        log.debug("Obj is of type: " + obj.getClass());
-        return idoc;
     }
 
     private ODocument createODocumentFromIdentifier(OrientGraph db, ODocument odoc, Identifier identifier) {
