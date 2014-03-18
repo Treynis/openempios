@@ -39,6 +39,8 @@ import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
 import org.openhie.openempi.model.User;
 
+import com.orientechnologies.common.collection.OCollection;
+import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.id.OClusterPositionLong;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
@@ -341,9 +343,27 @@ public class OrientdbConverter
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public static Set<ODocument> getIdentifiers(Object obj) {
+        Set<ODocument> idoc = new HashSet<ODocument>();
+        if (obj == null) {
+            return idoc;
+        }
+        if (obj instanceof OCollection<?>) {
+            OCollection<OIdentifiable> col = (OCollection<OIdentifiable>) obj;
+            for (OIdentifiable iobj : col) {
+                idoc.add((ODocument) iobj);
+            }
+            return idoc;
+        } else if (obj instanceof ODocument) {
+            idoc.add((ODocument) obj);
+        }
+        log.debug("Obj is of type: " + obj.getClass());
+        return idoc;
+    }
+    
     private static void extractIdentifiers(RecordCacheManager cache, ODocument odoc, Record record) {
-        Object obj = odoc.field(Constants.IDENTIFIER_OUT_PROPERTY);
-        Set<ODocument> ids = (Set<ODocument>) obj;
+        Set<ODocument> ids = getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
         for (ODocument idoc : ids) {
             if (idoc.field(Constants.DATE_VOIDED_PROPERTY) != null) {
                 continue;
