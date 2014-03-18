@@ -21,12 +21,16 @@
 package org.openhie.openempi.matching.fellegisunter;
 
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.service.BaseServiceTestCase;
 
 public class PrintFellegiSunterModelParameters extends BaseServiceTestCase
 {
 	public void testPrintParameters() {
-		FellegiSunterParameters params = FellegiSunterConfigurationManager.loadParameters(Context.getOpenEmpiHome() + "/conf");
+	    Entity entity = getTestEntity();
+	    log.info("Using entity " + entity.getName());;
+		FellegiSunterParameters params = FellegiSunterConfigurationManager
+		        .loadParameters(entity.getName(), Context.getOpenEmpiHome() + "/conf");
 		FellegiSunterConfigurationManager.printConfigurationParameters(params);
 	}
 }

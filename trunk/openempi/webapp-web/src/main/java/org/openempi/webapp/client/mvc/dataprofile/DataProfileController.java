@@ -25,6 +25,7 @@ import java.util.List;
 import org.openempi.webapp.client.AppEvents;
 import org.openempi.webapp.client.ProfileDataServiceAsync;
 import org.openempi.webapp.client.domain.AuthenticationException;
+import org.openempi.webapp.client.model.DataProfileWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeValueWeb;
 import org.openempi.webapp.client.mvc.Controller;
@@ -37,44 +38,102 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class DataProfileController extends Controller
 {
+    private static final int topCount = 50;
+
 	private DataProfileView dataProfileView;
-	
+    private DataProfileListView dataProfileListView;
+
 	public DataProfileController() {
-		
+
 		this.registerEventTypes(AppEvents.DataProfileView);
+	    this.registerEventTypes(AppEvents.DataProfileListView);
 	}
-	
+
 	public void initialize() {
 		dataProfileView = new DataProfileView(this);
+	    dataProfileListView = new DataProfileListView(this);
 	}
-	
+
 	@Override
 	public void handleEvent(AppEvent event) {
 		EventType type = event.getType();
-		if (type == AppEvents.DataProfileView) {
-			
-			forwardToView(dataProfileView, event);	
-			
+	    if (type == AppEvents.DataProfileListView) {
+
+	        forwardToView(dataProfileListView, event);
+
+        } else if (type == AppEvents.DataProfileListRequest) {
+
+            requestProfileListData();
+
+        } else if (type == AppEvents.DataProfileDelete) {
+
+            Integer dataProfileId = (Integer) event.getData();
+            removeDataProfile(dataProfileId);
+
+	    } else if (type == AppEvents.DataProfileView) {
+
+			forwardToView(dataProfileView, event);
+
 		} else if (type == AppEvents.DataProfileAttributeRequest) {
-			
-			// Data profile attributes can be coming from difference resources
-			Integer dataResource = 0;
-			requestProfileAttributeData(dataResource);
-			
+
+			// Data profile attributes can be coming from difference data profile
+	        Integer dataProfileId = (Integer) event.getData();
+			requestProfileAttributeData(dataProfileId);
+
 		} else if (type == AppEvents.DataProfileAttributeValueRequest) {
-			
+
 			DataProfileAttributeWeb attribute = event.getData();
-			int topCount = 10;
 			requestProfileAttributeValueData(attribute, topCount);
 		}
 	}
-	
+
+    private void requestProfileListData() {
+        ProfileDataServiceAsync profileDataService = getProfileDataService();
+        profileDataService.getDataProfiles(new AsyncCallback<List<DataProfileWeb>>() {
+
+          public void onFailure(Throwable caught) {
+              // Info.display("Information", "onFailure."+caught.getMessage());
+              if (caught instanceof AuthenticationException) {
+                  Dispatcher.get().dispatch(AppEvents.Logout);
+                  return;
+              }
+              forwardToView(dataProfileListView, AppEvents.Error, caught.getMessage());
+          }
+
+          public void onSuccess(List<DataProfileWeb> result) {
+            // Info.display("Information", "onSuccess."+result.size());
+            forwardToView(dataProfileListView, AppEvents.DataProfileListReceived, result);
+          }
+        });
+    }
+
+    private void removeDataProfile(Integer dataProfileId) {
+        ProfileDataServiceAsync profileDataService = getProfileDataService();
+        profileDataService.removeDataProfile(dataProfileId, new AsyncCallback<String>() {
+
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+
+                    forwardToView(dataProfileListView, AppEvents.Logout, null);
+                    return;
+                }
+                forwardToView(dataProfileListView, AppEvents.Error, caught.getMessage());
+            }
+
+            public void onSuccess(String message) {
+              // Info.display("Information", "delete onSuccess.");
+              forwardToView(dataProfileListView, AppEvents.DataProfileDeleteComplete, message);
+            }
+          });
+    }
+
 	private void requestProfileAttributeData(Integer dataResource) {
-		ProfileDataServiceAsync profileDataService = getProfileDataService();		
+		ProfileDataServiceAsync profileDataService = getProfileDataService();
 		profileDataService.getDataProfileAttributes(dataResource, new AsyncCallback<List<DataProfileAttributeWeb>>() {
-			
+
 	      public void onFailure(Throwable caught) {
-			  // Info.display("Information", "onFailure."+caught.getMessage());	    	  
+			  // Info.display("Information", "onFailure."+caught.getMessage());
 	    	  if (caught instanceof AuthenticationException) {
 	    		  Dispatcher.get().dispatch(AppEvents.Logout);
 	    		  return;
@@ -88,14 +147,14 @@ public class DataProfileController extends Controller
 	      }
 	    });
 	}
-	
+
 	private void requestProfileAttributeValueData(DataProfileAttributeWeb attribute, int topCount) {
-		
-		ProfileDataServiceAsync profileDataService = getProfileDataService();		
+
+		ProfileDataServiceAsync profileDataService = getProfileDataService();
 		profileDataService.getDataProfileAttributeValues(attribute.getAttributeId(), topCount,  new AsyncCallback<List<DataProfileAttributeValueWeb>>() {
 
 		      public void onFailure(Throwable caught) {
-				  // Info.display("Information", "onFailure."+caught.getMessage());	    	  
+				  // Info.display("Information", "onFailure."+caught.getMessage());
 		    	  if (caught instanceof AuthenticationException) {
 		    		  Dispatcher.get().dispatch(AppEvents.Logout);
 		    		  return;

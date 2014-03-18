@@ -53,7 +53,8 @@ public class ProbabilisticMatchingServiceTest extends BaseServiceTestCase
 			Entity testEntity = entities.get(0);
 			
 			matchingService.linkRecords(testEntity);
-			FellegiSunterParameters params = matchingService.getFellegiSunterParameters();
+			
+			FellegiSunterParameters params = matchingService.getFellegiSunterParameters(testEntity.getName());
 			List<RecordPair> pairs = matchingService.getRecordPairs(testEntity);
 			int countMatched=0, countUnmatched=0, countUndecided=0;
 			for (RecordPair pair : pairs) {

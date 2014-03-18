@@ -47,7 +47,7 @@ public class PersonLinkDaoTest extends BaseDaoTestCase
 
 		ids = new java.util.HashSet<Long>();
 		ids.add(4550L);
-		Integer clusterId = personLinkDao.getClusterId(ids, Context.getMatchingService().getMatchingServiceId());
+		Integer clusterId = personLinkDao.getClusterId(ids, Context.getMatchingService("person").getMatchingServiceId());
 		log.debug("The shared cluster ID is: " + clusterId);
 		
 		links = personLinkDao.getPersonLinks(clusterId);

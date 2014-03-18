@@ -53,6 +53,7 @@ public class RecordLinkTest extends BaseServiceTestCase
             recordLeft.set("postalCode", "20170");
             recordLeft.set("dateOfBirth", dateOfBirth);
             recordLeft = manager.addRecord(entity, recordLeft);
+            log.info("Added record with id " + recordLeft.getRecordId());
 
             recordRight = new Record(entity);
             recordRight.set("givenName", "John");
@@ -61,6 +62,7 @@ public class RecordLinkTest extends BaseServiceTestCase
             recordRight.set("postalCode", "20170");
             recordRight.set("dateOfBirth", dateOfBirth);
             recordRight = manager.addRecord(entity, recordRight);
+            log.info("Added record with id " + recordRight.getRecordId());
             
             recordFree = new Record(entity);
             recordFree.set("givenName", "Josh");
@@ -69,6 +71,7 @@ public class RecordLinkTest extends BaseServiceTestCase
             recordFree.set("postalCode", "20150");
             recordFree.set("dateOfBirth", dateOfBirth);
             recordFree = manager.addRecord(entity, recordFree);
+            log.info("Added record with id " + recordFree.getRecordId());
 
             List<RecordLink> links = Context.getRecordQueryService().loadRecordLinks(entity, recordRight.getRecordId());
             log.debug("Found: " + links.size() + " links.");

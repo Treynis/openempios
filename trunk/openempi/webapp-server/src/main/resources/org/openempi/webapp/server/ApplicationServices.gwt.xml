@@ -30,8 +30,6 @@
 	<servlet path="/referenceDataService" class="org.openempi.webapp.server.ReferenceDataServiceImpl"/>
 	
 	<servlet path="/blockingDataService" class="org.openempi.webapp.server.BlockingDataServiceImpl"/>
-	
-	<servlet path="/fileLoaderDataService" class="org.openempi.webapp.server.FileLoaderDataServiceImpl"/>
 
 	<servlet path="/configurationDataService" class="org.openempi.webapp.server.ConfigurationDataServiceImpl"/>
 

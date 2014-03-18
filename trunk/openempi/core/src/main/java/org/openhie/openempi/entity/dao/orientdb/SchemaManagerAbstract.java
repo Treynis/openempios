@@ -39,6 +39,7 @@ import org.openhie.openempi.notification.EventObservable;
 import org.openhie.openempi.notification.ObservationEventType;
 
 import com.orientechnologies.orient.core.Orient;
+import com.orientechnologies.orient.core.collate.OCaseInsensitiveCollate;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OClassImpl;
@@ -240,7 +241,8 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         for (EntityAttribute attribute : entity.getAttributes()) {
             String fieldName = attribute.getName();
             OType type = getOrientdbType(attribute.getDatatype());
-            addAttributeToClass(className, sourceClass, fieldName, type);
+            boolean isCaseInsensitive = (attribute.getCaseInsensitive() == null) ? false : attribute.getCaseInsensitive();
+            addAttributeToClass(className, sourceClass, fieldName, type, isCaseInsensitive);
         }
         sourceClass.saveInternal();
         refreshSchema(db);
@@ -267,7 +269,8 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         for (EntityAttribute attribute : entity.getAttributes()) {
             String fieldName = attribute.getName();
             OType type = getOrientdbType(attribute.getDatatype());
-            addAttributeToClass(className, sourceClass, fieldName, type);
+            boolean isCaseInsensitive = (attribute.getCaseInsensitive() == null) ? false : attribute.getCaseInsensitive();
+            addAttributeToClass(className, sourceClass, fieldName, type, isCaseInsensitive);
         }
 
         addAttributesToClass(className, sourceClass, INTERNAL_ATTRIBUTES);
@@ -300,7 +303,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
     private void addAttributesToClass(String className, final OClassImpl theClass, InternalAttribute[] attributes) {
         for (InternalAttribute attribute : attributes) {
             String fieldName = attribute.getName();
-            addAttributeToClass(className, theClass, fieldName, attribute.getType());
+            addAttributeToClass(className, theClass, fieldName, attribute.getType(), false);
         }
         log.info("Added attributes to graph entity: " + className);
     }
@@ -541,7 +544,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         return null;
     }
 
-    private void addAttributeToClass(String className, final OClassImpl sourceClass, String fieldName, OType type) {
+    private void addAttributeToClass(String className, final OClassImpl sourceClass, String fieldName, OType type, Boolean isCaseSensitive) {
         OPropertyImpl prop = (OPropertyImpl) sourceClass.getProperty(fieldName);
         if (prop != null) {
             log.warn("Property '" + className + "." + fieldName + "' already exists.");
@@ -549,6 +552,9 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         }
 
         prop = sourceClass.addPropertyInternal(fieldName, type, null, null);
+        if (isCaseSensitive) {
+        	prop.setCollate(new OCaseInsensitiveCollate());
+        }
         log.debug("Adding field " + fieldName + " to class " + className);
         sourceClass.saveInternal();
     }

@@ -28,7 +28,7 @@ import org.openhie.openempi.service.BaseServiceTestCase;
 public class BlockingReindexingTest extends BaseServiceTestCase
 {
 	public void testInitialization() {
-		BlockingService blockingService = Context.getBlockingService();
+		BlockingService blockingService = Context.getBlockingService(getTestEntity().getName());
 		try {
 			BlockingLifecycleObserver blockingLifecycle = (BlockingLifecycleObserver) blockingService;
 			blockingLifecycle.rebuildIndex();

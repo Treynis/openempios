@@ -28,6 +28,7 @@ import org.openempi.webapp.client.ConfigurationDataServiceAsync;
 import org.openempi.webapp.client.Constants;
 import org.openempi.webapp.client.EventNotificationServiceAsync;
 import org.openempi.webapp.client.IdentifierDomainDataServiceAsync;
+import org.openempi.webapp.client.JobQueueDataServiceAsync;
 import org.openempi.webapp.client.ProfileDataServiceAsync;
 import org.openempi.webapp.client.ReportDataServiceAsync;
 import org.openempi.webapp.client.UserDataServiceAsync;
@@ -54,7 +55,8 @@ public abstract class Controller extends com.extjs.gxt.ui.client.mvc.Controller
     private AuditEventDataServiceAsync auditEventDataService;
     private EntityDefinitionDataServiceAsync entityDefinitionDataService;
     private EntityInstanceDataServiceAsync entityInstanceDataService;
-
+    private JobQueueDataServiceAsync jobQueueDataService;
+    
     private HashMap<String, Object> cacheMap;
 
     public Controller() {
@@ -180,5 +182,13 @@ public abstract class Controller extends com.extjs.gxt.ui.client.mvc.Controller
                     .get(Constants.ENTITY_INSTANCE_DATA_SERVICE);
         }
         return entityInstanceDataService;
+    }
+    
+    public synchronized JobQueueDataServiceAsync getJobQueueDataService() {
+        if (jobQueueDataService == null) {
+            jobQueueDataService = (JobQueueDataServiceAsync) Registry
+                    .get(Constants.JOB_QUEUE_DATA_SERVICE);
+        }
+        return jobQueueDataService;
     }
 }

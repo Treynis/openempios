@@ -54,18 +54,19 @@ public class AppView extends View
 {
   private Viewport viewport;
   private ContentPanel west;
+  private ContentPanel south;
   private LayoutContainer center;
   private LayoutContainer north;
   private LoginDialog dialog;
- 
+
   public AppView(Controller controller) {
     super(controller);
   }
 
   protected void initialize() {
-      
+
 	initUI();
-	  
+
     dialog = new LoginDialog(controller);
     dialog.setClosable(false);
     dialog.addListener(Events.Hide, new Listener<WindowEvent>() {
@@ -81,6 +82,7 @@ public class AppView extends View
     viewport.setLayout(new BorderLayout());
 
     createNorth();
+    createSouth();
 //    createWest();
     createCenter();
 
@@ -88,6 +90,7 @@ public class AppView extends View
     Registry.register(Constants.VIEWPORT, viewport);
     Registry.register(Constants.NORTH_PANEL, north);
     Registry.register(Constants.CENTER_PANEL, center);
+    Registry.register(Constants.SOUTH_PANEL, south);
 
     RootPanel.get().add(viewport);
   }
@@ -97,7 +100,7 @@ public class AppView extends View
 	  Html header = new Html("<div id='header'>" +
 	  		"   <img src='images/openempi.jpg'/> " +
 	  		"</div>");
-	  
+
 	  BorderLayoutData data = new BorderLayoutData(LayoutRegion.NORTH, 120);
 	  data.setMargins(new Margins(0, 0, 0, 0));
 	  header.setBorders(true);
@@ -105,6 +108,20 @@ public class AppView extends View
 	  header.setHeight(70);
 	  north.add(header);
 	  viewport.add(north, data);
+  }
+
+  private void createSouth() {
+      BorderLayoutData data = new BorderLayoutData(LayoutRegion.SOUTH, 150, 150, 200);
+      data.setMargins(new Margins(2, 0, 2, 0));
+
+      south = new ContentPanel();
+      south.setBodyBorder(true);
+      south.setLayout(new AccordionLayout());
+      south.setLayoutOnChange(true);
+      south.setHeading("Information Panel");
+
+      viewport.add(south, data);
+      south.setVisible(false);
   }
 
   private void createWest() {
@@ -132,34 +149,34 @@ public class AppView extends View
 
   protected void handleEvent(AppEvent event) {
     if (event.getType() == AppEvents.Init) {
-    	
+
         initUI();
-        
+
     } else if (event.getType() == AppEvents.Logout) {
-        	
+
     	showDefaultCursor();
     	getController().cleanRegistry();
-    	
+
     	initUI();
         dialog.relogin();
     } else if (event.getType() == AppEvents.UserAuthenticateSuccess) {
-    	
+
     	//UserWeb user = event.getData();
 	    //Registry.register(Constants.LOGIN_USER, user);
-    	Map<String,PermissionWeb> permissions = event.getData();
-	    Registry.register(Constants.LOGIN_USER_PERMISSIONS, permissions);   
-	    
+    	Map<String, PermissionWeb> permissions = event.getData();
+	    Registry.register(Constants.LOGIN_USER_PERMISSIONS, permissions);
+
 //	    for (Object key: permissions.keySet()) {
 //	    	Info.display("permissions:", "Key : " + key.toString() + " Value : " + permissions.get(key).getDescription());
 //	    }
     	dialog.authenticateSuccess();
-    	
+
     	// load entity models
 //		controller.handleEvent(new AppEvent(AppEvents.EntitiesRequest));
-		
+
     } else if (event.getType() == AppEvents.UserAuthenticateFailure) {
     	String msg = event.getData();
-    	
+
 	    Registry.register(Constants.LOGIN_USER, null);
     	dialog.authenticateFailure(msg);
     }

@@ -45,10 +45,11 @@ public class BlockingServiceSaveConfigurationTest extends BaseServiceTestCase
 			field.setFieldName("givenName");
 			field = blockingFields.addNewBlockingField();
 			field.setFieldName("familyName");
+			newBasicBlocking.setEntityName("person");
 			
 			log.debug("Modified blocking info is: " + newBasicBlocking);
 			
-			blockingNode = Context.getConfiguration().saveBlockingConfiguration(newBasicBlocking);
+//			blockingNode = Context.getConfiguration().saveBlockingConfiguration(newBasicBlocking);
 			log.debug("Basic blocking info is: " + basicBlocking);			
 			
 		} catch (Exception e) {

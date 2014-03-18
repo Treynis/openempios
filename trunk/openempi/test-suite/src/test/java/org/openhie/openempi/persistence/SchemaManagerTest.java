@@ -25,6 +25,7 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
+import org.openhie.openempi.entity.Constants;
 import org.openhie.openempi.entity.dao.orientdb.ConnectionManager;
 import org.openhie.openempi.entity.dao.orientdb.EntityStore;
 import org.openhie.openempi.entity.dao.orientdb.SchemaManager;
@@ -38,9 +39,8 @@ public class SchemaManagerTest extends TestCase
     public void testInitialization() {
         Entity entity = getTestEntity();
         
-        SchemaManager local = SchemaManagerFactory.createSchemaManager(SchemaManager.PLOCAL_STORAGE_MODE,
-                getConnectionManager());
-        local.setParameter(SchemaManager.DATA_DIRECTORY_KEY, "/tmp");
+        SchemaManager local = SchemaManagerFactory.createSchemaManager(getConnectionManager());
+        local.setParameter(Constants.DATA_DIRECTORY_KEY, "/tmp");
         EntityStore store = local.getEntityStoreByName(entity.getName());
         local.initializeSchema(entity, store);
         
@@ -103,8 +103,11 @@ public class SchemaManagerTest extends TestCase
         ConnectionManager connectionManager = new ConnectionManager();
         connectionManager.setUsername("openempi");
         connectionManager.setPassword("openempi");
+        connectionManager.setServerUsername("admin");
+        connectionManager.setServerPassword("admin");
         connectionManager.setMaxPoolConnections(20);
         connectionManager.setMinPoolConnections(1);
+        connectionManager.setStorageMode(Constants.PLOCAL_STORAGE_MODE);
         return connectionManager;
     }
 }

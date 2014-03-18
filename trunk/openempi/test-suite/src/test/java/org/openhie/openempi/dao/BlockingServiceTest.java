@@ -38,7 +38,7 @@ public class BlockingServiceTest extends BaseServiceTestCase
 			assertTrue("No entities have been defined.", entities.size() > 0);
 			Entity testEntity = entities.get(0);
 			
-			BlockingService blockingService = Context.getBlockingService();
+			BlockingService blockingService = Context.getBlockingService(testEntity.getName());
 			RecordPairSource recordPairSource = blockingService.getRecordPairSource(testEntity);
 			int i=0;
 			for (RecordPairIterator iter = recordPairSource.iterator(); iter.hasNext(); ) {

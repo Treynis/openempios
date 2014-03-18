@@ -22,12 +22,17 @@ package org.openempi.webapp.client;
 
 import java.util.List;
 
+import org.openempi.webapp.client.model.DataProfileWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeValueWeb;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface ProfileDataServiceAsync
-{	
+{
+    public void getDataProfiles( AsyncCallback<List<DataProfileWeb>> callback);
+
+    public void removeDataProfile(Integer dataProfileId, AsyncCallback<String> callback);
+
 	public void getDataProfileAttributes( Integer dataResource, AsyncCallback<List<DataProfileAttributeWeb>> callback);
 	
 	public void getDataProfileAttributeValues( Integer attributeId, int topCount, AsyncCallback<List<DataProfileAttributeValueWeb>> callback);

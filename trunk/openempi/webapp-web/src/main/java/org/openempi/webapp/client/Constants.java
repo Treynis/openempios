@@ -28,6 +28,7 @@ public class Constants
     //
     public static final String WEST_PANEL = "west";
     public static final String NORTH_PANEL = "north";
+    public static final String SOUTH_PANEL = "south";
     public static final String VIEWPORT = "viewport";
     public static final String CENTER_PANEL = "center";
 
@@ -37,7 +38,6 @@ public class Constants
     public static final String BLOCKING_DATA_SERVICE = "blockingDataService";
     public static final String CONFIGURATION_DATA_SERVICE = "configurationDataService";
     public static final String EVENT_NOTIFICATION_SERVICE = "eventNotificationService";
-    public static final String FILE_LOADER_DATA_SERVICE = "fileLoaderDataService";
     public static final String IDENTIFIER_DOMAIN_DATA_SERVICE = "identifierDomainDataService";
     public static final String USER_FILE_DATA_SERVICE = "userFileDataService";
     public static final String REPORT_DATA_SERVICE = "reportDataService";
@@ -47,7 +47,9 @@ public class Constants
     public static final String AUDIT_EVENT_SERVICE = "auditEventDataService";
     public static final String ENTITY_DEFINITION_DATA_SERVICE = "entityDefinitionDataService";
     public static final String ENTITY_INSTANCE_DATA_SERVICE = "entityInstanceDataService";
+    public static final String JOB_QUEUE_DATA_SERVICE = "jobQueueDataService";
 
+    public static final String GLOBAL_IDENTITY_DOMAIN = "globalIdentityDomain";
     public static final String IDENTITY_DOMAINS = "identityDomains";
     public static final String IDENTITY_DOMAIN_TYPE_CODES = "identityDomainTypeCodes";
     public static final String PERSON_MODEL_ALL_ATTRIBUTE_NAMES = "personModelAllAtttributeNames";
@@ -84,7 +86,10 @@ public class Constants
     public static final String MATCH = "Match";
     public static final String NON_MATCH = "Non-Match";
     public static final String PROBABLE_MATCH = "Probable Match";
-    
+
+    public static final String JOB_TYPES = "jobTypes";
+    public static final String JOB_STATUS = "jobStatus";
+
     public static final int MATCH_CLASSIFICATION = 1;
     public static final int PROBABLE_MATCH_CLASSIFICATION = 2;
     public static final int NON_MATCH_CLASSIFICATION = 3;

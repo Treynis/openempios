@@ -45,7 +45,7 @@ public class BlockingServiceFindCandidatesTest extends BaseServiceTestCase
 		for (String attribute : matchingAttributes) {
 			System.out.println("The record has a value of " + record.getAsString(attribute) + " for field " + attribute);
 		}
-		BlockingService blockingService = Context.getBlockingService();
+		BlockingService blockingService = Context.getBlockingService(this.getTestEntity().getName());
 		java.util.List<RecordPair> records = blockingService.findCandidates(record);
 		for (RecordPair entry : records) {
 			System.out.println("Found candicate matching record pair: " + entry);

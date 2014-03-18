@@ -42,7 +42,7 @@ public class BlockingServiceTest extends BaseServiceTestCase
 			assertTrue("No entities have been defined.", entities.size() > 0);
 			Entity testEntity = entities.get(0);
 			
-			BlockingService blockingService = Context.getBlockingService();
+			BlockingService blockingService = Context.getBlockingService(testEntity.getName());
 			BlockingRound round = new BlockingRound();
 			round.addField(new BaseField("custom1"));
 //			round.addField(new BaseField("custom2"));
@@ -52,7 +52,7 @@ public class BlockingServiceTest extends BaseServiceTestCase
 			int i=0;
 			for (RecordPairIterator iter = recordPairSource.iterator(); iter.hasNext(); ) {
 				RecordPair pair = iter.next();
-				log.trace("Comparing records " + pair.getLeftRecord().getRecordId() + " and " + pair.getRightRecord().getRecordId());
+				log.info("Comparing records " + pair.getLeftRecord().getRecordId() + " and " + pair.getRightRecord().getRecordId());
 				i++;
 			}
 			log.trace("Loaded " + i + " record pairs.");
@@ -67,12 +67,12 @@ public class BlockingServiceTest extends BaseServiceTestCase
 			assertTrue("No entities have been defined.", entities.size() > 0);
 			Entity testEntity = entities.get(0);
 			
-			BlockingService blockingService = Context.getBlockingService();
+			BlockingService blockingService = Context.getBlockingService(testEntity.getName());
 			RecordPairSource recordPairSource = blockingService.getRecordPairSource(testEntity);
 			int i=0;
 			for (RecordPairIterator iter = recordPairSource.iterator(); iter.hasNext(); ) {
 				RecordPair pair = iter.next();
-				log.trace("Comparing records " + pair.getLeftRecord().getRecordId() + " and " + pair.getRightRecord().getRecordId());
+				log.info("Comparing records " + pair.getLeftRecord().getRecordId() + " and " + pair.getRightRecord().getRecordId());
 				i++;
 			}
 			log.trace("Loaded " + i + " record pairs.");

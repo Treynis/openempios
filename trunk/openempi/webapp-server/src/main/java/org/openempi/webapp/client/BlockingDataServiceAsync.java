@@ -30,11 +30,11 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface BlockingDataServiceAsync
 {
-	public void loadTraditionalBlockingConfigurationData(AsyncCallback<BlockingEntryListWeb> callback);
+	public void loadTraditionalBlockingConfigurationData(String entityName, AsyncCallback<BlockingEntryListWeb> callback);
 	
-	public void loadSortedNeighborhoodBlockingConfigurationData(AsyncCallback<SortedNeighborhoodConfigurationWeb> callback);
+	public void loadSortedNeighborhoodBlockingConfigurationData(String entityName, AsyncCallback<SortedNeighborhoodConfigurationWeb> callback);
 	
-	public void loadSuffixArrayBlockingConfigurationData(AsyncCallback<SuffixArrayBlockingConfigurationWeb> callback);
+	public void loadSuffixArrayBlockingConfigurationData(String entityName, AsyncCallback<SuffixArrayBlockingConfigurationWeb> callback);
 	
 	public void saveTraditionalBlockingConfigurationData(BlockingEntryListWeb configuration, AsyncCallback<String> callback);
 	

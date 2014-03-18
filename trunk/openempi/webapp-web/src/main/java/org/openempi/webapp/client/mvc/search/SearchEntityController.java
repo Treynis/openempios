@@ -37,19 +37,21 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public class SearchEntityController extends Controller
 {
+    private FixedSearchEntityView fixedSearchEntityView;
     private SearchEntityView searchEntityView;
     private UpdateEntityView updateEntityView;
     private DeleteEntityView deleteEntityView;
 
     public SearchEntityController() {
+        this.registerEventTypes(AppEvents.EntityFixedSearchView);
         this.registerEventTypes(AppEvents.EntitySearchView);
-        this.registerEventTypes(AppEvents.EntityBasicSearchView);
         this.registerEventTypes(AppEvents.EntityUpdateView);
         this.registerEventTypes(AppEvents.EntityDeleteView);
     }
 
     @Override
     protected void initialize() {
+        fixedSearchEntityView = new FixedSearchEntityView(this);
         searchEntityView = new SearchEntityView(this);
         updateEntityView = new UpdateEntityView(this);
         deleteEntityView = new DeleteEntityView(this);
@@ -58,7 +60,11 @@ public class SearchEntityController extends Controller
     @Override
     public void handleEvent(AppEvent event) {
         EventType type = event.getType();
-        if (type == AppEvents.EntitySearchView) {
+        if (type == AppEvents.EntityFixedSearchView) {
+
+            forwardToView(fixedSearchEntityView, event);
+
+        } else if (type == AppEvents.EntitySearchView) {
 
             forwardToView(searchEntityView, event);
 
@@ -82,15 +88,29 @@ public class SearchEntityController extends Controller
             RecordWeb entity = event.getData();
             updateEntity(entityModel, entity);
 
+        } else if (type == AppEvents.EntityLinksForFixedSearchRequest) {
+
+            EntityWeb entityModel = event.getData("entityModel");
+            RecordWeb entity = event.getData();
+            getEntityLinksForFixedSearch(entityModel, entity);
+
         } else if (type == AppEvents.EntityLinksRequest) {
 
             EntityWeb entityModel = event.getData("entityModel");
             RecordWeb entity = event.getData();
             getEntityLinks(entityModel, entity);
 
+        } else if (type == AppEvents.EntityBasicUpdateFinished) {
+
+            forwardToView(fixedSearchEntityView, event);
+
         } else if (type == AppEvents.EntityUpdateFinished) {
 
             forwardToView(searchEntityView, event);
+
+        } else if (type == AppEvents.EntityBasicUpdateCancel) {
+
+            forwardToView(fixedSearchEntityView, event);
 
         } else if (type == AppEvents.EntityUpdateCancel) {
 
@@ -106,9 +126,17 @@ public class SearchEntityController extends Controller
             RecordWeb entity = event.getData();
             deleteEntity(entityModel, entity);
 
+        } else if (type == AppEvents.EntityBasicDeleteFinished) {
+
+            forwardToView(fixedSearchEntityView, event);
+
         } else if (type == AppEvents.EntityDeleteFinished) {
 
             forwardToView(searchEntityView, event);
+
+        } else if (type == AppEvents.EntityBasicDeleteCancel) {
+
+            forwardToView(fixedSearchEntityView, event);
 
         } else if (type == AppEvents.EntityDeleteCancel) {
 
@@ -234,6 +262,30 @@ public class SearchEntityController extends Controller
             public void onSuccess(List<RecordWeb> result) {
 
                 forwardToView(searchEntityView, AppEvents.EntityLinksReceived, result);
+            }
+        });
+    }
+
+    private void getEntityLinksForFixedSearch(EntityWeb entityModel, RecordWeb entity) {
+        EntityInstanceDataServiceAsync entityDataService = getEntityInstanceDataService();
+
+        // Info.display("Information: ", "Submitting request to get entity links");
+
+        entityDataService.loadLinksFromRecord(entityModel, entity, new AsyncCallback<List<RecordWeb>>()
+        {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                forwardToView(fixedSearchEntityView, AppEvents.Error, caught.getMessage());
+            }
+
+            public void onSuccess(List<RecordWeb> result) {
+
+                forwardToView(fixedSearchEntityView, AppEvents.EntityLinksReceived, result);
             }
         });
     }

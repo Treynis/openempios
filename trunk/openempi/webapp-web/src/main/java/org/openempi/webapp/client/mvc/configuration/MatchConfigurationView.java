@@ -64,9 +64,11 @@ import com.extjs.gxt.ui.client.data.LoadEvent;
 import com.extjs.gxt.ui.client.data.PagingLoadConfig;
 import com.extjs.gxt.ui.client.data.PagingLoadResult;
 import com.extjs.gxt.ui.client.data.RpcProxy;
+import com.extjs.gxt.ui.client.data.PagingLoader;
+import com.extjs.gxt.ui.client.data.PagingModelMemoryProxy;
+
 import com.extjs.gxt.ui.client.event.ButtonEvent;
 import com.extjs.gxt.ui.client.event.Events;
-import com.extjs.gxt.ui.client.event.ComponentEvent;
 import com.extjs.gxt.ui.client.event.FieldSetEvent;
 import com.extjs.gxt.ui.client.event.GridEvent;
 import com.extjs.gxt.ui.client.event.Listener;
@@ -96,7 +98,7 @@ import com.extjs.gxt.ui.client.widget.form.NumberField;
 import com.extjs.gxt.ui.client.widget.form.SpinnerField;
 import com.extjs.gxt.ui.client.widget.form.TextField;
 import com.extjs.gxt.ui.client.widget.form.ComboBox.TriggerAction;
-import com.extjs.gxt.ui.client.widget.form.CheckBox;
+//import com.extjs.gxt.ui.client.widget.form.CheckBox;
 import com.extjs.gxt.ui.client.widget.grid.CellEditor;
 import com.extjs.gxt.ui.client.widget.grid.CheckColumnConfig;
 import com.extjs.gxt.ui.client.widget.grid.ColumnConfig;
@@ -126,10 +128,13 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.i18n.client.NumberFormat;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+// use this CheckBox to avoid blink in the rendering cell
+import com.google.gwt.user.client.ui.CheckBox;
 
 public class MatchConfigurationView extends BaseEntityView
 {
     public static final Integer PAGE_SIZE = new Integer(10);
+    public static final Integer PAGE_SIZE_VECTOR = new Integer(128);
 
     // keep six digit decimal numbers
     private static final NumberFormat nfc = NumberFormat.getFormat("#,###.######");
@@ -180,8 +185,13 @@ public class MatchConfigurationView extends BaseEntityView
 
     // vector
     private Grid<BaseModelData> gridVector;
+    private ListStore<BaseModelData> vectorLocalStore;
     private ListStore<BaseModelData> vectorStore; // = new ListStore<BaseModelData>();
     private BaseModelData selectedVector;
+
+    private PagingModelMemoryProxy proxyVector;
+    private PagingLoader<PagingLoadResult<BaseModelData>> loaderVector;
+    private PagingToolBar pagingToolBarVector;
 
     private LayoutContainer container;
 
@@ -198,7 +208,7 @@ public class MatchConfigurationView extends BaseEntityView
     private int currentFieldSize;
 
     // Vector Detail Dialog
-    private Dialog vectorDetailInfoDialog;
+    private Dialog vectorDetailInfoDialog = null;
     private Grid<RecordLinkWeb> pairGrid;
     private ListStore<RecordLinkWeb> pairStore = new ListStore<RecordLinkWeb>();
 
@@ -253,11 +263,14 @@ public class MatchConfigurationView extends BaseEntityView
 
             currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
 
-            initUI();
-
             // sort by display order
             List<VectorConfigurationWeb> vectorConfs = (List<VectorConfigurationWeb>) event.getData();
             Collections.sort(vectorConfs, VECTOR_WEIGHT_DISPLAY_ORDER);
+
+            // Vector Selection
+            initVectorSelection(vectorConfs);
+
+            initUI();
 
             store.removeAll();
             vectorStore.removeAll();
@@ -279,12 +292,7 @@ public class MatchConfigurationView extends BaseEntityView
             List<MatchFieldWeb> fields = (List<MatchFieldWeb>) currentConfig.getMatchFields();
             for (MatchFieldWeb matchField : fields) {
                 // Info.display("Information", "MatchThreshold: "+matchField.getMatchThreshold());
-
-//                matchField.setFieldDescription(Utility.convertToDescription(matchField.getFieldName()));
-                EntityAttributeWeb attribute = currentEntity.findEntityAttributeByName(matchField.getFieldName());
-                if (attribute != null) {
-                    matchField.setFieldDescription(attribute.getDisplayName());
-                }
+                matchField.setFieldDescription(Utility.convertToDescription(matchField.getFieldName()));
                 matchField.setComparatorFunctionNameDescription(Utility.convertToDescription(matchField
                         .getComparatorFunctionName()));
                 matchField.setAgreementProbability(Float.parseFloat(nfc.format(matchField.getAgreementProbability())));
@@ -355,55 +363,8 @@ public class MatchConfigurationView extends BaseEntityView
             // Info.display("loggingDestination: ", loggingDestination);
             loggingDestinationCombo.setValue(new ModelPropertyWeb(loggingDestination, loggingDestination));
 
-            // Vector Selection
-            fields = (List<MatchFieldWeb>) currentConfig.getMatchFields();
-            // Info.display("Number Of Vectors", ""+vectorConfs.size());
-            for (VectorConfigurationWeb vectorConf : vectorConfs) {
-                BaseModelData vector = new BaseModelData();
-                java.util.HashMap<String, Object> map = new java.util.HashMap<String, Object>();
-                map.put("matchDefault", vectorConf.getAlgorithmClassification());
-                switch (vectorConf.getManualClassification()) {
-                case Constants.MATCH_CLASSIFICATION:
-                    map.put("match", new Boolean(true));
-                    map.put("probable", new Boolean(false));
-                    map.put("nonmatch", new Boolean(false));
-                    break;
-                case Constants.PROBABLE_MATCH_CLASSIFICATION:
-                    map.put("match", new Boolean(false));
-                    map.put("probable", new Boolean(true));
-                    map.put("nonmatch", new Boolean(false));
-                    break;
-                case Constants.NON_MATCH_CLASSIFICATION:
-                    map.put("match", new Boolean(false));
-                    map.put("probable", new Boolean(false));
-                    map.put("nonmatch", new Boolean(true));
-                    break;
-                }
-
-/*                int j = 1;
-                for (MatchFieldWeb matchField : fields) {
-                    int bit = (int) Math.pow(2, currentFieldSize - j);
-                    String value = matchField.getFieldName() + ":" + Integer.toString(bit);
-                    map.put(matchField.getFieldName(), value);
-                    j++;
-                }
-*/
-                int j = 0;
-                for (MatchFieldWeb matchField : fields) {
-                    // set bit such as 1, 10, 100, 1000
-                    int bit = (int) Math.pow(2, j);
-//                    String value = matchField.getFieldName() + ":" + Integer.toString(bit);
-                    String value = matchField.getFieldDescription() + ":" + Integer.toString(bit);
-                    map.put(matchField.getFieldName(), value);
-                    j++;
-                }
-
-                map.put("weight", nfc.format(vectorConf.getWeight()));
-                map.put("vector", vectorConf.getVectorValue());
-                vector.setProperties(map);
-                // Info.display("Vector value", ""+vector.get("vector")+"; "+vector.get("givenName"));
-                vectorStore.add(vector);
-            }
+            // Vector Loading
+            loaderVector.load(0, PAGE_SIZE_VECTOR);
 
         } else if (event.getType() == AppEvents.MatchConfigurationSaveComplete) {
             // String message = event.getData();
@@ -431,14 +392,67 @@ public class MatchConfigurationView extends BaseEntityView
                 weightFractionSpin.setValue(20);
             }
 
+            showDefaultCursor();
             MessageBox.alert("Information", "Probabilistic Match Configuration was successfully saved", null);
 
             // refresh
             controller.handleEvent(new AppEvent(AppEvents.MatchConfigurationRequest));
 
         } else if (event.getType() == AppEvents.Error) {
+            showDefaultCursor();
+
             String message = event.getData();
             MessageBox.alert("Information", "Failure: " + message, null);
+        }
+    }
+
+    protected void initVectorSelection(List<VectorConfigurationWeb> vectorConfs) {
+        // Info.display("Number Of Vectors", ""+vectorConfs.size());
+        vectorLocalStore = new ListStore<BaseModelData>();
+        List<MatchFieldWeb> fields = (List<MatchFieldWeb>) currentConfig.getMatchFields();
+
+        for (VectorConfigurationWeb vectorConf : vectorConfs) {
+            BaseModelData vector = new BaseModelData();
+            java.util.HashMap<String, Object> map = new java.util.HashMap<String, Object>();
+            map.put("matchDefault", vectorConf.getAlgorithmClassification());
+            switch (vectorConf.getManualClassification()) {
+            case Constants.MATCH_CLASSIFICATION:
+                map.put("match", new Boolean(true));
+                map.put("probable", new Boolean(false));
+                map.put("nonmatch", new Boolean(false));
+                break;
+            case Constants.PROBABLE_MATCH_CLASSIFICATION:
+                map.put("match", new Boolean(false));
+                map.put("probable", new Boolean(true));
+                map.put("nonmatch", new Boolean(false));
+                break;
+            case Constants.NON_MATCH_CLASSIFICATION:
+                map.put("match", new Boolean(false));
+                map.put("probable", new Boolean(false));
+                map.put("nonmatch", new Boolean(true));
+                break;
+            default:
+                map.put("match", new Boolean(false));
+                map.put("probable", new Boolean(false));
+                map.put("nonmatch", new Boolean(false));
+                break;
+            }
+
+            int j = 0;
+            for (MatchFieldWeb matchField : fields) {
+                // set bit such as 1, 10, 100, 1000
+                int bit = (int) Math.pow(2, j);
+                String value =  Utility.convertToDescription(matchField.getFieldName()) + ":" + Integer.toString(bit);
+                map.put(matchField.getFieldName(), value);
+                j++;
+            }
+            // sorting numeric instead of string.  After formated, put the data back to double
+            // map.put("weight", nfc.format(vectorConf.getWeight()));
+            map.put("weight", Double.parseDouble(nfc.format(vectorConf.getWeight())));
+            map.put("vector", vectorConf.getVectorValue());
+            vector.setProperties(map);
+            // Info.display("Vector value", ""+vector.get("vector")+"; "+vector.get("givenName"));
+            vectorLocalStore.add(vector);
         }
     }
 
@@ -518,9 +532,10 @@ public class MatchConfigurationView extends BaseEntityView
         grid2.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         grid2.setHeight(180);
 
-        // Render to display the chec kbox
+        // Render to display the check box
         GridCellRenderer<BaseModelData> matchRenderer = new GridCellRenderer<BaseModelData>()
         {
+            @Override
             public Object render(BaseModelData model, String property, ColumnData config, int rowIndex, int colIndex,
                     ListStore<BaseModelData> store, Grid<BaseModelData> grid) {
 
@@ -538,28 +553,33 @@ public class MatchConfigurationView extends BaseEntityView
                 if (matchDefault == colIndex + 1) {
                     // algorithmClassification is default setting
                     checkBox.setValue(true);
-                    checkBox.disable();
+                    checkBox.setEnabled(false);
                 }
                 return checkBox;
             }
         };
 
         List<ColumnConfig> configVector = new ArrayList<ColumnConfig>();
-        CheckColumnConfig matchColumn = new CheckColumnConfig("match", "Match", 50);
+        CheckColumnConfig matchColumn = new CheckColumnConfig("match", "Match", 40);
         matchColumn.setRenderer(matchRenderer);
         configVector.add(matchColumn);
 
-        CheckColumnConfig probabilityColumn = new CheckColumnConfig("probable", "Probable", 60);
+        CheckColumnConfig probabilityColumn = new CheckColumnConfig("probable", "Probable", 55);
         probabilityColumn.setRenderer(matchRenderer);
         configVector.add(probabilityColumn);
 
-        CheckColumnConfig nonmatchColumn = new CheckColumnConfig("nonmatch", "Non-Match", 70);
+        CheckColumnConfig nonmatchColumn = new CheckColumnConfig("nonmatch", "Non-Match", 65);
         nonmatchColumn.setRenderer(matchRenderer);
         configVector.add(nonmatchColumn);
 
         // Render to display the color and stripe
         GridCellRenderer<BaseModelData> colorRenderer = new GridCellRenderer<BaseModelData>()
         {
+            String backgroundColor;
+            String decoration;
+            String fontWeight = "bold";
+
+            @Override
             public String render(BaseModelData model, String property, ColumnData config, int rowIndex, int colIndex,
                     ListStore<BaseModelData> store, Grid<BaseModelData> grid) {
 
@@ -573,9 +593,8 @@ public class MatchConfigurationView extends BaseEntityView
                 int val = (Integer) model.get("vector");
                 int color = val & bit;
 
-                String backgroundColor = "#E79191"; // "orangered";
-                String decoration = "line-through";
-                String fontWeight = "bold";
+                backgroundColor = "#E79191"; // "orangered";
+                decoration = "line-through";
 
                 if (color != 0) {
                     backgroundColor = "lightgreen";
@@ -593,13 +612,25 @@ public class MatchConfigurationView extends BaseEntityView
             fieldColumn.setRenderer(colorRenderer);
             configVector.add(fieldColumn);
         }
-        ColumnConfig fieldColumn = new ColumnConfig("weight", "Match Scroe", 80);
-        configVector.add(fieldColumn);
-        // fieldColumn = new ColumnConfig("vector", "Vector", 100);
-        // configVector.add(fieldColumn);
+
+        ColumnConfig weightColumn = new ColumnConfig("weight", "Match Score", 75);
+        configVector.add(weightColumn);
+
+        ColumnConfig vectorColumn = new ColumnConfig("vector", "Vector Value", 75);
+        configVector.add(vectorColumn);
+
+        // add memory paging support for vector selection
+        proxyVector = new PagingModelMemoryProxy(vectorLocalStore.getModels());
+
+        // loader
+        loaderVector = new BasePagingLoader<PagingLoadResult<BaseModelData>>(proxyVector);
+        loaderVector.setRemoteSort(true);
+
+        pagingToolBarVector = new PagingToolBar(PAGE_SIZE_VECTOR);
+        pagingToolBarVector.bind(loaderVector);
 
         final ColumnModel cmVector = new ColumnModel(configVector);
-        vectorStore = new ListStore<BaseModelData>();
+        vectorStore = new ListStore<BaseModelData>(loaderVector);
         gridVector = new Grid<BaseModelData>(vectorStore, cmVector);
         gridVector.setBorders(true);
         gridVector.setAutoWidth(true);
@@ -608,7 +639,7 @@ public class MatchConfigurationView extends BaseEntityView
         gridVector.addPlugin(matchColumn);
         gridVector.addPlugin(nonmatchColumn);
         gridVector.addPlugin(probabilityColumn);
-        gridVector.setHeight(450);
+        gridVector.setHeight(420);
 
         grid1.getSelectionModel().addListener(Events.SelectionChange,
                 new Listener<SelectionChangedEvent<MatchFieldWeb>>()
@@ -800,7 +831,7 @@ public class MatchConfigurationView extends BaseEntityView
         cp.setHeading("Probabilistic Matching Field Configuration");
         cp.setFrame(true);
         cp.setIcon(IconHelper.create("images/table_gear.png"));
-        cp.setSize(810, 530);
+        cp.setSize(1050, 530);
 
         // Tabs
         TabPanel tabPanel = new TabPanel();
@@ -811,49 +842,18 @@ public class MatchConfigurationView extends BaseEntityView
         TabItem attributeDataPart1Tab = new TabItem("Basic");
         attributeDataPart1Tab.setLayout(new FitLayout());
         attributeDataPart1Tab.add(basicPanel());
-        attributeDataPart1Tab.addListener(Events.Select, new Listener<ComponentEvent>()
-        {
-            public void handleEvent(ComponentEvent be) {
-                if (currentSelection != null) {
-                    grid1.getView().getRow(currentSelection).scrollIntoView();
-                }
-            }
-        });
 
         TabItem attributeDataPart2Tab = new TabItem("Advanced");
         attributeDataPart2Tab.setLayout(new FitLayout());
         attributeDataPart2Tab.add(advancedPanel());
-        attributeDataPart2Tab.addListener(Events.Select, new Listener<ComponentEvent>()
-        {
-            public void handleEvent(ComponentEvent be) {
-                if (currentSelection != null) {
-                    grid2.getView().getRow(currentSelection).scrollIntoView();
-                }
-            }
-        });
 
         TabItem attributeDataPart3Tab = new TabItem("Logging");
         attributeDataPart3Tab.setLayout(new FitLayout());
         attributeDataPart3Tab.add(loggingPanel());
-        attributeDataPart3Tab.addListener(Events.Select, new Listener<ComponentEvent>()
-        {
-            public void handleEvent(ComponentEvent be) {
-                if (currentSelection != null) {
-                }
-            }
-        });
 
         TabItem attributeDataPart4Tab = new TabItem("Vector Selection");
         attributeDataPart4Tab.setLayout(new FitLayout());
         attributeDataPart4Tab.add(VectorSelectionPanel());
-        attributeDataPart4Tab.addListener(Events.Select, new Listener<ComponentEvent>()
-        {
-            public void handleEvent(ComponentEvent be) {
-                if (currentSelection != null) {
-                    gridVector.getView().getRow(currentSelection).scrollIntoView();
-                }
-            }
-        });
 
         tabPanel.add(attributeDataPart1Tab);
         tabPanel.add(attributeDataPart2Tab);
@@ -897,7 +897,7 @@ public class MatchConfigurationView extends BaseEntityView
         formLayoutBasic.setLabelWidth(160);
         formLayoutBasic.setDefaultWidth(280);
         cpBasic.setLayout(formLayoutBasic);
-        cpBasic.setSize(750, 480);
+        cpBasic.setSize(750, 460);
 
         LayoutContainer buttonContainer = new LayoutContainer();
         buttonContainer.setHeight(24);
@@ -1032,7 +1032,7 @@ public class MatchConfigurationView extends BaseEntityView
 
                         // Advanced Tab
                         if (lowerBoundEdit.isValid() && upperBoundEdit.isValid() && pValueEdit.isValid()
-                                && maxIterationsEdit.isValid() && convergenceErrorEdit.isValid() 
+                                && maxIterationsEdit.isValid() && convergenceErrorEdit.isValid()
                                 && initialMValueEdit.isValid() && initialUValueEdit.isValid() && initialPValueEdit.isValid()) {
 
                             // Logging Tab
@@ -1109,8 +1109,9 @@ public class MatchConfigurationView extends BaseEntityView
 
                                     // Vector Selection
                                     List<VectorConfigurationWeb> vectorConfs = new ArrayList<VectorConfigurationWeb>();
-                                    ;
-                                    List<BaseModelData> vectorModelConfigs = gridVector.getStore().getModels();
+
+                                    // List<BaseModelData> vectorModelConfigs = gridVector.getStore().getModels();
+                                    List<BaseModelData> vectorModelConfigs = vectorLocalStore.getModels();
 
                                     // Info.display("Number Of Vectors", ""+vectorModelConfigs.size());
                                     for (BaseModelData vectorModelConf : vectorModelConfigs) {
@@ -1153,9 +1154,9 @@ public class MatchConfigurationView extends BaseEntityView
                                         }
                                         vectorConf.setManualClassification(manualClassification);
 
-                                        String weight = vectorModelConf.get("weight");
-                                        vectorConf.setWeight(Double.parseDouble(weight));
-
+                                        //String weight = vectorModelConf.get("weight");
+                                        //vectorConf.setWeight(Double.parseDouble(weight));
+                                        vectorConf.setWeight((Double) vectorModelConf.get("weight"));
                                         vectorConf.setVectorValue((Integer) vectorModelConf.get("vector"));
 
                                         vectorConfs.add(vectorConf);
@@ -1164,6 +1165,8 @@ public class MatchConfigurationView extends BaseEntityView
 
                                     currentConfig = matchConfig;
                                     controller.handleEvent(new AppEvent(AppEvents.MatchConfigurationSave, matchConfig));
+
+                                    showWaitCursor();
                                 } else {
                                     if (!weightUpperBoundEdit.isValid() || !weightLowerBoundEdit.isValid()
                                             || !weightFractionSpin.isValid()) {
@@ -1223,48 +1226,42 @@ public class MatchConfigurationView extends BaseEntityView
 
         lowerBoundEdit = new NumberField();
         lowerBoundEdit.setFieldLabel("Lower Bound");
-        lowerBoundEdit.setMinValue(-50);
-        lowerBoundEdit.setMaxValue(50);
+        lowerBoundEdit.setMinValue(-500);
+        lowerBoundEdit.setMaxValue(500);
         HBoxLayoutData dataLayoutFirst = new HBoxLayoutData(new Margins(5, 0, 0, 0));
         cpAdvan.add(lowerBoundEdit, dataLayoutFirst);
 
         upperBoundEdit = new NumberField();
         upperBoundEdit.setFieldLabel("Upper Bound");
-        upperBoundEdit.setAllowBlank(false);
-        upperBoundEdit.setMinValue(-50);
-        upperBoundEdit.setMaxValue(50);
+        upperBoundEdit.setMinValue(-500);
+        upperBoundEdit.setMaxValue(500);
         cpAdvan.add(upperBoundEdit);
 
         pValueEdit = new NumberField();
         pValueEdit.setFieldLabel("p-Value");
-        pValueEdit.setAllowBlank(false);
         pValueEdit.setMinValue(0);
         pValueEdit.setMaxValue(1);
         cpAdvan.add(pValueEdit);
 
         initialMValueEdit = new NumberField();
         initialMValueEdit.setFieldLabel("Initial m-Value");
-        initialMValueEdit.setAllowBlank(false);
         initialMValueEdit.setMinValue(-100);
         initialMValueEdit.setMaxValue(100);
         cpAdvan.add(initialMValueEdit);
 
         initialUValueEdit = new NumberField();
         initialUValueEdit.setFieldLabel("Initial u-Value");
-        initialUValueEdit.setAllowBlank(false);
         initialUValueEdit.setMinValue(-100);
         initialUValueEdit.setMaxValue(100);
         cpAdvan.add(initialUValueEdit);
 
         initialPValueEdit = new NumberField();
         initialPValueEdit.setFieldLabel("Initial p-Value");
-        initialPValueEdit.setAllowBlank(false);
         initialPValueEdit.setMinValue(0);
         initialPValueEdit.setMaxValue(1);
         cpAdvan.add(initialPValueEdit);
 
         maxIterationsEdit = new NumberField();
-        maxIterationsEdit.setAllowBlank(false);
         maxIterationsEdit.setFieldLabel("Maximum Iterations");
         maxIterationsEdit.setMinValue(0);
         maxIterationsEdit.setMaxValue(100);
@@ -1272,7 +1269,6 @@ public class MatchConfigurationView extends BaseEntityView
 
         convergenceErrorEdit = new NumberField();
         convergenceErrorEdit.setFieldLabel("Convergence Error");
-        convergenceErrorEdit.setAllowBlank(false);
         convergenceErrorEdit.setMinValue(0.000001);
         convergenceErrorEdit.setMaxValue(0.9);
         HBoxLayoutData dataLayoutLast = new HBoxLayoutData(new Margins(0, 0, 2, 0));
@@ -1368,9 +1364,10 @@ public class MatchConfigurationView extends BaseEntityView
         formLayoutAdvan.setLabelWidth(60);
         formLayoutAdvan.setDefaultWidth(280);
         cpVectorSelection.setLayout(formLayoutAdvan);
-        cpVectorSelection.setSize(750, 480);
+        cpVectorSelection.setSize(750, 460);
 
         cpVectorSelection.add(gridVector);
+        cpVectorSelection.setBottomComponent(pagingToolBarVector);
 
         return cpVectorSelection;
     }
@@ -1453,14 +1450,14 @@ public class MatchConfigurationView extends BaseEntityView
 
         weightLowerBoundEdit = new NumberField();
         weightLowerBoundEdit.setFieldLabel("Weight Lower Bound");
-        weightLowerBoundEdit.setMinValue(-50);
-        weightLowerBoundEdit.setMaxValue(50);
+        weightLowerBoundEdit.setMinValue(-500);
+        weightLowerBoundEdit.setMaxValue(500);
         loggingWeightfieldSet.add(weightLowerBoundEdit);
 
         weightUpperBoundEdit = new NumberField();
         weightUpperBoundEdit.setFieldLabel("Weight Upper Bound");
-        weightUpperBoundEdit.setMinValue(-50);
-        weightUpperBoundEdit.setMaxValue(50);
+        weightUpperBoundEdit.setMinValue(-500);
+        weightUpperBoundEdit.setMaxValue(500);
         loggingWeightfieldSet.add(weightUpperBoundEdit);
 
         ContentPanel spinPanel = new ContentPanel();
@@ -1511,7 +1508,7 @@ public class MatchConfigurationView extends BaseEntityView
                                                           // disagreementProbabilityEdit.getValue() != null
                         && attribNameSelection.size() > 0 && compFuncNameSelection.size() > 0) {
 
-                    if ( /** agreementProbabilityEdit.isValid() && disagreementProbabilityEdit.isValid() && **/
+                    if (/** agreementProbabilityEdit.isValid() && disagreementProbabilityEdit.isValid() && **/
                     matchThresholdEdit.isValid()) {
                         ModelPropertyWeb attribNameField = attribNameSelection.get(0);
                         ModelPropertyWeb compFuncNameField = compFuncNameSelection.get(0);
@@ -1939,7 +1936,7 @@ public class MatchConfigurationView extends BaseEntityView
 
                                 if (caught instanceof AuthenticationException) {
 
-                                    if (vectorDetailInfoDialog.isVisible()) {
+                                    if (vectorDetailInfoDialog != null && vectorDetailInfoDialog.isVisible()) {
                                         vectorDetailInfoDialog.close();
                                     }
 

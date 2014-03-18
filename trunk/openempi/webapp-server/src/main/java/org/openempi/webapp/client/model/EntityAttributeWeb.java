@@ -87,19 +87,35 @@ public class EntityAttributeWeb extends BaseModelData
 	public void setDisplayOrder(java.lang.Integer displayOrder) {
 		set("displayOrder", displayOrder);
 	}
-	
+
 	public java.lang.Boolean getIndexed() {
 		return get("indexed");
 	}
 
 	public void setIndexed(java.lang.Boolean indexed) {
 		set("indexed", indexed);
-	}	
-	
+	}
+
+    public java.lang.Boolean getSearchable() {
+        return get("searchable");
+    }
+
+    public void setSearchable(Boolean searchable) {
+        set("searchable", searchable);
+    }
+
+    public java.lang.Boolean getCaseInsensitive() {
+        return get("caseInsensitive");
+    }
+
+    public void setCaseInsensitive(Boolean caseInsensitive) {
+        set("caseInsensitive", caseInsensitive);
+    }
+
 	public java.util.Date getDateCreated() {
 		return get("dateCreated");
 	}
-	
+
 	public void setDateCreated(java.util.Date dateCreated) {
 		set("dateCreated", dateCreated);
 	}

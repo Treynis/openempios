@@ -25,22 +25,21 @@ import java.util.List;
 
 import org.openempi.webapp.client.AppEvents;
 import org.openempi.webapp.client.Constants;
-import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
 import org.openempi.webapp.client.model.MatchFieldWeb;
+import org.openempi.webapp.client.model.MatchRuleEntryListWeb;
+import org.openempi.webapp.client.model.MatchRuleWeb;
 import org.openempi.webapp.client.model.ModelPropertyWeb;
 import org.openempi.webapp.client.ui.util.Utility;
 
 import com.extjs.gxt.ui.client.Registry;
-import com.extjs.gxt.ui.client.Style.SelectionMode;
 import com.extjs.gxt.ui.client.event.ButtonEvent;
-import com.extjs.gxt.ui.client.event.Events;
-import com.extjs.gxt.ui.client.event.GridEvent;
 import com.extjs.gxt.ui.client.event.Listener;
-import com.extjs.gxt.ui.client.event.SelectionChangedEvent;
+import com.extjs.gxt.ui.client.event.MessageBoxEvent;
 import com.extjs.gxt.ui.client.event.SelectionListener;
 import com.extjs.gxt.ui.client.mvc.AppEvent;
 import com.extjs.gxt.ui.client.mvc.Controller;
 import com.extjs.gxt.ui.client.mvc.View;
+import com.extjs.gxt.ui.client.store.GroupingStore;
 import com.extjs.gxt.ui.client.store.ListStore;
 import com.extjs.gxt.ui.client.util.IconHelper;
 import com.extjs.gxt.ui.client.util.Margins;
@@ -57,22 +56,34 @@ import com.extjs.gxt.ui.client.widget.form.NumberField;
 import com.extjs.gxt.ui.client.widget.grid.ColumnConfig;
 import com.extjs.gxt.ui.client.widget.grid.ColumnModel;
 import com.extjs.gxt.ui.client.widget.grid.Grid;
+import com.extjs.gxt.ui.client.widget.grid.GridGroupRenderer;
+import com.extjs.gxt.ui.client.widget.grid.GroupColumnData;
+import com.extjs.gxt.ui.client.widget.grid.GroupingView;
 import com.extjs.gxt.ui.client.widget.layout.BoxLayout.BoxLayoutPack;
 import com.extjs.gxt.ui.client.widget.layout.CenterLayout;
-import com.extjs.gxt.ui.client.widget.layout.ColumnLayout;
+import com.extjs.gxt.ui.client.widget.layout.FillLayout;
 import com.extjs.gxt.ui.client.widget.layout.FormLayout;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayout;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayout.HBoxLayoutAlign;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayoutData;
+import com.extjs.gxt.ui.client.widget.toolbar.SeparatorToolItem;
+import com.extjs.gxt.ui.client.widget.toolbar.ToolBar;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.i18n.client.NumberFormat;
 
 public class DeterministicMatchConfigurationView extends View
 {
 	private static final NumberFormat nfc = NumberFormat.getFormat("#,##0.0000");
-	
+
+	private Grid<MatchRuleWeb> ruleGrid;
+	private GroupingStore<MatchRuleWeb> ruleStore = new GroupingStore<MatchRuleWeb>();
 	private Grid<MatchFieldWeb> grid;
 	private ListStore<MatchFieldWeb> store = new ListStore<MatchFieldWeb>();
+
+	private Dialog addMatchRuleDialog = null;
+	private Boolean addOrEditRuleMode = true;
+	private int editedMatchRule = 0;
+
 	private Dialog addEditMatchFieldDialog = null;
 	private Boolean addOrEditFieldMode = true;
 	private int editedFieldIndex = 0;
@@ -86,28 +97,14 @@ public class DeterministicMatchConfigurationView extends View
 	private NumberField matchThresholdEdit = new NumberField();
 
 	private LayoutContainer container;
-	
+
 	@SuppressWarnings("unchecked")
 	public DeterministicMatchConfigurationView(Controller controller) {
 		super(controller);
 
 		List<ModelPropertyWeb> comparatorFuncNames = (List<ModelPropertyWeb>) Registry.get(Constants.COMPARATOR_FUNCTION_NAMES);
-/*		List<ModelPropertyWeb> attributeNames = (List<ModelPropertyWeb>) Registry.get(Constants.PERSON_MODEL_ALL_ATTRIBUTE_NAMES);	
-		
-		List<ModelPropertyWeb> names = new ArrayList<ModelPropertyWeb>();
-		for (ModelPropertyWeb field : attributeNames) {
-			 String name = field.getName();
-			 if( name.equals("personId") || name.equals("personIdentifiers") || name.equals("accountIdentifierDomain") ||
-				 name.equals("userCreatedBy") || name.equals("userChangedBy") || name.equals("userVoidedBy") ||
-				 name.equals("dateCreated") || name.equals("dateChanged") || name.equals("dateVoided") ) {	
-				 continue;
-			 } else {
-				 names.add(field);
-			 }				 
-		}	
-*/		
+
 		try {
-//			attributeNameStore.add(names);
 			comparatorFuncNameStore.add(comparatorFuncNames);
 		} catch (Exception e) {
 			Info.display("Message", e.getMessage());
@@ -119,278 +116,418 @@ public class DeterministicMatchConfigurationView extends View
 		if (event.getType() == AppEvents.DeterministicMatchConfigurationView) {
 			initUI();
 		} else if (event.getType() == AppEvents.DeterministicMatchConfigurationReceived) {
-			store.removeAll();
-			ExactMatchingConfigurationWeb config = (ExactMatchingConfigurationWeb) event.getData();
-				
-			List<MatchFieldWeb> fields = (List<MatchFieldWeb>) config.getMatchFields();						
-			for (MatchFieldWeb matchField : fields) {		
-				// Info.display("Information", "MatchThreshold: "+matchField.getMatchThreshold());
-				matchField.setFieldDescription(Utility.convertToDescription(matchField.getFieldName()));
-				matchField.setComparatorFunctionNameDescription(Utility.convertToDescription(matchField.getComparatorFunctionName()));
-				matchField.setMatchThreshold( Float.parseFloat( nfc.format(matchField.getMatchThreshold())) );
-			}
-			store.add(fields);
-			
-			grid.getSelectionModel().select(0, true);
-			grid.getSelectionModel().deselect(0);
-			
-		} else if (event.getType() == AppEvents.DeterministicMatchConfigurationSaveComplete) {			
-			// String message = event.getData();			
-	        MessageBox.alert("Information", "Deterministic Match Configuration was successfully saved", null);  	 
-	        
-		} else if (event.getType() == AppEvents.Error) {			
+			ruleStore.removeAll();
+
+			MatchRuleEntryListWeb config = (MatchRuleEntryListWeb) event.getData();
+            List<MatchRuleWeb> fields = config.getMatchRuleEntries();
+
+            // Matching rules
+            for (MatchRuleWeb rule : fields) {
+                rule.setFieldDescription(Utility.convertToDescription(rule.getFieldName()));
+                rule.setComparatorFunctionNameDescription(Utility.convertToDescription(rule.getComparatorFunctionName()));
+                rule.setMatchThreshold(Float.parseFloat(nfc.format(rule.getMatchThreshold())));
+                ruleStore.add(rule);
+            }
+
+			ruleGrid.getSelectionModel().select(0, true);
+			ruleGrid.getSelectionModel().deselect(0);
+
+		} else if (event.getType() == AppEvents.DeterministicMatchConfigurationSaveComplete) {
+			// String message = event.getData();
+	        MessageBox.alert("Information", "Deterministic Match Configuration was successfully saved", null);
+
+		} else if (event.getType() == AppEvents.Error) {
 			String message = event.getData();
-	        MessageBox.alert("Information", "Failure: " + message, null);  			
+	        MessageBox.alert("Information", "Failure: " + message, null);
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private void initUI() {
-		long time = new java.util.Date().getTime();
-		GWT.log("Initializing the UI ", null);
+    @SuppressWarnings("unchecked")
+    private void initUI() {
+        long time = new java.util.Date().getTime();
+        GWT.log("Initializing the UI ", null);
 
-		attributeNameStore.removeAll();
-		attributeNames = (List<ModelPropertyWeb>) Registry.get(Constants.PERSON_MODEL_ALL_ATTRIBUTE_NAMES);
-		if( attributeNames!= null ) {
-			attributeNameStore.add(attributeNames);
-		}
-		
-		controller.handleEvent(new AppEvent(AppEvents.DeterministicMatchConfigurationRequest));
-		
-		buildAddEditFieldDialog();
-		container = new LayoutContainer();
-		container.setLayout(new CenterLayout());
-		
-		// ColumnConfig fieldNameColumn = new ColumnConfig("fieldName", "Field Name", 130);
-		ColumnConfig fieldNameColumn = new ColumnConfig("fieldDescription", "Field Name", 150);
-		// ColumnConfig compFuncNameColumn = new ColumnConfig("comparatorFunctionName", "Comp.Func.Name", 170);
-		ColumnConfig compFuncNameColumn = new ColumnConfig("comparatorFunctionNameDescription", "Comparator Name", 180);
-		ColumnConfig matchThresholdColumn = new ColumnConfig("matchThreshold", "Match Threshold", 120);
-		List<ColumnConfig> config = new ArrayList<ColumnConfig>();
-		config.add(fieldNameColumn);
-		config.add(compFuncNameColumn);
-		config.add(matchThresholdColumn);
-		
-		final ColumnModel cm = new ColumnModel(config);
+        attributeNameStore.removeAll();
+        attributeNames = (List<ModelPropertyWeb>) Registry.get(Constants.PERSON_MODEL_ALL_ATTRIBUTE_NAMES);
+        if (attributeNames!= null) {
+           attributeNameStore.add(attributeNames);
+        }
 
-		grid = new Grid<MatchFieldWeb>(store, cm);
-		grid.setBorders(true);
-		grid.setAutoWidth(true);
-		grid.setStripeRows(true); 
-		grid.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);	
-		grid.setHeight(280);
+        ruleStore.groupBy("matchRule");
+        controller.handleEvent(new AppEvent(AppEvents.DeterministicMatchConfigurationRequest));
 
-		ContentPanel cp = new ContentPanel();
-		cp.setHeading("Deterministic Match Field Configuration");
-		cp.setFrame(true);
-		cp.setIcon(IconHelper.create("images/table_gear.png"));
-		FormLayout formLayout = new FormLayout();
-		formLayout.setLabelWidth(150);
-		formLayout.setDefaultWidth(280);
-		cp.setLayout(formLayout);
-		cp.setSize(500, 380);
+        buildAddMatchRuleDialog();
+        container = new LayoutContainer();
+        container.setLayout(new CenterLayout());
 
-		LayoutContainer buttonContainer = new LayoutContainer();
-		buttonContainer.setHeight(24);
-		buttonContainer.setLayout(new ColumnLayout());
-		final Button addFieldButton =
-			new Button("Add", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
-				@Override
-				public void componentSelected(ButtonEvent ce) {
-					// Make sure we are starting with a clean slate
-					addOrEditFieldMode = true;
-					addEditMatchFieldDialog.show();
+        ColumnConfig matchRule = new ColumnConfig("matchRule", "Rule", 60);
+//      ColumnConfig fieldName = new ColumnConfig("fieldName", "Field Name", 100);
+        ColumnConfig fieldName = new ColumnConfig("fieldDescription", "Field Name", 150);
+        ColumnConfig compFuncName = new ColumnConfig("comparatorFunctionNameDescription", "Comparator Name", 180);
+        ColumnConfig matchThreshold = new ColumnConfig("matchThreshold", "Match Threshold", 120);
+        List<ColumnConfig> config = new ArrayList<ColumnConfig>();
+        config.add(matchRule);
+        config.add(fieldName);
+        config.add(compFuncName);
+        config.add(matchThreshold);
 
-					attributeNameCombo.clearSelections();
-					comparatorFuncNameCombo.clearSelections();
-					matchThresholdEdit.clear();
-				}
-			});
-		buttonContainer.add(addFieldButton);
-		final Button editFieldButton =
-			new Button("Edit", IconHelper.create("images/folder_edit.png"), new SelectionListener<ButtonEvent>() {
-		  		@Override
-		  		public void componentSelected(ButtonEvent ce) {
-		  			addOrEditFieldMode = false;
-					MatchFieldWeb editField = grid.getSelectionModel().getSelectedItem();
-					if (editField == null) {
-						Info.display("Information", "You must first select a field to be edited before pressing the \"Edit Field\" button.");
-						return;
-					}
-					addEditMatchFieldDialog.show();
-					editedFieldIndex = grid.getStore().indexOf(editField);
-					editedField = editField;
-					
-					attributeNameCombo.setValue(new ModelPropertyWeb(editField.getFieldName(), editField.getFieldDescription()));
-					comparatorFuncNameCombo.setValue(new ModelPropertyWeb(editField.getComparatorFunctionName(), editField.getComparatorFunctionNameDescription()));
-					
-					matchThresholdEdit.setValue(editField.getMatchThreshold());
-		  		}
-		    });
-		buttonContainer.add(editFieldButton);
-		final Button removeFieldButton =
-			new Button("Remove", IconHelper.create("images/folder_delete.png"), new SelectionListener<ButtonEvent>() {
-				@Override
-				public void componentSelected(ButtonEvent ce) {
-					MatchFieldWeb removeField = grid.getSelectionModel().getSelectedItem();
-					if (removeField == null) {
-						Info.display("Information", "You must first select a field to be deleted before pressing the \"Remove Round\" button.");
-						return;
-					}
-					grid.getStore().remove(removeField);
-/*					for (MatchFieldWeb field : grid.getStore().getModels()) {
-						if (field == removeField) {
-							grid.getStore().remove(field);
-						}
-					}
-*/
-				}
-		    });
-		buttonContainer.add(removeFieldButton);
-		final Button moveUpFieldButton =
-			new Button("Move Up", IconHelper.create("images/arrow_up.png"), new SelectionListener<ButtonEvent>() {
-				@Override
-				public void componentSelected(ButtonEvent ce) {
-					if (grid.getStore().getCount() > 1) {
-						MatchFieldWeb field = grid.getSelectionModel().getSelectedItem();
-						if (field == null) {
-							Info.display("Information", "You must first select a field before pressing the \"Move Up\" button.");
-							return;
-						}
-/*						int selectionIndex = grid.getStore().indexOf(field);
-						if (selectionIndex > 0) {
-							grid.getStore().remove(field);
-							grid.getStore().insert(field, selectionIndex - 1);
-						} else {
-							Info.display("Information", "Cannot move up the first field.");
-						}
-						
-						grid.getSelectionModel().select(field, true);
-*/
-						grid.getSelectionModel().selectPrevious(false);						
-					}
-				}
-		    });
-		buttonContainer.add(moveUpFieldButton);
-		final Button moveDownFieldButton =
-			new Button("Move Down", IconHelper.create("images/arrow_down.png"), new SelectionListener<ButtonEvent>() {
-				@Override
-				public void componentSelected(ButtonEvent ce) {
-					if (grid.getStore().getCount() > 1) {
-						MatchFieldWeb field = grid.getSelectionModel().getSelectedItem();
-						if (field == null) {
-							Info.display("Information", "You must first select a field before pressing the \"Move Down\" button.");
-							return;
-						}
-/*						int selectionIndex = grid.getStore().indexOf(field);
-						if (selectionIndex >= 0 && selectionIndex < grid.getStore().getCount() - 1) {
-							grid.getStore().remove(field);
-							grid.getStore().insert(field, selectionIndex + 1);
-						} else {
-							Info.display("Information", "Cannot move down the last field.");
-						}
-						
-						grid.getSelectionModel().select(field, true);
-*/
-						grid.getSelectionModel().selectNext(false);
-					}
-				}
-		    });
-		buttonContainer.add(moveDownFieldButton);
+        final ColumnModel cm = new ColumnModel(config);
 
-		grid.getSelectionModel().addListener(Events.SelectionChange,
-			new Listener<SelectionChangedEvent<MatchFieldWeb>>() {
-				public void handleEvent(SelectionChangedEvent<MatchFieldWeb> be) {
-					List<MatchFieldWeb> selection = be.getSelection();
-					Boolean editFieldEnabled = true;
-					Boolean removeFieldEnabled = true;
-					Boolean moveUpEnabled = true;
-					Boolean moveDownEnabled = true;
-					if (selection != null) {
-						if (selection.size() <= 0) {
-							editFieldEnabled = false;
-							removeFieldEnabled = false;
-							moveUpEnabled = false;
-							moveDownEnabled = false;
-						} else {
-							if( attributeNames != null ) {
-								editFieldEnabled = true;
-								removeFieldEnabled = true;
-							} else {
-								editFieldEnabled = false;
-								removeFieldEnabled = false;								
-							}
-							int selectionIndex = grid.getStore().indexOf(selection.get(0));
-							moveUpEnabled = (selectionIndex > 0);
-							moveDownEnabled = (selectionIndex < grid.getStore().getCount() - 1);
-						}
-					}
-					editFieldButton.setEnabled(editFieldEnabled);
-					removeFieldButton.setEnabled(removeFieldEnabled);
-					moveUpFieldButton.setEnabled(moveUpEnabled);
-					moveDownFieldButton.setEnabled(moveDownEnabled);
-				}
-			});
+        GroupingView view = new GroupingView();
+        view.setShowGroupedColumn(false);
+        view.setForceFit(true);
+        view.setGroupRenderer(new GridGroupRenderer() {
+            public String render(GroupColumnData data) {
+                String f = cm.getColumnById(data.field).getHeader();
+                String l = data.models.size() == 1 ? "Field" : "Fields";
+                return f + ": " + data.group + " (" + data.models.size() + " " + l + ")";
+            } });
 
-		grid.addListener(Events.SortChange, new Listener<GridEvent>() {
-			public void handleEvent(GridEvent be) {
-				// Info.display("Information", "SortChange.");
-				MatchFieldWeb selectField = grid.getSelectionModel().getSelectedItem();
-				
-				int selectionIndex = grid.getStore().indexOf(selectField);
-				Boolean moveUpEnabled = (selectionIndex > 0);;
-				Boolean moveDownEnabled = (selectionIndex < grid.getStore().getCount() - 1);
-				moveUpFieldButton.setEnabled(moveUpEnabled);
-				moveDownFieldButton.setEnabled(moveDownEnabled);
-			}
-		});
-		
-		LayoutContainer c = new LayoutContainer();
-		HBoxLayout layout = new HBoxLayout();
-		layout.setPadding(new Padding(5));
-		layout.setHBoxLayoutAlign(HBoxLayoutAlign.MIDDLE);
-		layout.setPack(BoxLayoutPack.CENTER);
-		c.setLayout(layout);
+        ruleGrid = new Grid<MatchRuleWeb>(ruleStore, cm);
+        ruleGrid.setView(view);
+        ruleGrid.setBorders(true);
 
-		HBoxLayoutData layoutData = new HBoxLayoutData(new Margins(0, 5, 0, 0));
+        ContentPanel cp = new ContentPanel();
+        cp.setHeading("Deterministic Match Rule Configuration");
+        cp.setFrame(true);
+        cp.setIcon(IconHelper.create("images/table_gear.png"));
+        cp.setLayout(new FillLayout());
+        cp.setSize(500, 380);
 
-		c.add(new Button("Save Settings", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
-	  		@Override
-	  		public void componentSelected(ButtonEvent ce) {
-	  			ExactMatchingConfigurationWeb matchConfig = new ExactMatchingConfigurationWeb();
-				
-				List<MatchFieldWeb> matchFieldsConfig = grid.getStore().getModels();
-				matchConfig.setMatchFields(matchFieldsConfig);
-				
-				controller.handleEvent(new AppEvent(AppEvents.DeterministicMatchConfigurationSave, matchConfig));
-	  		}
-	    }), layoutData);
-		
-		cp.setBottomComponent(c);
+        ToolBar toolBar = new ToolBar();
+        toolBar.add(new Button("Add Rule", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  // Make sure we are starting with a clean slate
+                  addMatchRuleDialog.setIcon(IconHelper.create("images/folder_go.png"));
+                  addMatchRuleDialog.setHeading("Add Match Rule");
+                  Button ok = addMatchRuleDialog.getButtonById("ok");
+                  ok.setText("Add Rule");
 
-		cp.add(buttonContainer);
-		
-		cp.add(grid);
+                  addOrEditRuleMode = true;
+                  grid.getStore().removeAll();
+                  addMatchRuleDialog.show();
+              }
+        }));
+        toolBar.add(new SeparatorToolItem());
+        toolBar.add(new Button("Edit Rule", IconHelper.create("images/folder_edit.png"), new SelectionListener<ButtonEvent>() {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                MatchRuleWeb editField = ruleGrid.getSelectionModel().getSelectedItem();
+                if (editField == null) {
+                    Info.display("Information","You must first select a field in the rule to be edited before pressing the \"Edit Rule\" button.");
+                    return;
+                }
 
-		container.add(cp);
+                addMatchRuleDialog.setIcon(IconHelper.create("images/folder_edit.png"));
+                addMatchRuleDialog.setHeading("Edit Match Rule");
+                Button ok = addMatchRuleDialog.getButtonById("ok");
+                ok.setText("Edit Rule");
 
-		LayoutContainer wrapper = (LayoutContainer) Registry.get(Constants.CENTER_PANEL);
-		wrapper.removeAll();
-		wrapper.add(container);
-		wrapper.layout();
-		GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime()-time), null);
-	}	
+                addOrEditRuleMode = false;
+                grid.getStore().removeAll();
+                editedMatchRule = editField.getMatchRule();
+                for (MatchRuleWeb field : ruleGrid.getStore().getModels()) {
+                    if (field.getMatchRule() == editField.getMatchRule()) {
+
+                        MatchFieldWeb matchFieldWeb = new MatchFieldWeb();
+                        matchFieldWeb.setFieldName(field.getFieldName());
+                        matchFieldWeb.setFieldDescription(field.getFieldDescription());
+                        matchFieldWeb.setComparatorFunctionName(field.getComparatorFunctionName());
+                        matchFieldWeb.setComparatorFunctionNameDescription(field.getComparatorFunctionNameDescription());
+                        matchFieldWeb.setMatchThreshold(field.getMatchThreshold());
+                        grid.getStore().add(matchFieldWeb);
+                    }
+                }
+                addMatchRuleDialog.show();
+
+            }
+        }));
+        toolBar.add(new SeparatorToolItem());
+        toolBar.add(new Button("Remove Rule", IconHelper.create("images/folder_delete.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  MatchRuleWeb removeField = ruleGrid.getSelectionModel().getSelectedItem();
+                  if (removeField == null) {
+                      Info.display("Information","You must first select a field in the rule to be deleted before pressing the \"Remove Rule\" button.");
+                      return;
+                  }
+                  for (MatchRuleWeb field : ruleGrid.getStore().getModels()) {
+                      if (field.getMatchRule() == removeField.getMatchRule()) {
+                          ruleStore.remove(field);
+                      } else if (field.getMatchRule() > removeField.getMatchRule()) {
+                          MatchRuleWeb theField = field;
+                          ruleStore.remove(field);
+                          theField.setMatchRule(theField.getMatchRule() - 1);
+                          ruleStore.add(theField);
+                      }
+                  }
+              }
+        }));
+        cp.setTopComponent(toolBar);
+
+        LayoutContainer c = new LayoutContainer();
+        HBoxLayout layout = new HBoxLayout();
+        layout.setPadding(new Padding(5));
+        layout.setHBoxLayoutAlign(HBoxLayoutAlign.MIDDLE);
+        layout.setPack(BoxLayoutPack.CENTER);
+        c.setLayout(layout);
+
+        HBoxLayoutData layoutData = new HBoxLayoutData(new Margins(0, 5, 0, 0));
+        c.add(new Button("Save Settings", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+
+                  MatchRuleEntryListWeb configuration = new MatchRuleEntryListWeb();
+                  configuration.setMatchRuleEntries(ruleGrid.getStore().getModels());
+
+                  controller.handleEvent(new AppEvent(AppEvents.DeterministicMatchConfigurationSave, configuration));
+              }
+        }), layoutData);
+        cp.setBottomComponent(c);
+        cp.add(ruleGrid);
+
+        container.add(cp);
+
+        LayoutContainer wrapper = (LayoutContainer) Registry.get(Constants.CENTER_PANEL);
+        wrapper.removeAll();
+        wrapper.add(container);
+        wrapper.layout();
+        GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime() - time), null);
+    }
+
+    final Listener<MessageBoxEvent> listenInfoMsg = new Listener<MessageBoxEvent>() {
+        public void handleEvent(MessageBoxEvent ce) {
+          Button btn = ce.getButtonClicked();
+          if (btn.getText().equals("OK")) {
+              return;
+          }
+        }
+    };
+
+	private void buildAddMatchRuleDialog() {
+        if (addMatchRuleDialog != null) {
+            return;
+        }
+
+        buildAddEditFieldDialog();
+
+        addMatchRuleDialog = new Dialog();
+        addMatchRuleDialog.setBodyBorder(false);
+        addMatchRuleDialog.setIcon(IconHelper.create("images/folder_go.png"));
+        addMatchRuleDialog.setHeading("Add Match Rule");
+        addMatchRuleDialog.setWidth(480);
+        addMatchRuleDialog.setHeight(300);
+        addMatchRuleDialog.setButtons(Dialog.OKCANCEL);
+        addMatchRuleDialog.setModal(true);
+        addMatchRuleDialog.getButtonById(Dialog.OK).addSelectionListener(new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  if (addOrEditRuleMode) { // Add  Rule
+                      // check duplicate Rule
+                      int ruleCount = getCurrentRuleCount(ruleStore);
+                      for (int i = 1; i <= ruleCount; i++) {
+                          // get round with index i
+                          List<MatchRuleWeb> rule = new ArrayList<MatchRuleWeb>();
+                          for (MatchRuleWeb fieldInRule : ruleStore.getModels()) {
+                               if (fieldInRule.getMatchRule() == i) {
+                                   rule.add(fieldInRule);
+                               }
+                          }
+
+                          // check round same as round added in Grid
+                          boolean sameRule = true;
+                          if (rule.size() ==  grid.getStore().getModels().size()) {
+                              int roundIndex = 0;
+                              for (MatchFieldWeb field : grid.getStore().getModels()) {
+                                  if (!field.getFieldName().equals(rule.get(roundIndex).getFieldName())) {
+                                      sameRule = false;
+                                  }
+                                  roundIndex++;
+                              }
+                          } else {
+                              sameRule = false;
+                          }
+
+                          if (sameRule) {
+                              // Info.display("Information", "same round.");
+                              MessageBox.alert("Information", "There is a duplicate match rule in Blocking Configuration", listenInfoMsg);
+                              return;
+                          }
+                      }
+
+                      int ruleIndex = getCurrentRuleCount(ruleStore) + 1;
+                      for (MatchFieldWeb field : grid.getStore().getModels()) {
+                          MatchRuleWeb newRule = new MatchRuleWeb(ruleIndex, field.getFieldIndex(), field.getFieldName());
+                          newRule.setFieldDescription(Utility.convertToDescription(field.getFieldName()));
+                          newRule.setComparatorFunctionName(field.getComparatorFunctionName());
+                          newRule.setComparatorFunctionNameDescription(Utility.convertToDescription(field.getComparatorFunctionName()));
+                          newRule.setMatchThreshold(Float.parseFloat(nfc.format(field.getMatchThreshold())));
+                          ruleStore.add(newRule);
+                      }
+                  } else { // Edit Rule
+                      // check duplicate Rule
+                      int ruleCount = getCurrentRuleCount(ruleStore);
+                      for (int i = 1; i <= ruleCount; i++) {
+                          if (editedMatchRule == i) {
+                              continue;
+                          }
+
+                          // get round with index i
+                          List<MatchRuleWeb> rule = new ArrayList<MatchRuleWeb>();
+                          for (MatchRuleWeb fieldInRule : ruleStore.getModels()) {
+                               if (fieldInRule.getMatchRule() == i) {
+                                   rule.add(fieldInRule);
+                               }
+                          }
+
+                          // check round same as round added in Grid
+                          boolean sameRule = true;
+                          if (rule.size() ==  grid.getStore().getModels().size()) {
+                              int roundIndex = 0;
+                              for (MatchFieldWeb field : grid.getStore().getModels()) {
+                                  if (!field.getFieldName().equals(rule.get(roundIndex).getFieldName())) {
+                                      sameRule = false;
+                                  }
+                                  roundIndex++;
+                              }
+                          } else {
+                              sameRule = false;
+                          }
+
+                          if (sameRule) {
+                              // Info.display("Information", "same round.");
+                              MessageBox.alert("Information", "There is a duplicate match rule in Blocking Configuration", listenInfoMsg);
+                              return;
+                          }
+                      }
+
+                      // remove old rules
+                      for (MatchRuleWeb field : ruleGrid.getStore().getModels()) {
+                          if (field.getMatchRule() == editedMatchRule) {
+                              ruleStore.remove(field);
+                          }
+                      }
+                      // add new rules
+                      for (MatchFieldWeb field : grid.getStore().getModels()) {
+                          MatchRuleWeb newRule = new MatchRuleWeb(editedMatchRule, field.getFieldIndex(), field.getFieldName());
+                          newRule.setFieldDescription(Utility.convertToDescription(field.getFieldName()));
+                          newRule.setComparatorFunctionName(field.getComparatorFunctionName());
+                          newRule.setComparatorFunctionNameDescription(Utility.convertToDescription(field.getComparatorFunctionName()));
+                          newRule.setMatchThreshold(Float.parseFloat(nfc.format(field.getMatchThreshold())));
+                          ruleStore.add(newRule);
+                      }
+                  }
+
+                  addMatchRuleDialog.hide();
+              }
+
+              private int getCurrentRuleCount(GroupingStore<MatchRuleWeb> store) {
+                int ruleCount = 0;
+                for (MatchRuleWeb field : store.getModels()) {
+                    if (field.getMatchRule() > ruleCount) {
+                        ruleCount = field.getMatchRule();
+                    }
+                }
+                return ruleCount;
+              }
+        });
+
+        addMatchRuleDialog.getButtonById(Dialog.CANCEL).addSelectionListener(new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  addMatchRuleDialog.hide();
+              }
+        });
+
+        ContentPanel cp = new ContentPanel();
+        cp.setHeading("Match Rule");
+        cp.setFrame(true);
+        cp.setIcon(IconHelper.create("images/folder.png"));
+        cp.setLayout(new FillLayout());
+        cp.setSize(470, 230);
+
+        ToolBar toolBar = new ToolBar();
+
+        toolBar.add(new Button("Add Field", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  // Make sure we are starting with a clean slate
+                  addOrEditFieldMode = true;
+                  addEditMatchFieldDialog.show();
+
+                  attributeNameCombo.clearSelections();
+                  comparatorFuncNameCombo.clearSelections();
+                  matchThresholdEdit.clear();
+              }
+        }));
+        toolBar.add(new SeparatorToolItem());
+        toolBar.add(new Button("Edit Field", IconHelper.create("images/folder_edit.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  addOrEditFieldMode = false;
+                  MatchFieldWeb editField = grid.getSelectionModel().getSelectedItem();
+                  if (editField == null) {
+                      Info.display("Information", "You must first select a field to be edited before pressing the \"Edit Field\" button.");
+                      return;
+                  }
+                  addEditMatchFieldDialog.show();
+                  editedFieldIndex = grid.getStore().indexOf(editField);
+                  editedField = editField;
+
+                  attributeNameCombo.setValue(new ModelPropertyWeb(editField.getFieldName(), editField.getFieldDescription()));
+                  comparatorFuncNameCombo.setValue(new ModelPropertyWeb(editField.getComparatorFunctionName(), editField.getComparatorFunctionNameDescription()));
+
+                  matchThresholdEdit.setValue(editField.getMatchThreshold());
+              }
+        }));
+
+        toolBar.add(new SeparatorToolItem());
+        toolBar.add(new Button("Remove Field", IconHelper.create("images/folder_delete.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {
+                  MatchFieldWeb removeField = grid.getSelectionModel().getSelectedItem();
+                  if (removeField == null) {
+                      Info.display("Information", "You must first select a field to be deleted before pressing the \"Remove Round\" button.");
+                      return;
+                  }
+                  grid.getStore().remove(removeField);
+              }
+        }));
+        cp.setTopComponent(toolBar);
+
+        List<ColumnConfig> configs = new ArrayList<ColumnConfig>();
+
+        ColumnConfig fieldNameColumn = new ColumnConfig("fieldDescription", "Field Name", 150);
+        ColumnConfig compFuncNameColumn = new ColumnConfig("comparatorFunctionNameDescription", "Comparator Name", 180);
+        ColumnConfig matchThresholdColumn = new ColumnConfig("matchThreshold", "Match Threshold", 120);
+        configs.add(fieldNameColumn);
+        configs.add(compFuncNameColumn);
+        configs.add(matchThresholdColumn);
+
+        ColumnModel cm = new ColumnModel(configs);
+
+        grid = new Grid<MatchFieldWeb>(store, cm);
+        grid.setStyleAttribute("borderTop", "none");
+        grid.setBorders(true);
+        grid.setStripeRows(true);
+        cp.add(grid);
+
+        addMatchRuleDialog.add(cp);
+
+	}
 
 	private void buildAddEditFieldDialog() {
-		if(addEditMatchFieldDialog != null)
+		if (addEditMatchFieldDialog != null) {
 			return;
-		
+		}
+
 		addEditMatchFieldDialog = new Dialog();
 		addEditMatchFieldDialog.setBodyBorder(false);
 		addEditMatchFieldDialog.setIcon(IconHelper.create("images/folder_go.png"));
 		addEditMatchFieldDialog.setHeading("Add/Edit Match Field");
 		addEditMatchFieldDialog.setWidth(460);
-		addEditMatchFieldDialog.setHeight(330);
+		addEditMatchFieldDialog.setHeight(300);
 		addEditMatchFieldDialog.setButtons(Dialog.OKCANCEL);
 //		addEditMatchFieldDialog.setHideOnButtonClick(true);
 		addEditMatchFieldDialog.setModal(true);
@@ -401,65 +538,65 @@ public class DeterministicMatchConfigurationView extends View
 				List<ModelPropertyWeb> compFuncNameSelection = comparatorFuncNameCombo.getSelection();
 				if (matchThresholdEdit.getValue() != null && attribNameSelection.size() > 0 && compFuncNameSelection.size() > 0) {
 						ModelPropertyWeb attribNameField = attribNameSelection.get(0);
-						ModelPropertyWeb compFuncNameField = compFuncNameSelection.get(0);														  
-			        	  
+						ModelPropertyWeb compFuncNameField = compFuncNameSelection.get(0);
+
 						MatchFieldWeb matchFieldWeb = new MatchFieldWeb();
 						matchFieldWeb.setFieldName(attribNameField.getName());
 						matchFieldWeb.setFieldDescription(attribNameField.getDescription());
 						matchFieldWeb.setComparatorFunctionName(compFuncNameField.getName());
 						matchFieldWeb.setComparatorFunctionNameDescription(compFuncNameField.getDescription());
 						matchFieldWeb.setMatchThreshold(matchThresholdEdit.getValue().floatValue());
-						
-						if (addOrEditFieldMode) {  // Add					
+
+						if (addOrEditFieldMode) {  // Add
 				        	// check duplicate Field
 				        	for (MatchFieldWeb field : grid.getStore().getModels()) {
-				        		  if( field.getFieldName().equals( matchFieldWeb.getFieldName() ) ) {
-					        	      MessageBox.alert("Information", "There is a duplicate match field in Deterministic Match Configuration", null);  		
-					        	      return;			        			  
+				        		  if (field.getFieldName().equals(matchFieldWeb.getFieldName())) {
+					        	      MessageBox.alert("Information", "There is a duplicate match field in Deterministic Match Configuration", null);
+					        	      return;
 				        		  }
-				        	}				
+				        	}
 							grid.getStore().add(matchFieldWeb);
-							
+
 						} else { // Edit
 				        	for (MatchFieldWeb field : grid.getStore().getModels()) {
-				        		if( field.getFieldName() != editedField.getFieldName() ) {
-					        		if( field.getFieldName().equals( matchFieldWeb.getFieldName() ) ) {
-						        	    MessageBox.alert("Information", "There is a duplicate match field in Deterministic Match Configuration", null);  		
-						        	    return;			        			  
+				        		if (field.getFieldName() != editedField.getFieldName()) {
+					        		if (field.getFieldName().equals(matchFieldWeb.getFieldName())) {
+						        	    MessageBox.alert("Information", "There is a duplicate match field in Deterministic Match Configuration", null);
+						        	    return;
 					        		}
 				        		}
-				        	}				
+				        	}
 							grid.getStore().remove(editedField);
 							grid.getStore().insert(matchFieldWeb, editedFieldIndex);
 						}
-						
+
 						addEditMatchFieldDialog.close();
 
 				} else {
-					if ( attribNameSelection.size() == 0 ) {
-						MessageBox.alert("Information", "Please select Attribute Name", null);  
+					if (attribNameSelection.size() == 0) {
+						MessageBox.alert("Information", "Please select Attribute Name", null);
 						return;
-					} 
-					if ( compFuncNameSelection.size() == 0 ) {
-		        	    MessageBox.alert("Information", "Please select Comparator Name", null);  
-						return;		
-					}	
-					if( matchThresholdEdit.getValue() == null ) {
-		        	    MessageBox.alert("Information", "Match Threshold is required.", null);  
-						return;	
-					} 
+					}
+					if (compFuncNameSelection.size() == 0) {
+		        	    MessageBox.alert("Information", "Please select Comparator Name", null);
+						return;
+					}
+					if (matchThresholdEdit.getValue() == null) {
+		        	    MessageBox.alert("Information", "Match Threshold is required.", null);
+						return;
+					}
 				}
 			}
 	    });
-		
+
 		addEditMatchFieldDialog.getButtonById(Dialog.CANCEL).addSelectionListener(new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
-	        	  
+
 	        	  addEditMatchFieldDialog.close();
 	          }
 	    });
-		
+
 		ContentPanel cp = new ContentPanel();
 		cp.setHeading("Match Field");
 		cp.setFrame(true);
@@ -468,15 +605,15 @@ public class DeterministicMatchConfigurationView extends View
 			formLayout.setLabelWidth(150);
 			formLayout.setDefaultWidth(280);
 		cp.setLayout(formLayout);
-		cp.setSize(450, 270);
-		
+		cp.setSize(450, 240);
+
 		attributeNameCombo.setEmptyText("Select attribute...");
 		attributeNameCombo.setForceSelection(true);
 //		attributeNameCombo.setDisplayField("name");
 		attributeNameCombo.setDisplayField("description");
 		attributeNameCombo.setStore(attributeNameStore);
 		attributeNameCombo.setTypeAhead(true);
-		attributeNameCombo.setTriggerAction(TriggerAction.ALL);		
+		attributeNameCombo.setTriggerAction(TriggerAction.ALL);
 		attributeNameCombo.setFieldLabel("Attribute Name");
 		cp.add(attributeNameCombo);
 
@@ -492,7 +629,7 @@ public class DeterministicMatchConfigurationView extends View
 
 		matchThresholdEdit.setFieldLabel("Match Threshold");
 		cp.add(matchThresholdEdit);
-		
+
 		addEditMatchFieldDialog.add(cp);
 	}
 

@@ -95,6 +95,7 @@ import com.extjs.gxt.ui.client.widget.grid.CheckColumnConfig;
 import com.extjs.gxt.ui.client.widget.grid.ColumnConfig;
 import com.extjs.gxt.ui.client.widget.grid.ColumnModel;
 import com.extjs.gxt.ui.client.widget.grid.Grid;
+import com.extjs.gxt.ui.client.widget.grid.RowExpander;
 import com.extjs.gxt.ui.client.widget.layout.BorderLayout;
 import com.extjs.gxt.ui.client.widget.layout.BorderLayoutData;
 import com.extjs.gxt.ui.client.widget.layout.FillLayout;
@@ -106,6 +107,7 @@ import com.extjs.gxt.ui.client.widget.menu.MenuItem;
 import com.extjs.gxt.ui.client.widget.toolbar.PagingToolBar;
 import com.extjs.gxt.ui.client.widget.toolbar.SeparatorToolItem;
 import com.extjs.gxt.ui.client.widget.toolbar.ToolBar;
+import com.extjs.gxt.ui.client.core.XTemplate;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.i18n.client.DateTimeFormat;
@@ -214,7 +216,7 @@ public class SearchEntityView extends BaseEntityView
 
                             // Search Attribute display
                             RecordWeb record = (RecordWeb) entityMap.get("entitySearch");
-                            displayEntityRecord(attributeFieldMap, record);                           
+                            displayEntityRecord(attributeFieldMap, record);
                             searchButton.enable();
                         }
                     }
@@ -667,10 +669,36 @@ public class SearchEntityView extends BaseEntityView
         return buttonPanel;
     }
 
+    private String getTemplate() {
+        return "<p class=\"identifierBlock\">" +
+                "<table class=\"identifierTable\">" +
+                "<tr>" +
+                    "<th class=\"identifierColumn\">Identifier</th>" +
+                    "<th class=\"identifierDomainNameColumn\">Domain Name</th>" +
+                    "<th class=\"namespaceColumn\">Namespace Identifier</th>" +
+                    "<th class=\"universalIdentifierColumn\">Universal Identifier</th>" +
+                    "<th class=\"universalIdentifierTypeColumn\" >Universal Identifier Type</th>" +
+                "</tr>" +
+                "<tpl for=\"identifiers\">" +
+                    "<tr>" +
+                    "<td>{identifier}</td><td>{identifierDomainName}</td><td>{namespaceIdentifier}</td><td>{universalIdentifier}</td><td>{universalIdentifierTypeCode}</td>" +
+                    "</tr>" +
+                "</tpl>" +
+                "</table>"+
+                "</p>";
+    }
+
     private Grid<RecordWeb> setupGrid(EntityWeb entity, List<EntityAttributeWeb> sortedEntityAttributes) {
 
         // setup column configuration
         List<ColumnConfig> columnConfig = new ArrayList<ColumnConfig>();
+        XTemplate tpl = XTemplate.create(getTemplate());
+        GWT.log("Maximum depth is " + tpl.getMaxDepth(), null);
+        RowExpander expander = new RowExpander();
+        expander.setTemplate(tpl);
+
+        columnConfig.add(expander);
+
         for (EntityAttributeWeb entityAttribute : sortedEntityAttributes) {
             // Info.display("Attribute: ", entityAttribute.getDisplayName());
 
@@ -688,6 +716,9 @@ public class SearchEntityView extends BaseEntityView
             if (type == AttributeDatatype.DATE) {
                 column.setDateTimeFormat(DateTimeFormat.getShortDateFormat());
             }
+            if (type == AttributeDatatype.TIMESTAMP) {
+                column.setDateTimeFormat(DateTimeFormat.getShortDateTimeFormat());
+            }
             columnConfig.add(column);
         }
 
@@ -698,6 +729,9 @@ public class SearchEntityView extends BaseEntityView
         gridList.setStripeRows(true);
         gridList.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         gridList.setHeight(300);
+
+        gridList.addPlugin(expander);
+
 
         Menu linkedMenu = new Menu();
         MenuItem menuItemlinks = new MenuItem("Show Linked Records", IconHelper.create("images/link.png"),
@@ -745,6 +779,9 @@ public class SearchEntityView extends BaseEntityView
             ColumnConfig column = new ColumnConfig(entityAttribute.getName(), entityAttribute.getDisplayName(), 120);
             if (type == AttributeDatatype.DATE) {
                 column.setDateTimeFormat(DateTimeFormat.getShortDateFormat());
+            }
+            if (type == AttributeDatatype.TIMESTAMP) {
+                column.setDateTimeFormat(DateTimeFormat.getShortDateTimeFormat());
             }
             columnConfig.add(column);
         }
@@ -1065,7 +1102,7 @@ public class SearchEntityView extends BaseEntityView
                         RecordWeb editEntity = grid.getSelectionModel().getSelectedItem();
                         if (editEntity == null) {
                             Info.display("Information",
-                                    "You must first select a field to be edited before pressing the \"Remove Entity\" button.");
+                                    "You must first select a field to be removed before pressing the \"Remove Entity\" button.");
                             return;
                         }
 

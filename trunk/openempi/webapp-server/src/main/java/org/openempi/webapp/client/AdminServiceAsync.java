@@ -26,21 +26,17 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface AdminServiceAsync
 {
-	public void assignGlobalIdentifiers(AsyncCallback<String> callback);
-	
+	public void assignGlobalIdentifiers(EntityWeb entity, AsyncCallback<String> callback);
+
 	public void startPixPdqServer(AsyncCallback<String> callback);
-	
+
 	public void stopPixPdqServer(AsyncCallback<String> callback);
-	
-	public void initializeRepository(AsyncCallback<String> callback);
 
 	public void initializeRepository(EntityWeb entity, AsyncCallback<String> callback);
-	
-	public void linkAllRecordPairs(AsyncCallback<String> callback);
-	
+
 	public void linkAllRecordPairs(EntityWeb entity, AsyncCallback<String> callback);
-	
+
 	public void initializeCustomConfiguration(EntityWeb entity, AsyncCallback<String> callback);
-	
-	public void rebuildBlockingIndex(AsyncCallback<String> callback);
+
+	public void rebuildBlockingIndex(EntityWeb entity, AsyncCallback<String> callback);
 }

@@ -23,29 +23,29 @@ package org.openempi.webapp.client;
 import org.openempi.webapp.client.mvc.AppController;
 import org.openempi.webapp.client.mvc.MenuToolbarController;
 import org.openempi.webapp.client.mvc.admin.AdminController;
+import org.openempi.webapp.client.mvc.admin.InformationPanelController;
 import org.openempi.webapp.client.mvc.blocking.BlockingConfigurationController;
-import org.openempi.webapp.client.mvc.blocking.SortedNeighborhoodBlockingConfigurationController;
-import org.openempi.webapp.client.mvc.blocking.SuffixArrayBlockingConfigurationController;
+import org.openempi.webapp.client.mvc.blocking.BlockingHPConfigurationController;
 import org.openempi.webapp.client.mvc.configuration.CustomFieldsConfigurationController;
-import org.openempi.webapp.client.mvc.configuration.MatchConfigurationController;
 import org.openempi.webapp.client.mvc.configuration.DeterministicMatchConfigurationController;
+import org.openempi.webapp.client.mvc.configuration.MatchConfigurationController;
+import org.openempi.webapp.client.mvc.dataprofile.DataProfileController;
+import org.openempi.webapp.client.mvc.edit.AddEntityController;
+import org.openempi.webapp.client.mvc.entityattribute.EntityAttributeDesignController;
+import org.openempi.webapp.client.mvc.entityattribute.KeyValueSetDesignController;
+import org.openempi.webapp.client.mvc.event.AuditEventEntryController;
+import org.openempi.webapp.client.mvc.jobqueue.JobQueueController;
 import org.openempi.webapp.client.mvc.manage.ManageIdentifierDomainController;
-import org.openempi.webapp.client.mvc.fileloader.FileLoaderConfigurationController;
 import org.openempi.webapp.client.mvc.notification.EventNotificationController;
-import org.openempi.webapp.client.mvc.user.MatchController;
-import org.openempi.webapp.client.mvc.user.UserFileController;
+import org.openempi.webapp.client.mvc.process.EntityLinkController;
 import org.openempi.webapp.client.mvc.report.ReportDesignController;
 import org.openempi.webapp.client.mvc.report.ReportGenerateController;
-import org.openempi.webapp.client.mvc.security.ProfileController;
-import org.openempi.webapp.client.mvc.security.ManageUserController;
-import org.openempi.webapp.client.mvc.security.ManageRoleController;
-import org.openempi.webapp.client.mvc.dataprofile.DataProfileController;
-import org.openempi.webapp.client.mvc.entityAttribute.EntityAttributeDesignController;
-import org.openempi.webapp.client.mvc.entityAttribute.KeyValueSetDesignController;
-import org.openempi.webapp.client.mvc.edit.AddEntityController;
 import org.openempi.webapp.client.mvc.search.SearchEntityController;
-import org.openempi.webapp.client.mvc.process.EntityLinkController;
-import org.openempi.webapp.client.mvc.event.AuditEventEntryController;
+import org.openempi.webapp.client.mvc.security.ManageRoleController;
+import org.openempi.webapp.client.mvc.security.ManageUserController;
+import org.openempi.webapp.client.mvc.security.ProfileController;
+import org.openempi.webapp.client.mvc.user.MatchController;
+import org.openempi.webapp.client.mvc.user.UserFileController;
 
 import com.extjs.gxt.ui.client.GXT;
 import com.extjs.gxt.ui.client.Registry;
@@ -84,18 +84,12 @@ public class MainApp implements EntryPoint
 		endpoint.setServiceEntryPoint(GWT.getModuleBaseURL() + moduleRelativeURL);
 		Registry.register(Constants.EVENT_NOTIFICATION_SERVICE, eventNotificationService);
 
-		FileLoaderDataServiceAsync fileLoaderDataService = (FileLoaderDataServiceAsync) GWT.create(FileLoaderDataService.class);
-		endpoint = (ServiceDefTarget) fileLoaderDataService;
-		moduleRelativeURL = Constants.FILE_LOADER_DATA_SERVICE;
-		endpoint.setServiceEntryPoint(GWT.getModuleBaseURL() + moduleRelativeURL);
-		Registry.register(Constants.FILE_LOADER_DATA_SERVICE, fileLoaderDataService);
-
 		IdentifierDomainDataServiceAsync identifierDomainDataService = (IdentifierDomainDataServiceAsync) GWT.create(IdentifierDomainDataService.class);
         endpoint = (ServiceDefTarget) identifierDomainDataService;
         moduleRelativeURL = Constants.IDENTIFIER_DOMAIN_DATA_SERVICE;
         endpoint.setServiceEntryPoint(GWT.getModuleBaseURL() + moduleRelativeURL);
         Registry.register(Constants.IDENTIFIER_DOMAIN_DATA_SERVICE, identifierDomainDataService);
- 
+
         UserFileDataServiceAsync userFileDataService = (UserFileDataServiceAsync) GWT.create(UserFileDataService.class);
         endpoint = (ServiceDefTarget) userFileDataService;
         moduleRelativeURL = Constants.USER_FILE_DATA_SERVICE;
@@ -144,15 +138,19 @@ public class MainApp implements EntryPoint
 		endpoint.setServiceEntryPoint(GWT.getModuleBaseURL() + moduleRelativeURL);
 		Registry.register(Constants.ENTITY_INSTANCE_DATA_SERVICE, entityInstanceDataService);
 
+        JobQueueDataServiceAsync jobQueueDataService = (JobQueueDataServiceAsync) GWT.create(JobQueueDataService.class);
+        endpoint = (ServiceDefTarget) jobQueueDataService;
+        moduleRelativeURL = Constants.JOB_QUEUE_DATA_SERVICE;
+        endpoint.setServiceEntryPoint(GWT.getModuleBaseURL() + moduleRelativeURL);
+        Registry.register(Constants.JOB_QUEUE_DATA_SERVICE, jobQueueDataService);
+
 		Dispatcher dispatcher = Dispatcher.get();
 		dispatcher.addController(new AppController());
 		dispatcher.addController(new AdminController());
 		dispatcher.addController(new MenuToolbarController());
 		dispatcher.addController(new UserFileController());
 		dispatcher.addController(new BlockingConfigurationController());
-		dispatcher.addController(new SortedNeighborhoodBlockingConfigurationController());
-		dispatcher.addController(new SuffixArrayBlockingConfigurationController());
-		dispatcher.addController(new FileLoaderConfigurationController());
+	    dispatcher.addController(new BlockingHPConfigurationController());
 		dispatcher.addController(new CustomFieldsConfigurationController());
 		dispatcher.addController(new MatchConfigurationController());
 		dispatcher.addController(new DeterministicMatchConfigurationController());
@@ -171,6 +169,8 @@ public class MainApp implements EntryPoint
 		dispatcher.addController(new SearchEntityController());
 		dispatcher.addController(new EntityLinkController());
 		dispatcher.addController(new AuditEventEntryController());
+        dispatcher.addController(new JobQueueController());
+        dispatcher.addController(new InformationPanelController());
 		dispatcher.dispatch(AppEvents.Login);
 
 		GXT.hideLoadingPanel("loading");

@@ -96,6 +96,7 @@ public class AddEntityView extends BaseEntityView
 
     private TextField<String> identifier;
     private ComboBox<IdentifierDomainWeb> identifierDomains;
+    private IdentifierDomainWeb globalIdentifierDomain;
 
     private ListStore<IdentifierWeb> identifierStore = new ListStore<IdentifierWeb>();
     private Grid<IdentifierWeb> identifierGrid;
@@ -123,6 +124,8 @@ public class AddEntityView extends BaseEntityView
 
         if (event.getType() == AppEvents.EntityAddView) {
 
+            globalIdentifierDomain = Registry.get(Constants.GLOBAL_IDENTITY_DOMAIN);
+
             // initUI();
             if (Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL) != null) {
 
@@ -131,7 +134,6 @@ public class AddEntityView extends BaseEntityView
                 currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
                 initEntityUI(currentEntity);
             }
-
         } else if (event.getType() == AppEvents.EntitiesReceived) {
 
             // Info.display("Information", "EntitiesReceived.");
@@ -171,6 +173,8 @@ public class AddEntityView extends BaseEntityView
         public void handleEvent(MessageBoxEvent ce) {
             Button btn = ce.getButtonClicked();
             if (btn.getText().equals("OK")) {
+                status.hide();
+                submitButton.unmask();
             }
         }
     };
@@ -282,7 +286,17 @@ public class AddEntityView extends BaseEntityView
 
         ListStore<IdentifierDomainWeb> domains = new ListStore<IdentifierDomainWeb>();
         List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);
-        domains.add(domainEntries);
+        if (globalIdentifierDomain != null) {
+            for (IdentifierDomainWeb dentifierDomain : domainEntries) {
+                if (dentifierDomain.getIdentifierDomainName().equals(globalIdentifierDomain.getIdentifierDomainName())) {
+                    // skip the Global Identifier Domain
+                    continue;
+                }
+                domains.add(dentifierDomain);
+            }
+        } else {
+            domains.add(domainEntries);
+        }
 
         identifierDomains = new ComboBox<IdentifierDomainWeb>();
         identifierDomains.setEmptyText("Select a identifier domain...");
