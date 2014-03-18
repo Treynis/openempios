@@ -35,7 +35,6 @@ import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.entity.RecordManagerService;
 
-import org.openhie.openempi.service.PersonManagerService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
@@ -63,18 +62,18 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 	}
 
 	public String startPixPdqServer() {
-		log.debug("Starting the PIX/PDQ Service");		
+		log.debug("Starting the PIX/PDQ Service");
 		authenticateCaller();
 		String message = startPixPdqServerLocal();
 		return message;
 	}
 
 	private String startPixPdqServerLocal() {
-		String message=null;
+		String message = null;
 		loader = PixPdqConfigurationLoader.getInstance();
 		loader.destroyAllActors();
 		try {
-			String[] propertyFiles = { "openpixpdq.properties" };
+			String[] propertyFiles = {"openpixpdq.properties"};
 			loader.loadProperties(propertyFiles);
 			File configurationFile = getConfigurationFile();
 			log.debug("Using as configuration the file " + configurationFile.getAbsolutePath());
@@ -87,19 +86,22 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		return message;
 	}
 
-	public String assignGlobalIdentifiers() {
+	public String assignGlobalIdentifiers(EntityWeb entityWeb) {
 		log.debug("Assign global identifiers for person entries without one.");
 		
-		authenticateCaller();
-		String message=null;
-		try {
-			PersonManagerService personManagerService = Context.getPersonManagerService();
-			personManagerService.assignGlobalIdentifier();
-		} catch (Exception e) {
-			log.error("Failed while trying to assign global identifiers to entries in the repository: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
+        authenticateCaller();
+        String message = null;
+        try {
+            RecordManagerService service = Context.getRecordManagerService();
+
+            org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
+            service.assignGlobalIdentifier(entity);
+
+        } catch (Exception e) {
+            log.error("Failed while trying to assign global identifiers to entries in the repository: " + e, e);
+            message = e.getMessage();
+        }
+        return message;
 	}
 
 	private File getConfigurationFile() throws IOException {
@@ -111,7 +113,7 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 			if (configFile != null && configFile.exists() && configFile.canRead()) {
 				log.info("Using for PIX/PDQ configuration file at " + configFile.getAbsolutePath());
 				return configFile;
-			}			
+			}
 		}
 		PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 		Resource resource = resolver.getResource("classpath:/IheActors.xml");
@@ -122,60 +124,31 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 
 	public String stopPixPdqServer() {
 		log.debug("Stopping the PIX/PDQ Service");
-		
+
 		authenticateCaller();
 		String message = stopPixPdqServerLocal();
 		return message;
 	}
 
 	private String stopPixPdqServerLocal() {
-		String message=null;
+		String message = null;
 		if (loader != null) {
 			loader.destroyAllActors();
 		}
 		return message;
 	}
 
-	public String initializeRepository() {
-		log.debug("Initialize Repository");
-		
-		authenticateCaller();		
-		String message=null;
-		try {
-			PersonManagerService personManagerService = Context.getPersonManagerService();
-			personManagerService.initializeRepository();			
-		} catch (Exception e) {
-			log.error("Failed while trying to initialize repository: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
-	}
-
 	public String initializeRepository(EntityWeb entityWeb) {
 		log.debug("Initialize Repository");
-		
-		authenticateCaller();		
-		String message=null;
-		try {			
-			RecordManagerService service = Context.getRecordManagerService();
-			
-			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);		
-			service.initializeRepository(entity);
-			
-		} catch (Exception e) {
-			log.error("Failed while trying to initialize repository: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
-	}
-	
-	public String linkAllRecordPairs() {
-		log.debug("Linking all record pairs in the repository");
-		
-		authenticateCaller();		
-		String message=null;
+
+		authenticateCaller();
+		String message = null;
 		try {
-			Context.getPersonManagerService().linkAllRecordPairs();
+			RecordManagerService service = Context.getRecordManagerService();
+
+			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
+			service.initializeRepository(entity);
+
 		} catch (Exception e) {
 			log.error("Failed while trying to initialize repository: " + e, e);
 			message = e.getMessage();
@@ -185,13 +158,13 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 
 	public String linkAllRecordPairs(EntityWeb entityWeb) {
 		log.debug("Linking all record pairs in the repository");
-		
-		authenticateCaller();		
-		String message=null;
+
+		authenticateCaller();
+		String message = null;
 		try {
 			RecordManagerService service = Context.getRecordManagerService();
-			
-			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);		
+
+			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
 			service.linkAllRecordPairs(entity);
 		} catch (Exception e) {
 			log.error("Failed while trying to initialize repository: " + e, e);
@@ -199,15 +172,15 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		}
 		return message;
 	}
-	
+
 	public String initializeCustomConfiguration(EntityWeb entityWeb) {
 		log.debug("Initialize Custom Configuration");
-		
-		authenticateCaller();		
-		String message=null;
+
+		authenticateCaller();
+		String message = null;
 		try {
 			RecordManagerService entityManagerService = Context.getRecordManagerService();
-			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);		
+			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
 			entityManagerService.generateCustomFields(entity);
 		} catch (Exception e) {
 			log.error("Failed while trying to initialize custom configuration: " + e, e);
@@ -215,14 +188,14 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		}
 		return message;
 	}
-	
-	public String rebuildBlockingIndex() {
+
+	public String rebuildBlockingIndex(EntityWeb entity) {
 		log.debug("Rebuild Blocking Index");
-		
+
 		authenticateCaller();
-		String message=null;
-		try {			
-			BlockingService blockingService = Context.getBlockingService();
+		String message = null;
+		try {
+			BlockingService blockingService = Context.getBlockingService(entity.getName());
 			BlockingLifecycleObserver blockingLifecycle = (BlockingLifecycleObserver) blockingService;
 			blockingLifecycle.rebuildIndex();
 		} catch (Exception e) {
@@ -231,7 +204,7 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		}
 		return message;
 	}
-	
+
 	public static boolean isInitialized() {
 		return initialized;
 	}

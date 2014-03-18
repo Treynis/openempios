@@ -22,13 +22,17 @@ package org.openempi.webapp.client;
 
 import java.util.List;
 
+import org.openempi.webapp.client.model.DataProfileWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeValueWeb;
 import com.google.gwt.user.client.rpc.RemoteService;
 
 public interface ProfileDataService extends RemoteService
 {
-	
+    public List<DataProfileWeb> getDataProfiles() throws Exception;
+
+    public String removeDataProfile(Integer dataProfileId) throws Exception;
+
 	public List<DataProfileAttributeWeb> getDataProfileAttributes(Integer dataResource) throws Exception;
 	
 	public List<DataProfileAttributeValueWeb> getDataProfileAttributeValues(Integer attributeId, int topCount) throws Exception;

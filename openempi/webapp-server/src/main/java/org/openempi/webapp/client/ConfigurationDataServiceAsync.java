@@ -25,7 +25,7 @@ import java.util.List;
 import org.openempi.webapp.client.model.CustomFieldWeb;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.model.MatchConfigurationWeb;
-import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
+import org.openempi.webapp.client.model.MatchRuleEntryListWeb;
 import org.openempi.webapp.client.model.StringComparatorFunctionWeb;
 import org.openempi.webapp.client.model.TransformationFunctionWeb;
 import org.openempi.webapp.client.model.VectorConfigurationWeb;
@@ -40,15 +40,15 @@ public interface ConfigurationDataServiceAsync
 
 	public void loadCustomFieldsConfiguration(String entityName, AsyncCallback<List<CustomFieldWeb>> callback);
 	
-	public void loadProbabilisticMatchingConfiguration(AsyncCallback<MatchConfigurationWeb> callback);
+	public void loadProbabilisticMatchingConfiguration(String entityName, AsyncCallback<MatchConfigurationWeb> callback);
 
-	public void loadExactMatchingConfiguration(AsyncCallback<ExactMatchingConfigurationWeb> callback);
+	public void loadExactMatchingConfiguration(String entityName, AsyncCallback<MatchRuleEntryListWeb> callback);
 	
-	public void loadVectorConfiguration(AsyncCallback<List<VectorConfigurationWeb>> callback);
+	public void loadVectorConfiguration(String entityName, AsyncCallback<List<VectorConfigurationWeb>> callback);
 
 	public void saveCustomFieldsConfiguration(EntityWeb entityModel, List<CustomFieldWeb> customFieldsConfiguration, AsyncCallback<String> callback);
 
-	public void saveExactMatchingConfiguration(ExactMatchingConfigurationWeb matchingConfiguration, AsyncCallback<String> callback);
+	public void saveExactMatchingConfiguration(MatchRuleEntryListWeb matchingConfiguration, AsyncCallback<String> callback);
 	
 	public void saveProbabilisticMatchingConfiguration(MatchConfigurationWeb matchingConfiguration, AsyncCallback<String> callback);
 }

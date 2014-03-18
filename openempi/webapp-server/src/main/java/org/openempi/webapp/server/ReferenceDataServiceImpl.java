@@ -34,12 +34,17 @@ import org.openempi.webapp.client.model.SystemConfigurationWeb;
 import org.openempi.webapp.client.model.AuditEventTypeWeb;
 import org.openempi.webapp.client.model.EntityAttributeDatatypeWeb;
 import org.openempi.webapp.client.model.EntityValidationRuleWeb;
+import org.openempi.webapp.client.model.JobTypeWeb;
+import org.openempi.webapp.client.model.JobStatusWeb;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.AuditEventType;
 import org.openhie.openempi.model.EntityAttributeDatatype;
+import org.openhie.openempi.model.JobStatus;
+import org.openhie.openempi.model.JobType;
 
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.service.IdentifierDomainService;
+import org.openhie.openempi.service.JobQueueService;
 import org.openhie.openempi.service.PersonQueryService;
 import org.openhie.openempi.service.AuditEventService;
 import org.openhie.openempi.configuration.ConfigurationRegistry;
@@ -50,15 +55,35 @@ import org.openhie.openempi.validation.EntityValidationService;
 import org.openhie.openempi.validation.ValidationRule;
 
 public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet implements ReferenceDataService
-{	
+{
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 	}
-	
+
+    public IdentifierDomainWeb getGlobalIdentifierDomain() {
+
+        authenticateCaller();
+        try {
+            IdentifierDomain globalIdentifierDomain = Context.getConfiguration().getGlobalIdentifierDomain();
+            if (globalIdentifierDomain != null) {
+                IdentifierDomainWeb domainWeb = new IdentifierDomainWeb(globalIdentifierDomain.getIdentifierDomainId(),
+                        globalIdentifierDomain.getIdentifierDomainName(), globalIdentifierDomain.getIdentifierDomainDescription(),
+                        globalIdentifierDomain.getNamespaceIdentifier(), globalIdentifierDomain.getUniversalIdentifier(),
+                        globalIdentifierDomain.getUniversalIdentifierTypeCode());
+                return domainWeb;
+            } else {
+                return null;
+            }
+        } catch (Throwable t) {
+            log.error("Failed to execute: " + t.getMessage(), t);
+            throw new RuntimeException(t);
+        }
+    }
+
 	public List<IdentifierDomainWeb> getIdentifierDomains() {
 		log.debug("Received request to retrieve the list of identifier domains.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			IdentifierDomainService identifierDomainService = Context.getIdentifierDomainService();
 			List<IdentifierDomain> domains = identifierDomainService.getIdentifierDomains();
@@ -67,7 +92,7 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 				domainsWeb.add( new IdentifierDomainWeb(domain.getIdentifierDomainId(),
 						domain.getIdentifierDomainName(), domain.getIdentifierDomainDescription(),
 						domain.getNamespaceIdentifier(), domain.getUniversalIdentifier(),
-						domain.getUniversalIdentifierTypeCode()));			
+						domain.getUniversalIdentifierTypeCode()));
 			}
 			return domainsWeb;
 		} catch (Throwable t) {
@@ -75,17 +100,17 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 			throw new RuntimeException(t);
 		}
 	}
-	
+
 	public List<IdentifierDomainTypeCodeWeb> getIdentifierDomainTypeCodes() {
 		log.debug("Received request to retrieve the list of identifier domain type codes.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			IdentifierDomainService identifierDomainService = Context.getIdentifierDomainService();
 			List<String> types = identifierDomainService.getIdentifierDomainTypeCodes();
 			List<IdentifierDomainTypeCodeWeb> codes = new ArrayList<IdentifierDomainTypeCodeWeb>(types.size());
 			for (String type : types) {
-				codes.add( new IdentifierDomainTypeCodeWeb(type));			
+				codes.add(new IdentifierDomainTypeCodeWeb(type));
 			}
 			return codes;
 		} catch (Throwable t) {
@@ -96,13 +121,13 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 
 	public List<AuditEventTypeWeb> getAuditEventTypeCodes() {
 		log.debug("Received request to retrieve the list of audit event type codes.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			AuditEventService auditEventService = Context.getAuditEventService();
 			List<AuditEventType> types = auditEventService.getAllAuditEventTypes();
-			List<AuditEventTypeWeb> codes = new ArrayList<AuditEventTypeWeb>(types.size());			
-			if( types != null ) {
+			List<AuditEventTypeWeb> codes = new ArrayList<AuditEventTypeWeb>(types.size());
+			if (types != null) {
 				for (AuditEventType type : types) {
 					codes.add( new AuditEventTypeWeb(type.getAuditEventTypeCd(), type.getAuditEventTypeName(),type.getAuditEventTypeDescription(), type.getAuditEventTypeCode()));			
 				}
@@ -113,11 +138,11 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 			throw new RuntimeException(t);
 		}
 	}
-	
+
 	public List<String> getPersonModelAllAttributeNames() {
 		log.debug("Received request to retrieve the list of person model all attribute names.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			PersonQueryService personQueryService = Context.getPersonQueryService();
 			List<String> attributeNames = personQueryService.getPersonModelAllAttributeNames();
@@ -127,11 +152,11 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 			throw new RuntimeException(t);
 		}
 	}
-	
+
 	public List<String> getPersonModelAttributeNames() {
 		log.debug("Received request to retrieve the list of person model attribute names.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			PersonQueryService personQueryService = Context.getPersonQueryService();
 			List<String> attributeNames = personQueryService.getPersonModelAttributeNames();
@@ -144,8 +169,8 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 
 	public List<String> getPersonModelCustomFieldNames() {
 		log.debug("Received request to retrieve the list of person model custom field names.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			PersonQueryService personQueryService = Context.getPersonQueryService();
 			List<String> customFieldNames = personQueryService.getPersonModelCustomAttributeNames();
@@ -158,8 +183,8 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 
 	public List<String> getTransformationFunctionNames() {
 		log.debug("Received request to retrieve the list of transformation function names.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			TransformationService transformationService = Context.getTransformationService();
 			List<String> transformationFunctionNames = transformationService.getTransformationFunctionNames();
@@ -172,8 +197,8 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 
 	public List<String> getComparatorFunctionNames() {
 		log.debug("Received request to retrieve the list of comparator function names.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			StringComparisonService stringComparisonService = Context.getStringComparisonService();
 			List<String> comparisonFunctionNames = stringComparisonService.getComparisonFunctionNames();
@@ -184,30 +209,30 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 		}
 	}
 
-	public SystemConfigurationWeb getSystemConfigurationInfo() {
+	public SystemConfigurationWeb getSystemConfigurationInfo(String entityName) {
 		log.debug("Received request to retrieve the system configuration information.");
 		SystemConfigurationWeb systemConfig = new SystemConfigurationWeb();
 		String blockingAlgorithmName = (String) Context.getConfiguration()
-				.lookupConfigurationEntry(ConfigurationRegistry.BLOCKING_ALGORITHM_NAME_KEY);
+				.lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_ALGORITHM_NAME_KEY);
 		log.info("The system is configured with blocking algorithm: " + blockingAlgorithmName);
 		String matchingAlgorithmName = (String) Context.getConfiguration()
-				.lookupConfigurationEntry(ConfigurationRegistry.MATCHING_ALGORITHM_NAME_KEY);
+				.lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCHING_ALGORITHM_NAME_KEY);
 		log.info("The system is configured with matching algorithm: " + matchingAlgorithmName);
 		systemConfig.setBlockingAlgorithmName(blockingAlgorithmName);
 		systemConfig.setMatchingAlgorithmName(matchingAlgorithmName);
 		return systemConfig;
 	}
-	
+
 	public List<EntityAttributeDatatypeWeb> getEntityAttributeDatatypes() {
 		log.debug("Received request to retrieve the list of entity attribute data types.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			EntityDefinitionManagerService entityManagerService = Context.getEntityDefinitionManagerService();
 			List<EntityAttributeDatatype> datatypes = entityManagerService.getEntityAttributeDatatypes();
 			List<EntityAttributeDatatypeWeb> typesWeb = new ArrayList<EntityAttributeDatatypeWeb>(datatypes.size());
 			for (EntityAttributeDatatype type : datatypes) {
-				typesWeb.add( new EntityAttributeDatatypeWeb(type.getDatatypeCd(),type.getName(), type.getDisplayName()));	
+				typesWeb.add( new EntityAttributeDatatypeWeb(type.getDatatypeCd(),type.getName(), type.getDisplayName()));
 			}
 			return typesWeb;
 		} catch (Throwable t) {
@@ -215,23 +240,23 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 			throw new RuntimeException(t);
 		}
 	}
-	
+
 	public List<EntityValidationRuleWeb> getValidationRules() {
 		log.debug("Received request to retrieve the list of Validation Rules.");
-		
-		authenticateCaller();	
+
+		authenticateCaller();
 		try {
 			EntityValidationService entityValidationService = Context.getEntityValidationService();
 			Set<ValidationRule> validationRules = entityValidationService.getValidationRules();
 			List<EntityValidationRuleWeb> rulesWeb = new ArrayList<EntityValidationRuleWeb>(validationRules.size());
 			for (ValidationRule rule : validationRules) {
-				
+
 				EntityValidationRuleWeb validationRule = new EntityValidationRuleWeb();
-					validationRule.setValidationRuleName(rule.getValidationRuleName());
-					validationRule.setValidationRuleDisplayName(rule.getValidationRuleDisplayName());	
-					validationRule.setParameters(rule.getParameters());
-					
-				rulesWeb.add( validationRule);	
+				validationRule.setValidationRuleName(rule.getValidationRuleName());
+				validationRule.setValidationRuleDisplayName(rule.getValidationRuleDisplayName());
+				validationRule.setParameters(rule.getParameters());
+
+				rulesWeb.add(validationRule);
 			}
 			return rulesWeb;
 		} catch (Throwable t) {
@@ -239,4 +264,42 @@ public class ReferenceDataServiceImpl extends AbstractRemoteServiceServlet imple
 			throw new RuntimeException(t);
 		}
 	}
+
+    public List<JobTypeWeb> getJobTypes() {
+        log.debug("Received request to retrieve the list of Job Types.");
+
+        authenticateCaller();
+        try {
+            JobQueueService jobQueueService = Context.getJobQueueService();
+
+            List<JobType> jobtypes = jobQueueService.getJobTypes();
+            List<JobTypeWeb> jobTypesWeb = new ArrayList<JobTypeWeb>(jobtypes.size());
+            for (JobType type : jobtypes) {
+                jobTypesWeb.add( new JobTypeWeb(type.getJobTypeCd(),type.getJobTypeName(), type.getJobTypeDescription(), type.getJobTypeHandler()));
+            }
+            return jobTypesWeb;
+        } catch (Throwable t) {
+            log.error("Failed to execute: " + t.getMessage(), t);
+            throw new RuntimeException(t);
+        }
+    }
+
+    public List<JobStatusWeb> getJobStatuses() {
+        log.debug("Received request to retrieve the list of Job Statuses.");
+
+        authenticateCaller();
+        try {
+            JobQueueService jobQueueService = Context.getJobQueueService();
+
+            List<JobStatus> jobStatuses = jobQueueService.getJobStatuses();
+            List<JobStatusWeb> jobStatusesWeb = new ArrayList<JobStatusWeb>(jobStatuses.size());
+            for (JobStatus status : jobStatuses) {
+                jobStatusesWeb.add( new JobStatusWeb(status.getJobStatusCd(),status.getJobStatusName(), status.getJobStatusDescription()));
+            }
+            return jobStatusesWeb;
+        } catch (Throwable t) {
+            log.error("Failed to execute: " + t.getMessage(), t);
+            throw new RuntimeException(t);
+        }
+    }
 }

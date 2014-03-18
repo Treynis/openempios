@@ -49,24 +49,24 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
     public final static String SIMILARITY_METRIC_REGISTRY_KEY = "suffixArray.similarityMetric";
     public final static String THRESHOLD_REGISTRY_KEY = "suffixArray.threshold";
     public final static String ENTITY_NAME_KEY = "entityName";
-    
+
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
     }
 
     @SuppressWarnings("unchecked")
-    public SortedNeighborhoodConfigurationWeb loadSortedNeighborhoodBlockingConfigurationData() throws Exception {
+    public SortedNeighborhoodConfigurationWeb loadSortedNeighborhoodBlockingConfigurationData(String entityName) throws Exception {
         log.debug("Received request to load the sorted neighborhood blocking configuration data.");
 
         authenticateCaller();
         try {
             Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                    .lookupConfigurationEntry(ConfigurationRegistry.BLOCKING_CONFIGURATION);
+                    .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
             List<BlockingRound> rounds = (List<BlockingRound>) configurationData.get(SN_BLOCKING_ROUNDS_REGISTRY_KEY);
             List<BaseFieldWeb> webRounds = convertToClientModel(rounds);
             Integer windowSize = (Integer) configurationData.get(WINDOW_SIZE_REGISTRY_KEY);
             SortedNeighborhoodConfigurationWeb webConfig = new SortedNeighborhoodConfigurationWeb(webRounds, windowSize);
-            String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
+            // String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
             webConfig.setEntityName(entityName);
             return webConfig;
         } catch (Throwable t) {
@@ -76,13 +76,13 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
     }
 
     @SuppressWarnings("unchecked")
-    public SuffixArrayBlockingConfigurationWeb loadSuffixArrayBlockingConfigurationData() throws Exception {
+    public SuffixArrayBlockingConfigurationWeb loadSuffixArrayBlockingConfigurationData(String entityName) throws Exception {
         log.debug("Received request to load the sorted neighborhood blocking configuration data.");
 
         authenticateCaller();
         try {
             Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                    .lookupConfigurationEntry(ConfigurationRegistry.BLOCKING_CONFIGURATION);
+                    .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
             List<BlockingRound> rounds = (List<BlockingRound>) configurationData.get(SA_BLOCKING_ROUNDS_REGISTRY_KEY);
             List<BaseFieldWeb> webRounds = convertToClientModel(rounds);
             Integer minimumSuffixLength = (Integer) configurationData.get(MINIMUM_SUFFIX_LENGTH_REGISTRY_KEY);
@@ -91,7 +91,7 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
             Float similarityThreshold = (Float) configurationData.get(THRESHOLD_REGISTRY_KEY);
             SuffixArrayBlockingConfigurationWeb webConfig = new SuffixArrayBlockingConfigurationWeb(webRounds,
                     minimumSuffixLength, maximumBlockSize, similarityMetric, similarityThreshold);
-            String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
+            // String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
             webConfig.setEntityName(entityName);
             return webConfig;
         } catch (Throwable t) {
@@ -101,21 +101,21 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
     }
 
     @SuppressWarnings("unchecked")
-    public BlockingEntryListWeb loadTraditionalBlockingConfigurationData() throws Exception {
+    public BlockingEntryListWeb loadTraditionalBlockingConfigurationData(String entityName) throws Exception {
         log.debug("Received request to load the blocking configuration data.");
 
         authenticateCaller();
         try {
             BlockingEntryListWeb blockingEntry = new BlockingEntryListWeb();
-            
+
             Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                    .lookupConfigurationEntry(ConfigurationRegistry.BLOCKING_CONFIGURATION);
+                    .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
             List<BlockingRound> rounds = (List<BlockingRound>) configurationData.get(BLOCKING_ROUNDS_REGISTRY_KEY);
             Integer maximumBlockSize = (Integer) configurationData.get(MAXIMUM_BLOCK_SIZE);
 
             blockingEntry.setMaximumBlockSize(maximumBlockSize);
             blockingEntry.setBlockingRoundtEntries(convertToClientModel(rounds));
-            String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
+            // String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
             blockingEntry.setEntityName(entityName);
             return blockingEntry;
         } catch (Throwable t) {
@@ -147,7 +147,13 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
         Configuration configuration = Context.getConfiguration();
         String returnMessage = "";
         try {
-            ConfigurationLoader loader = configuration.getBlockingConfigurationLoader();
+            ConfigurationLoader loader = configuration
+                    .getBlockingConfigurationLoader(blockingConfiguration.getEntityName());
+            if (loader == null) {
+                log.error("Unable to find a loader for saving the configuration of the blocking algorithm.");
+                returnMessage = "No loader has been configured for storing the configuration information.";
+                return returnMessage;
+            }            
             List<BlockingRound> rounds = convertFromClientModel(blockingConfiguration.getBlockingRoundEntries());
             Integer maximumBlockSize = blockingConfiguration.getMaximumBlockSize();
 
@@ -172,7 +178,13 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
         Configuration configuration = Context.getConfiguration();
         String returnMessage = "";
         try {
-            ConfigurationLoader loader = configuration.getBlockingConfigurationLoader();
+            ConfigurationLoader loader = configuration
+                    .getBlockingConfigurationLoader(blockingConfiguration.getEntityName());
+            if (loader == null) {
+                log.error("Unable to find a loader for saving the configuration of the blocking algorithm.");
+                returnMessage = "No loader has been configured for storing the configuration information.";
+                return returnMessage;
+            }                 
             List<BlockingRound> rounds = convertFromClientModel(blockingConfiguration.getBlockingRounds());
             Map<String, Object> configurationData = new java.util.HashMap<String, Object>();
             configurationData.put(SN_BLOCKING_ROUNDS_REGISTRY_KEY, rounds);
@@ -195,7 +207,13 @@ public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implem
         Configuration configuration = Context.getConfiguration();
         String returnMessage = "";
         try {
-            ConfigurationLoader loader = configuration.getBlockingConfigurationLoader();
+            ConfigurationLoader loader = configuration
+                    .getBlockingConfigurationLoader(blockingConfiguration.getEntityName());
+            if (loader == null) {
+                log.error("Unable to find a loader for saving the configuration of the blocking algorithm.");
+                returnMessage = "No loader has been configured for storing the configuration information.";
+                return returnMessage;
+            }            
             List<BlockingRound> rounds = convertFromClientModel(blockingConfiguration.getBlockingRounds());
             Map<String, Object> configurationData = new java.util.HashMap<String, Object>();
             configurationData.put(SA_BLOCKING_ROUNDS_REGISTRY_KEY, rounds);

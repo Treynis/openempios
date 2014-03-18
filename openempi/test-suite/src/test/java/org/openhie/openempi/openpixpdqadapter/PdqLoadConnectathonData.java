@@ -24,8 +24,8 @@ import java.io.File;
 import java.util.List;
 
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.loader.ConcurrentFileLoader;
 import org.openhie.openempi.loader.FileLoaderManager;
-import org.openhie.openempi.loader.NominalSetFileLoader;
 import org.openhie.openempi.model.Entity;
 
 public class PdqLoadConnectathonData extends AbstractPdqTest
@@ -51,7 +51,7 @@ public class PdqLoadConnectathonData extends AbstractPdqTest
 				log.warn("The required entity named person has not been defined in the system.");
 				System.exit(-1);
 			}
-			fileLoaderManager.loadFile(testData.getAbsolutePath(), NominalSetFileLoader.LOADER_ALIAS, entities.get(0));
+			fileLoaderManager.loadFile(testData.getAbsolutePath(), ConcurrentFileLoader.LOADER_ALIAS, entities.get(0));
 		} catch (Exception e) {			
         	log.error("Failed to load the PDQ test data from file " + testData.getAbsolutePath() + " due to: " + e.getMessage(), e);
 		}

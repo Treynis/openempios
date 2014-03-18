@@ -26,11 +26,12 @@ import java.util.List;
 
 import org.openempi.webapp.client.AppEvents;
 import org.openempi.webapp.client.Constants;
-import org.openempi.webapp.client.model.DataProfileAttributeWeb;
 import org.openempi.webapp.client.model.DataProfileAttributeValueWeb;
+import org.openempi.webapp.client.model.DataProfileAttributeWeb;
 import org.openempi.webapp.client.mvc.Controller;
 import org.openempi.webapp.client.mvc.View;
 import org.openempi.webapp.client.ui.util.Utility;
+import org.openempi.webapp.client.ui.util.AttributeDatatype;
 
 import com.extjs.gxt.charts.client.Chart;
 import com.extjs.gxt.charts.client.model.ChartModel;
@@ -53,13 +54,11 @@ import com.extjs.gxt.ui.client.event.Listener;
 import com.extjs.gxt.ui.client.event.SelectionChangedEvent;
 import com.extjs.gxt.ui.client.event.SelectionListener;
 import com.extjs.gxt.ui.client.mvc.AppEvent;
-
 import com.extjs.gxt.ui.client.store.ListStore;
 import com.extjs.gxt.ui.client.util.IconHelper;
 import com.extjs.gxt.ui.client.util.Margins;
 import com.extjs.gxt.ui.client.util.Padding;
 import com.extjs.gxt.ui.client.widget.ContentPanel;
-import com.extjs.gxt.ui.client.widget.Info;
 import com.extjs.gxt.ui.client.widget.LayoutContainer;
 import com.extjs.gxt.ui.client.widget.MessageBox;
 import com.extjs.gxt.ui.client.widget.TabItem;
@@ -71,12 +70,12 @@ import com.extjs.gxt.ui.client.widget.grid.Grid;
 import com.extjs.gxt.ui.client.widget.grid.GridCellRenderer;
 import com.extjs.gxt.ui.client.widget.layout.BorderLayout;
 import com.extjs.gxt.ui.client.widget.layout.BorderLayoutData;
+import com.extjs.gxt.ui.client.widget.layout.BoxLayout.BoxLayoutPack;
 import com.extjs.gxt.ui.client.widget.layout.FillLayout;
 import com.extjs.gxt.ui.client.widget.layout.FitLayout;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayout;
-import com.extjs.gxt.ui.client.widget.layout.HBoxLayoutData;
-import com.extjs.gxt.ui.client.widget.layout.BoxLayout.BoxLayoutPack;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayout.HBoxLayoutAlign;
+import com.extjs.gxt.ui.client.widget.layout.HBoxLayoutData;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.i18n.client.NumberFormat;
 import com.google.gwt.user.client.DOM;
@@ -85,6 +84,7 @@ import com.google.gwt.user.client.ui.RootPanel;
 public class DataProfileView extends View
 {
     private static final NumberFormat percent = NumberFormat.getFormat("#.##%;(#0.##%)");
+    private static final int topPieCount = 10;
 
     // private LayoutContainer container;
     private ContentPanel container;
@@ -108,6 +108,7 @@ public class DataProfileView extends View
     private Chart barChartLength;
     private Chart pieChart;
 
+    private Integer dataProfileId;
     private DataProfileAttributeWeb currentAttribute;
 
     // private List<ModelPropertyWeb> fieldNames;
@@ -131,7 +132,9 @@ public class DataProfileView extends View
             grid = null;
             grid2 = null;
             gridAttributeValue = null;
-            initUI();
+
+            dataProfileId = (Integer) event.getData();
+            initUI(dataProfileId);
 
             showWaitCursor();
 
@@ -235,7 +238,7 @@ public class DataProfileView extends View
         column = new ColumnConfig();
         column.setId("rowCount");
         column.setHeader("Row Count");
-        column.setWidth(90);
+        column.setWidth(80);
         configs.add(column);
 
         column = new ColumnConfig();
@@ -259,7 +262,7 @@ public class DataProfileView extends View
         column = new ColumnConfig();
         column.setId("nullCount");
         column.setHeader("Null Count");
-        column.setWidth(90);
+        column.setWidth(70);
         configs.add(column);
 
         column = new ColumnConfig();
@@ -289,75 +292,69 @@ public class DataProfileView extends View
          * column = new ColumnConfig(); column.setId("maximumValue"); column.setHeader("Maximum Value");
          * column.setWidth(90); configs.add(column);
          */
-        ColumnConfig averageValueColumn = new ColumnConfig("averageValue", "Average Value", 100);
+        ColumnConfig averageValueColumn = new ColumnConfig("averageValue", "Average Value", 130);
         averageValueColumn.setRenderer(new GridCellRenderer<DataProfileAttributeWeb>()
         {
             public Object render(DataProfileAttributeWeb model, String property,
                     com.extjs.gxt.ui.client.widget.grid.ColumnData config, int rowIndex, int colIndex,
                     ListStore<DataProfileAttributeWeb> store, Grid<DataProfileAttributeWeb> grid) {
                 Double averageValue = model.getAverageValue();
-                String attributeName = model.getAttributeName();
-                if (attributeName.equals("dateOfBirth") || attributeName.equals("dateVoided")
-                        || attributeName.equals("dateCreated") || attributeName.equals("dateChanged")) {
-                    if (averageValue == null) {
-                        return "";
-                    }
+                if (averageValue == null) {
+                    return "";
+                }
+                if (AttributeDatatype.getById(model.getDatatypeId()) == AttributeDatatype.DATE) {
                     Date d = new Date(averageValue.longValue());
-                    if (attributeName.equals("dateOfBirth")) {
-                        return Utility.DateToString(d);
-                    } else {
-                        return Utility.DateTimeToString(d);
-                    }
+                    return Utility.DateToString(d);
+                }
+                if (AttributeDatatype.getById(model.getDatatypeId()) == AttributeDatatype.TIMESTAMP) {
+                    Date d = new Date(averageValue.longValue());
+                    return Utility.DateTimeToString(d);
                 }
                 return averageValue;
             }
         });
         configs.add(averageValueColumn);
 
-        ColumnConfig minimumValueColumn = new ColumnConfig("minimumValue", "Minimum Value", 100);
+        ColumnConfig minimumValueColumn = new ColumnConfig("minimumValue", "Minimum Value", 130);
         minimumValueColumn.setRenderer(new GridCellRenderer<DataProfileAttributeWeb>()
         {
             public Object render(DataProfileAttributeWeb model, String property,
                     com.extjs.gxt.ui.client.widget.grid.ColumnData config, int rowIndex, int colIndex,
                     ListStore<DataProfileAttributeWeb> store, Grid<DataProfileAttributeWeb> grid) {
                 Double minimumValue = model.getMinimumValue();
-                String attributeName = model.getAttributeName();
-                if (attributeName.equals("dateOfBirth") || attributeName.equals("dateVoided")
-                        || attributeName.equals("dateCreated") || attributeName.equals("dateChanged")) {
-                    if (minimumValue == null) {
-                        return "";
-                    }
+                if (minimumValue == null) {
+                    return "";
+                }
+                if (AttributeDatatype.getById(model.getDatatypeId()) == AttributeDatatype.DATE) {
                     Date d = new Date(minimumValue.longValue());
-                    if (attributeName.equals("dateOfBirth")) {
-                        return Utility.DateToString(d);
-                    } else {
-                        return Utility.DateTimeToString(d);
-                    }
+                    return Utility.DateToString(d);
+                }
+                if (AttributeDatatype.getById(model.getDatatypeId()) == AttributeDatatype.TIMESTAMP) {
+                    Date d = new Date(minimumValue.longValue());
+                    return Utility.DateTimeToString(d);
                 }
                 return minimumValue;
             }
         });
         configs.add(minimumValueColumn);
 
-        ColumnConfig maximumValueColumn = new ColumnConfig("maximumValue", "Maximum Value", 100);
+        ColumnConfig maximumValueColumn = new ColumnConfig("maximumValue", "Maximum Value", 130);
         maximumValueColumn.setRenderer(new GridCellRenderer<DataProfileAttributeWeb>()
         {
             public Object render(DataProfileAttributeWeb model, String property,
                     com.extjs.gxt.ui.client.widget.grid.ColumnData config, int rowIndex, int colIndex,
                     ListStore<DataProfileAttributeWeb> store, Grid<DataProfileAttributeWeb> grid) {
                 Double maximumValue = model.getMaximumValue();
-                String attributeName = model.getAttributeName();
-                if (attributeName.equals("dateOfBirth") || attributeName.equals("dateVoided")
-                        || attributeName.equals("dateCreated") || attributeName.equals("dateChanged")) {
-                    if (maximumValue == null) {
-                        return "";
-                    }
+                if (maximumValue == null) {
+                    return "";
+                }
+                if (AttributeDatatype.getById(model.getDatatypeId()) == AttributeDatatype.DATE) {
                     Date d = new Date(maximumValue.longValue());
-                    if (attributeName.equals("dateOfBirth")) {
-                        return Utility.DateToString(d);
-                    } else {
-                        return Utility.DateTimeToString(d);
-                    }
+                    return Utility.DateToString(d);
+                }
+                if (AttributeDatatype.getById(model.getDatatypeId()) == AttributeDatatype.TIMESTAMP) {
+                    Date d = new Date(maximumValue.longValue());
+                    return Utility.DateTimeToString(d);
                 }
                 return maximumValue;
             }
@@ -488,7 +485,7 @@ public class DataProfileView extends View
         tabPanel.setBorders(false);
         tabPanel.setBodyBorder(false);
 
-        TabItem attributeDataPart1Tab = new TabItem("Attribute Data, Part1");
+        TabItem attributeDataPart1Tab = new TabItem("Basic Metrics");
         attributeDataPart1Tab.setLayout(new FitLayout());
         attributeDataPart1Tab.add(grid);
         attributeDataPart1Tab.addListener(Events.Select, new Listener<ComponentEvent>()
@@ -500,7 +497,7 @@ public class DataProfileView extends View
             }
         });
 
-        TabItem attributeDataPart2Tab = new TabItem("Attribute Data, Part 2");
+        TabItem attributeDataPart2Tab = new TabItem("Advanced Metrics");
         attributeDataPart2Tab.setLayout(new FitLayout());
         attributeDataPart2Tab.add(grid2);
         attributeDataPart2Tab.addListener(Events.Select, new Listener<ComponentEvent>()
@@ -530,7 +527,7 @@ public class DataProfileView extends View
                     @Override
                     public void componentSelected(ButtonEvent ce) {
                         showWaitCursor();
-                        controller.handleEvent(new AppEvent(AppEvents.DataProfileView, null));
+                        controller.handleEvent(new AppEvent(AppEvents.DataProfileView, dataProfileId));
                     }
                 });
 
@@ -552,35 +549,20 @@ public class DataProfileView extends View
         List<ColumnConfig> configs = new ArrayList<ColumnConfig>();
 
         // Columns
-        ColumnConfig column;
-
-        // Name
-        column = new ColumnConfig();
-        column.setId("attributeValue");
-        column.setHeader("Attribute Value");
-        column.setWidth(150);
+        ColumnConfig column = new ColumnConfig("attributeValue", "Attribute Value", 150);
         configs.add(column);
 
-        column = new ColumnConfig();
-        column.setId("frequency");
-        column.setHeader("Frequency");
-        column.setWidth(80);
+        column = new ColumnConfig("frequency", "Frequency", 80);
         configs.add(column);
 
-        column = new ColumnConfig();
-        column.setId("percent");
-        column.setHeader("Percent");
+        column = new ColumnConfig("percent", "Percent", 80);
         column.setNumberFormat(percent);
-        column.setWidth(80);
         configs.add(column);
 
-        column = new ColumnConfig();
-        column.setId("cumulative");
-        column.setHeader("Cumulative");
+        column = new ColumnConfig("cumulative", "Cumulative", 80);
         column.setNumberFormat(percent);
-        column.setWidth(80);
         configs.add(column);
-        
+
         ColumnModel cm = new ColumnModel(configs);
         gridAttributeValue = new Grid<DataProfileAttributeValueWeb>(profileAttributeValueStore, cm);
         gridAttributeValue.setStyleAttribute("borderTop", "none");
@@ -607,6 +589,10 @@ public class DataProfileView extends View
                 "#800000", "#ffa500", "#c0c0c0", "#F080F0");
         /* red, cyan, blue, lightblue, purple grey lime fuchsia maroon orange silver violet */
 
+        // sub list
+        if (attributeValueList.size() > topPieCount) {
+            attributeValueList = attributeValueList.subList(0, topPieCount);
+        }
         int frequencies = 0;
         for (DataProfileAttributeValueWeb attributeValueWeb : attributeValueList) {
             // Info.display("Information", ""+attributeValueWeb.getAttributeValue());
@@ -616,13 +602,16 @@ public class DataProfileView extends View
         }
         if (frequencies != 0) {
             if (currentAttribute.getNullCount() != null && currentAttribute.getNullCount() > 0) {
+
                 pie.addSlices(new PieChart.Slice(currentAttribute.getNullCount(), "Null", "Null"));
                 if (currentAttribute.getRowCount() - frequencies - currentAttribute.getNullCount() > 0) {
                     pie.addSlices(new PieChart.Slice(currentAttribute.getRowCount() - frequencies
                             - currentAttribute.getNullCount(), "Other", "Other"));
                 }
             } else {
-                pie.addSlices(new PieChart.Slice(currentAttribute.getRowCount() - frequencies, "Other", "Other"));
+                if (currentAttribute.getRowCount() > frequencies) {
+                    pie.addSlices(new PieChart.Slice(currentAttribute.getRowCount() - frequencies, "Other", "Other"));
+                }
             }
 
         } else {
@@ -710,7 +699,7 @@ public class DataProfileView extends View
         int step = 10;
 
         // set the maximum, minimum and the step value for the Y axis
-        ya.setRange(0, ((attribute.getAverageLength() != null) ? attribute.getAverageLength() : 0) + step / 2, step);
+        ya.setRange(0, ((attribute.getMaximumLength() != null) ? attribute.getMaximumLength() : 0) + step / 2, step);
         cm.setYAxis(ya);
 
         // create a Bar Chart object and add bars to the object
@@ -771,16 +760,16 @@ public class DataProfileView extends View
         container.layout();
     }
 
-    private void initUI() {
+    private void initUI(Integer dataProfileId) {
         long time = new java.util.Date().getTime();
         GWT.log("Initializing the UI ", null);
 
-        controller.handleEvent(new AppEvent(AppEvents.DataProfileAttributeRequest));
+        controller.handleEvent(new AppEvent(AppEvents.DataProfileAttributeRequest, dataProfileId));
 
         // container = new LayoutContainer();
         container = new ContentPanel();
         container.setLayout(new BorderLayout());
-        container.setHeading("Data Profiles");
+        container.setHeading("Data Profile");
 
         gridContainer = new LayoutContainer();
         gridContainer.setBorders(false);

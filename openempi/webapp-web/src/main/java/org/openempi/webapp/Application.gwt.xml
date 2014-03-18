@@ -94,8 +94,6 @@
 		class="org.openempi.webapp.server.ConfigurationDataServiceImpl" />
 	<servlet path="/eventNotificationService"
 		class="org.openempi.webapp.server.EventNotificationServiceImpl" />
-	<servlet path="/fileLoaderDataService"
-		class="org.openempi.webapp.server.FileLoaderDataServiceImpl" />
 	<servlet path="/identifierDomainDataService"
 		class="org.openempi.webapp.server.IdentifierDomainDataServiceImpl" />
 	<servlet path="/userFileDataService"

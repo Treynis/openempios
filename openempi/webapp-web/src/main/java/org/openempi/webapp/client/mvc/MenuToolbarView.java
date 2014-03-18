@@ -32,6 +32,7 @@ import org.openhie.openempi.model.Permission;
 import com.extjs.gxt.ui.client.Registry;
 import com.extjs.gxt.ui.client.Style.Orientation;
 import com.extjs.gxt.ui.client.event.ButtonEvent;
+import com.extjs.gxt.ui.client.event.Events;
 import com.extjs.gxt.ui.client.event.Listener;
 import com.extjs.gxt.ui.client.event.MenuEvent;
 import com.extjs.gxt.ui.client.event.MessageBoxEvent;
@@ -56,6 +57,7 @@ import com.extjs.gxt.ui.client.widget.layout.HBoxLayoutData;
 import com.extjs.gxt.ui.client.widget.layout.RowLayout;
 import com.extjs.gxt.ui.client.widget.layout.BoxLayout.BoxLayoutPack;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayout.HBoxLayoutAlign;
+import com.extjs.gxt.ui.client.widget.menu.CheckMenuItem;
 import com.extjs.gxt.ui.client.widget.menu.Menu;
 import com.extjs.gxt.ui.client.widget.menu.MenuBar;
 import com.extjs.gxt.ui.client.widget.menu.MenuBarItem;
@@ -70,6 +72,11 @@ public class MenuToolbarView extends View
 {
     private LayoutContainer container;
     private Dialog aboutDialog = null;
+
+    private Menu blockingMenu;
+    private Menu matchingMenu;
+    private MenuItem menuItemBlocking;
+    private MenuItem menuItemMatching;
 
     public MenuToolbarView(Controller controller) {
         super(controller);
@@ -92,7 +99,7 @@ public class MenuToolbarView extends View
         container.setLayout(rowLayout);
 
         // File menu
-        Menu fileList = new Menu();
+        Menu fileListMenu = new Menu();
         MenuItem menuItemFileList = new MenuItem("File List", IconHelper.create("images/folder_explore.png"),
                 new SelectionListener<MenuEvent>()
                 {
@@ -101,12 +108,31 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.FileListView);
                     }
                 });
-        fileList.add(menuItemFileList);
-        MenuBarItem files = new MenuBarItem("File", fileList);
+        fileListMenu.add(menuItemFileList);
+        MenuBarItem fileItem = new MenuBarItem("File", fileListMenu);
+
 
         // Edit menu
-        Menu edit = new Menu();
-        MenuItem menuItemAdd = new MenuItem("Add Entity", IconHelper.create("images/entity_add.png"),
+        Menu editMenu = new Menu();
+        MenuItem menuItemEntityModelDesign = new MenuItem("Edit Entity Model", IconHelper.create("images/entity.png"),
+                new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        Dispatcher.get().dispatch(AppEvents.EntityAttributeView);
+                    }
+                });
+        editMenu.add(menuItemEntityModelDesign);
+        MenuItem menuItemIdentifierDomains = new MenuItem("Edit Identifier Domains",
+                IconHelper.create("images/key.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        Dispatcher.get().dispatch(AppEvents.ManageIdentifierDomainView);
+                    }
+                });
+        editMenu.add(menuItemIdentifierDomains);
+        MenuItem menuItemAdd = new MenuItem("Add Record", IconHelper.create("images/add.png"),
                 new SelectionListener<MenuEvent>()
                 {
                     @Override
@@ -114,9 +140,9 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.EntityAddView);
                     }
                 });
-        edit.add(menuItemAdd);
+        editMenu.add(menuItemAdd);
 
-        MenuItem menuItemProfile = new MenuItem("Profile", IconHelper.create("images/user_profile.png"),
+        MenuItem menuItemProfile = new MenuItem("Edit Profile", IconHelper.create("images/user_profile.png"),
                 new SelectionListener<MenuEvent>()
                 {
                     @Override
@@ -124,12 +150,22 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.ProfileView);
                     }
                 });
-        edit.add(menuItemProfile);
-        MenuBarItem editItem = new MenuBarItem("Edit", edit);
+        editMenu.add(menuItemProfile);
+        MenuBarItem editItem = new MenuBarItem("Edit", editMenu);
+
 
         // Search menu
-        Menu searchSubmenu = new Menu();
-        MenuItem menuItemSearchEntity = new MenuItem("Entity Search", IconHelper.create("images/search_adv_16x16.png"),
+        Menu searchMenu = new Menu();
+        MenuItem menuItemFieldSearchEntity = new MenuItem("Fixed Search", IconHelper.create("images/search_icon_16x16.png"), 
+                new SelectionListener<MenuEvent>() 
+                {
+                  @Override
+                  public void componentSelected(MenuEvent ce) {
+                      Dispatcher.get().dispatch(AppEvents.EntityFixedSearchView);// EntityFieldSearchView
+                  }
+                });
+        searchMenu.add(menuItemFieldSearchEntity);
+        MenuItem menuItemSearchEntity = new MenuItem("Search", IconHelper.create("images/search_adv_16x16.png"),
                 new SelectionListener<MenuEvent>()
                 {
                     @Override
@@ -137,12 +173,13 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.EntitySearchView);
                     }
                 });
-        searchSubmenu.add(menuItemSearchEntity);
-        MenuBarItem search = new MenuBarItem("Search", searchSubmenu);
+        searchMenu.add(menuItemSearchEntity);
+        MenuBarItem searchItem = new MenuBarItem("Search", searchMenu);
 
-        // Admin menu
-        Menu configMenuOptions = new Menu();
-        MenuItem menuItemCustomFields = new MenuItem("Custom Fields Configuration",
+
+        // Custom Field menu
+        Menu customFieldMenu = new Menu();
+        MenuItem menuItemCustomFields = new MenuItem("Configure Fields",
                 IconHelper.create("images/folder_edit.png"), new SelectionListener<MenuEvent>()
                 {
                     @Override
@@ -150,12 +187,40 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.CustomFieldsConfigurationView);
                     }
                 });
-        configMenuOptions.add(menuItemCustomFields);
+        customFieldMenu.add(menuItemCustomFields);
 
+        MenuItem menuItemInitializeCustomConfiguration = new MenuItem("Regenerate Fields",
+                IconHelper.create("images/application_view_list.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        MessageBox
+                                .confirm(
+                                        "Confirm",
+                                        "The regenerate fields operation cannot be undone. Are you sure you want to regenerate fields?",
+                                        listenRegenerateFields);
+                        // Dispatcher.get().dispatch(AppEvents.InitializeCustomConfiguration);
+                    }
+                });
+        customFieldMenu.add(menuItemInitializeCustomConfiguration);
+        MenuBarItem customFieldItem = new MenuBarItem("Custom Fields", customFieldMenu);
+
+        // Blocking menu
         // Check Blocking Algorithm Name
-        MenuItem menuItemBlocking = null;
-        if (systemInfo != null && systemInfo.getBlockingAlgorithmName().contains("Traditional Blocking Algorithm")) {
-            menuItemBlocking = new MenuItem("Traditional Blocking Configuration",
+        blockingMenu = new Menu();
+        menuItemBlocking = null;
+        if (systemInfo != null && systemInfo.getBlockingAlgorithmName().contains("Traditional Blocking Algorithm (High Performance)")) {
+            menuItemBlocking = new MenuItem("Blocking Configuration", // "Traditional Blocking High Performance",
+                    IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
+                    {
+                        @Override
+                        public void componentSelected(MenuEvent ce) {
+                            Dispatcher.get().dispatch(AppEvents.BlockingHPConfigurationView);
+                        }
+                    });
+            blockingMenu.add(menuItemBlocking);
+        } else if (systemInfo != null && systemInfo.getBlockingAlgorithmName().contains("Traditional Blocking Algorithm")) {
+            menuItemBlocking = new MenuItem("Blocking Configuration", // "Traditional Blocking Configuration",
                     IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
                     {
                         @Override
@@ -163,10 +228,10 @@ public class MenuToolbarView extends View
                             Dispatcher.get().dispatch(AppEvents.BlockingConfigurationView);
                         }
                     });
-            configMenuOptions.add(menuItemBlocking);
+            blockingMenu.add(menuItemBlocking);
         } else if (systemInfo != null
                 && systemInfo.getBlockingAlgorithmName().contains("Sorted Neighborhood Blocking Algorithm")) {
-            menuItemBlocking = new MenuItem("Sorted Neighborhood Blocking Configuration",
+            menuItemBlocking = new MenuItem("Blocking Configuration", // "Sorted Neighborhood Blocking",
                     IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
                     {
                         @Override
@@ -174,10 +239,10 @@ public class MenuToolbarView extends View
                             Dispatcher.get().dispatch(AppEvents.SortedNeighborhoodBlockingConfigurationView);
                         }
                     });
-            configMenuOptions.add(menuItemBlocking);
+            blockingMenu.add(menuItemBlocking);
         } else if (systemInfo != null
                 && systemInfo.getBlockingAlgorithmName().contains("Suffix Array Blocking Algorithm")) {
-            menuItemBlocking = new MenuItem("Suffix Array Blocking Configuration",
+            menuItemBlocking = new MenuItem("Blocking Configuration", // "Suffix Array Blocking",
                     IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
                     {
                         @Override
@@ -185,13 +250,31 @@ public class MenuToolbarView extends View
                             Dispatcher.get().dispatch(AppEvents.SuffixArrayBlockingConfigurationView);
                         }
                     });
-            configMenuOptions.add(menuItemBlocking);
+            blockingMenu.add(menuItemBlocking);
         }
 
-        // Check Matching Algorithm Name
-        MenuItem menuItemMatching = null;
+        MenuItem menuItemRebuildBlockingIndex = new MenuItem("Rebuild Indexes",
+                IconHelper.create("images/rebuild.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        MessageBox
+                                .confirm(
+                                        "Confirm",
+                                        "The rebuild indexes operation cannot be undone. Are you sure you want to rebuild indexes?",
+                                        listenRebuildBlockingIndex);
+                        // Dispatcher.get().dispatch(AppEvents.RebuildBlockingIndex);
+                    }
+                });
+        blockingMenu.add(menuItemRebuildBlockingIndex);
+        MenuBarItem blockingItem = new MenuBarItem("Blocking", blockingMenu);
+
+
+        // Matching menu
+        matchingMenu = new Menu();
+        menuItemMatching = null;
         if (systemInfo != null && systemInfo.getMatchingAlgorithmName().contains("Deterministic Matching Algorithm")) {
-            menuItemMatching = new MenuItem("Deterministic Matching Configuration",
+            menuItemMatching = new MenuItem("Matching Configuration", // "Deterministic Matching Configuration",
                     IconHelper.create("images/wrench_orange.png"), new SelectionListener<MenuEvent>()
                     {
                         @Override
@@ -199,10 +282,10 @@ public class MenuToolbarView extends View
                             Dispatcher.get().dispatch(AppEvents.DeterministicMatchConfigurationView);
                         }
                     });
-            configMenuOptions.add(menuItemMatching);
+            matchingMenu.add(menuItemMatching);
         } else if (systemInfo != null
                 && systemInfo.getMatchingAlgorithmName().contains("Probabilistic Matching Algorithm")) {
-            menuItemMatching = new MenuItem("Probabilistic Matching Configuration",
+            menuItemMatching = new MenuItem("Matching Configuration", // "Probabilistic Matching Configuration",
                     IconHelper.create("images/wrench_orange.png"), new SelectionListener<MenuEvent>()
                     {
                         @Override
@@ -210,10 +293,40 @@ public class MenuToolbarView extends View
                             Dispatcher.get().dispatch(AppEvents.MatchConfigurationView);
                         }
                     });
-            configMenuOptions.add(menuItemMatching);
+            matchingMenu.add(menuItemMatching);
         }
 
-        MenuItem menuItemReviewLinks = new MenuItem("Review Entity Links", IconHelper.create("images/entity_link.png"),
+        MenuItem menuItemInitializeRepository = new MenuItem("Initialize Links",
+                IconHelper.create("images/wrench.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        MessageBox
+                                .confirm(
+                                        "Confirm",
+                                        "The initialize links operation cannot be undone. Are you sure you want to initialize links from the beginning using the underlying matching algorithm?",
+                                        listenInitializeLinks);
+                        // Dispatcher.get().dispatch(AppEvents.InitializeRepository);
+                    }
+                });
+        matchingMenu.add(menuItemInitializeRepository);
+
+        MenuItem menuItemLinkAllRecord = new MenuItem("Regenerate Links",
+                IconHelper.create("images/world_link.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        MessageBox
+                                .confirm(
+                                        "Confirm",
+                                        "The regenerate links operation cannot be undone. Are you sure you want to regenerate links from the beginning using the underlying matching algorithm?",
+                                        listenRegenerateLinks);
+                        // Dispatcher.get().dispatch(AppEvents.LinkAllRecordPairs);
+                    }
+                });
+        matchingMenu.add(menuItemLinkAllRecord);
+
+        MenuItem menuItemReviewLinks = new MenuItem("Review Links", IconHelper.create("images/layout_link.png"),
                 new SelectionListener<MenuEvent>()
                 {
                     @Override
@@ -221,8 +334,12 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.EntityLinkView);
                     }
                 });
-        configMenuOptions.add(menuItemReviewLinks);
+        matchingMenu.add(menuItemReviewLinks);
+        MenuBarItem matchingItem = new MenuBarItem("Matching", matchingMenu); 
 
+
+        // Admin menu
+        Menu adminMenu = new Menu();
         MenuItem menuItemEventNotification = new MenuItem("Event Notification",
                 IconHelper.create("images/email_open_image.png"), new SelectionListener<MenuEvent>()
                 {
@@ -231,49 +348,19 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.EventNotificationView);
                     }
                 });
-        configMenuOptions.add(menuItemEventNotification);
+        adminMenu.add(menuItemEventNotification);
 
-        MenuItem menuItemManageIdentifier = new MenuItem("Manage Identifier Domains",
-                IconHelper.create("images/key.png"), new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.ManageIdentifierDomainView);
-                    }
-                });
-        configMenuOptions.add(menuItemManageIdentifier);
-/*
-        MenuItem menuItemManageReport = new MenuItem("Manage Report Design", IconHelper.create("images/report.png"),
+        MenuItem menuItemDataProfile = new MenuItem("Data Profile Viewer", IconHelper.create("images/script.png"),
                 new SelectionListener<MenuEvent>()
                 {
                     @Override
                     public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.ReportDesignView);
+                        Dispatcher.get().dispatch(AppEvents.DataProfileListView);
                     }
                 });
-        configMenuOptions.add(menuItemManageReport);
+        adminMenu.add(menuItemDataProfile);
 
-        MenuItem menuItemReportGenerate = new MenuItem("Report Generate", IconHelper.create("images/report.png"),
-                new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.ReportGenerateView);
-                    }
-                });
-        configMenuOptions.add(menuItemReportGenerate);
-*/
-        MenuItem menuItemDataProfile = new MenuItem("Data Profile", IconHelper.create("images/script.png"),
-                new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.DataProfileView);
-                    }
-                });
-        configMenuOptions.add(menuItemDataProfile);
-
-        MenuItem menuItemEventViewer = new MenuItem("Entity Event Viewer",
+        MenuItem menuItemEventViewer = new MenuItem("Event Viewer",
                 IconHelper.create("images/search_icon_16x16.png"), new SelectionListener<MenuEvent>()
                 {
                     @Override
@@ -281,30 +368,7 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.AuditEventEntryView);
                     }
                 });
-        configMenuOptions.add(menuItemEventViewer);
-
-        MenuItem menuItemStartPIXPDQ = new MenuItem("Start PIX/PDQ Server", IconHelper.create("images/clock_play.png"),
-                new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.AdminStartPixPdqServer);
-                    }
-                });
-        configMenuOptions.add(menuItemStartPIXPDQ);
-
-        MenuItem menuItemStopPIXPDQ = new MenuItem("Stop PIX/PDQ Server", IconHelper.create("images/clock_stop.png"),
-                new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.AdminStopPixPdqServer);
-                    }
-                });
-        configMenuOptions.add(menuItemStopPIXPDQ);
-
-        // Admin-Advanced Sub-menu
-        Menu advancedSubmenu = new Menu();
+        adminMenu.add(menuItemEventViewer);
 
         MenuItem menuItemGlobalIdentifiers = new MenuItem("Assign Global Identifiers",
                 IconHelper.create("images/computer.png"), new SelectionListener<MenuEvent>()
@@ -314,75 +378,62 @@ public class MenuToolbarView extends View
                         Dispatcher.get().dispatch(AppEvents.AssignGlobalIdentifier);
                     }
                 });
-        advancedSubmenu.add(menuItemGlobalIdentifiers);
+        adminMenu.add(menuItemGlobalIdentifiers);
 
-        MenuItem menuItemInitializeRepository = new MenuItem("Initialize Repository",
-                IconHelper.create("images/wrench.png"), new SelectionListener<MenuEvent>()
+        MenuItem menuItemStartPIXPDQ = new MenuItem("Start PIX/PDQ Server", IconHelper.create("images/clock_play.png"),
+                new SelectionListener<MenuEvent>()
                 {
                     @Override
                     public void componentSelected(MenuEvent ce) {
-                        MessageBox
-                                .confirm(
-                                        "Confirm",
-                                        "The initialize repository operation cannot be undone. Are you sure you want to initialize repository from the beginning using the underlying matching algorithm?",
-                                        listenInitiailRepository);
-                        // Dispatcher.get().dispatch(AppEvents.InitializeRepository);
+                        Dispatcher.get().dispatch(AppEvents.AdminStartPixPdqServer);
                     }
                 });
-        advancedSubmenu.add(menuItemInitializeRepository);
+        adminMenu.add(menuItemStartPIXPDQ);
 
-        MenuItem menuItemLinkAllRecord = new MenuItem("Link all Record Pairs",
-                IconHelper.create("images/world_link.png"), new SelectionListener<MenuEvent>()
+        MenuItem menuItemStopPIXPDQ = new MenuItem("Stop PIX/PDQ Server", IconHelper.create("images/clock_stop.png"),
+                new SelectionListener<MenuEvent>()
                 {
                     @Override
                     public void componentSelected(MenuEvent ce) {
-                        MessageBox
-                                .confirm(
-                                        "Confirm",
-                                        "The link all record pairs operation cannot be undone. Are you sure you want to link all record pairs from the beginning using the underlying matching algorithm?",
-                                        listenLinkAllRecordPairs);
-                        // Dispatcher.get().dispatch(AppEvents.LinkAllRecordPairs);
+                        Dispatcher.get().dispatch(AppEvents.AdminStopPixPdqServer);
                     }
                 });
-        advancedSubmenu.add(menuItemLinkAllRecord);
+        adminMenu.add(menuItemStopPIXPDQ);
 
-        MenuItem menuItemInitializeCustomConfiguration = new MenuItem("Initialize Custom Configuration",
-                IconHelper.create("images/application_view_list.png"), new SelectionListener<MenuEvent>()
+        MenuItem menuItemJobQueue = new MenuItem("Job Queue Entries",
+                IconHelper.create("images/pictures.png"), new SelectionListener<MenuEvent>()
                 {
                     @Override
                     public void componentSelected(MenuEvent ce) {
-                        MessageBox
-                                .confirm(
-                                        "Confirm",
-                                        "The initialize custom configuration operation cannot be undone. Are you sure you want to initialize custom configuration?",
-                                        listenInitiailCustomConfiguration);
-                        // Dispatcher.get().dispatch(AppEvents.InitializeCustomConfiguration);
+                        Dispatcher.get().dispatch(AppEvents.JobQueueView);
                     }
                 });
-        advancedSubmenu.add(menuItemInitializeCustomConfiguration);
+        adminMenu.add(menuItemJobQueue);
+        
+        CheckMenuItem menuItemInfoPanel = new CheckMenuItem("Information Panel");
+        Listener<MenuEvent> menuListener = new Listener<MenuEvent>() {
+            public void handleEvent(MenuEvent be) {
+              if (be.getType() == Events.CheckChange) {
+                  if (be.isChecked()) {
+                      // Info.display("Info Panel: ", "checked");
+                      LayoutContainer wrapper = (LayoutContainer) Registry.get(Constants.SOUTH_PANEL);
+                      wrapper.setVisible(true);
 
-        MenuItem menuItemRebuildBlockingIndex = new MenuItem("Rebuild Blocking Indexes",
-                IconHelper.create("images/rebuild.png"), new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        MessageBox
-                                .confirm(
-                                        "Confirm",
-                                        "The rebuild blocking indexes operation cannot be undone. Are you sure you want to rebuild blocking indexes?",
-                                        listenRebuildBlockingIndex);
-                        // Dispatcher.get().dispatch(AppEvents.RebuildBlockingIndex);
-                    }
-                });
-        advancedSubmenu.add(menuItemRebuildBlockingIndex);
+                      Dispatcher.get().dispatch(AppEvents.InformationPanelView);
 
-        MenuItem advancedMenuItem = new MenuItem("Advanced");
-        advancedMenuItem.setIcon(IconHelper.create("images/menu.png"));
-        advancedMenuItem.setSubMenu(advancedSubmenu);
+                  } else {
+                      // Info.display("Info Panel: ", "unchecked");
+                      LayoutContainer wrapper = (LayoutContainer) Registry.get(Constants.SOUTH_PANEL);
+                      wrapper.setVisible(false);
+                  }
+              }
+            }
+          };
+        menuItemInfoPanel.addListener(Events.CheckChange, menuListener);
+        adminMenu.add(menuItemInfoPanel);
+        MenuBarItem adminItem = new MenuBarItem("Admin", adminMenu);
 
-        configMenuOptions.add(advancedMenuItem);
 
-        MenuBarItem adminItem = new MenuBarItem("Admin", configMenuOptions);
 
         // Security menu
         Menu security = new Menu();
@@ -407,28 +458,6 @@ public class MenuToolbarView extends View
         security.add(menuItemManageRoles);
         MenuBarItem securityItem = new MenuBarItem("Security", security);
 
-        // Entity menu
-        Menu entity = new Menu();
-        MenuItem entityAttributeItem = new MenuItem("Entity Model Design", IconHelper.create("images/entity.png"),
-                new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.EntityAttributeView);
-                    }
-                });
-        entity.add(entityAttributeItem);
-
-        MenuItem keyValueSetItem = new MenuItem("Key Value Sets", IconHelper.create("images/key.png"),
-                new SelectionListener<MenuEvent>()
-                {
-                    @Override
-                    public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.KeyValueSetView);
-                    }
-                });
-        entity.add(keyValueSetItem);
-        MenuBarItem entityItem = new MenuBarItem("Entity", entity);
 
         // Help menu
         Menu help = new Menu();
@@ -449,13 +478,14 @@ public class MenuToolbarView extends View
 
         MenuBar bar = new MenuBar();
         bar.setBorders(true);
-        bar.add(files);
+        bar.add(fileItem);
         bar.add(editItem);
-        // bar.setStyleAttribute("borderTop", "none");
-        bar.add(search);
+        bar.add(searchItem);
+        bar.add(customFieldItem);
+        bar.add(blockingItem);
+        bar.add(matchingItem);
         bar.add(adminItem);
         bar.add(securityItem);
-        bar.add(entityItem);
         bar.add(helpItem);
 
         container.add(bar); // , new MarginData(5,0,0,0));
@@ -476,11 +506,60 @@ public class MenuToolbarView extends View
             }
         });
         toolbar.add(buttonFileList);
-
         toolbar.add(new SeparatorToolItem());
 
+        Button buttonEditEntityModel = new Button();
+        buttonEditEntityModel.setToolTip("Edit Entity Model");
+        buttonEditEntityModel.setIcon(IconHelper.create("images/entity.png"));
+        buttonEditEntityModel.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.EntityAttributeView);
+            }
+        });
+        toolbar.add(buttonEditEntityModel);
+
+        Button buttonEditIdentifierDomains = new Button();
+        buttonEditIdentifierDomains.setToolTip("Edit Identifier Domains");
+        buttonEditIdentifierDomains.setIcon(IconHelper.create("images/key.png"));
+        buttonEditIdentifierDomains.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.ManageIdentifierDomainView);
+            }
+        });
+        toolbar.add(buttonEditIdentifierDomains);
+
+        Button buttonAddRecord = new Button();
+        buttonAddRecord.setToolTip("Add Record");
+        buttonAddRecord.setIcon(IconHelper.create("images/add.png"));
+        buttonAddRecord.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.EntityAddView);
+            }
+        });
+        toolbar.add(buttonAddRecord);
+        toolbar.add(new SeparatorToolItem());
+        
+        Button buttonEntityFieldSearch = new Button();
+        buttonEntityFieldSearch.setToolTip("Fixed Search");
+        buttonEntityFieldSearch.setIcon(IconHelper.create("images/search_icon_16x16.png"));
+        buttonEntityFieldSearch.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.EntityFixedSearchView);
+            }
+        });
+        toolbar.add(buttonEntityFieldSearch);
+        toolbar.add(new SeparatorToolItem());
+        
         Button buttonEntitySearch = new Button();
-        buttonEntitySearch.setToolTip("Enttity Search");
+        buttonEntitySearch.setToolTip("Search");
         buttonEntitySearch.setIcon(IconHelper.create("images/search_adv_16x16.png"));
         buttonEntitySearch.addSelectionListener(new SelectionListener<ButtonEvent>()
         {
@@ -490,21 +569,6 @@ public class MenuToolbarView extends View
             }
         });
         toolbar.add(buttonEntitySearch);
-
-        toolbar.add(new SeparatorToolItem());
-
-        Button buttonAddEntity = new Button();
-        buttonAddEntity.setToolTip("Add Entity");
-        buttonAddEntity.setIcon(IconHelper.create("images/add.png"));
-        buttonAddEntity.addSelectionListener(new SelectionListener<ButtonEvent>()
-        {
-            @Override
-            public void componentSelected(ButtonEvent ce) {
-                Dispatcher.get().dispatch(AppEvents.EntityAddView);
-            }
-        });
-        toolbar.add(buttonAddEntity);
-
         toolbar.add(new SeparatorToolItem());
 
         Button buttonReviewLinks = new Button();
@@ -518,11 +582,10 @@ public class MenuToolbarView extends View
             }
         });
         toolbar.add(buttonReviewLinks);
-
         toolbar.add(new SeparatorToolItem());
 
         Button buttonEventNotifications = new Button();
-        buttonEventNotifications.setToolTip("Event Notifications");
+        buttonEventNotifications.setToolTip("Event Notification");
         buttonEventNotifications.setIcon(IconHelper.create("images/email_open_image.png"));
         buttonEventNotifications.addSelectionListener(new SelectionListener<ButtonEvent>()
         {
@@ -533,6 +596,57 @@ public class MenuToolbarView extends View
             }
         });
         toolbar.add(buttonEventNotifications);
+
+        Button buttonDataProfileViewer = new Button();
+        buttonDataProfileViewer.setToolTip("Data Profile Viewer");
+        buttonDataProfileViewer.setIcon(IconHelper.create("images/script.png"));
+        buttonDataProfileViewer.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.DataProfileListView);
+            }
+        });
+        toolbar.add(buttonDataProfileViewer);
+        toolbar.add(new SeparatorToolItem());
+
+        Button buttonManageUsers = new Button();
+        buttonManageUsers.setToolTip("Manage Users");
+        buttonManageUsers.setIcon(IconHelper.create("images/user_group.png"));
+        buttonManageUsers.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.ManageUserView);
+            }
+        });
+        toolbar.add(buttonManageUsers);
+
+        Button buttonManageRoles = new Button();
+        buttonManageRoles.setToolTip("Manage Roles");
+        buttonManageRoles.setIcon(IconHelper.create("images/user_role.png"));
+        buttonManageRoles.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                Dispatcher.get().dispatch(AppEvents.ManageRoleView);
+            }
+        });
+        toolbar.add(buttonManageRoles);
+        toolbar.add(new SeparatorToolItem());
+
+        Button buttonAbout = new Button();
+        buttonAbout.setToolTip("About OpenEMPI");
+        buttonAbout.setIcon(IconHelper.create("images/help.png"));
+        buttonAbout.addSelectionListener(new SelectionListener<ButtonEvent>()
+        {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                buildAboutDialog();
+                aboutDialog.show();
+            }
+        });
+        toolbar.add(buttonAbout);
 
         // button.setIcon(Examples.ICONS.menu_show());
         toolbar.add(new FillToolItem());
@@ -560,13 +674,15 @@ public class MenuToolbarView extends View
 
             permission = permissions.get(Permission.RECORD_VIEW);
             if (permission == null) {
+                buttonEntityFieldSearch.disable();
+                menuItemFieldSearchEntity.disable();
                 buttonEntitySearch.disable();
                 menuItemSearchEntity.disable();
             }
 
             permission = permissions.get(Permission.RECORD_ADD);
             if (permission == null) {
-                buttonAddEntity.disable();
+                buttonAddRecord.disable();
                 menuItemAdd.disable();
             }
 
@@ -575,17 +691,6 @@ public class MenuToolbarView extends View
                 buttonReviewLinks.disable();
                 menuItemReviewLinks.disable();
             }
-
-            // Disable Report menu option
-//            permission = permissions.get(Permission.REPORT_GENERATE);
-//            if (permission == null) {
-////                menuItemManageReport.disable();
-//            }
-
-//            permission = permissions.get(Permission.REPORT_VIEW);
-//            if (permission == null) {
-////                menuItemReportGenerate.disable();
-//            }
 
             permission = permissions.get(Permission.CUSTOM_FIELDS_CONFIGURE);
             if (permission == null) {
@@ -602,11 +707,6 @@ public class MenuToolbarView extends View
                 menuItemMatching.disable();
             }
 
-            // Protect the Advanced Menu Entry with permissions BLOCKING_CONFIGURATION and MATCHING_CONFIGURATION
-            if (blockingPermission == null || machingPermission == null) {
-                advancedSubmenu.disable();
-            }
-
             /*
              * permission = permissions.get(Permission.GLOBAL_IDENTIFIERS_EDIT); if (permission == null) {
              * menuItemGlobalIdentifiers.disable(); }
@@ -620,7 +720,8 @@ public class MenuToolbarView extends View
 
             permission = permissions.get(Permission.IDENTIFIER_DOMAIN_VIEW);
             if (permission == null) {
-                menuItemManageIdentifier.disable();
+                buttonEditIdentifierDomains.disable();
+                menuItemIdentifierDomains.disable();
             }
 
             permission = permissions.get(Permission.PIXPDQ_MANAGE);
@@ -633,6 +734,8 @@ public class MenuToolbarView extends View
             if (permission == null) {
                 menuItemProfile.disable();
 
+                buttonManageUsers.disable();
+                buttonManageRoles.disable();
                 menuItemManageUsers.disable();
                 menuItemManageRoles.disable();
             }
@@ -703,7 +806,7 @@ public class MenuToolbarView extends View
         aboutDialog.add(cp);
     }
 
-    final Listener<MessageBoxEvent> listenInitiailRepository = new Listener<MessageBoxEvent>()
+    final Listener<MessageBoxEvent> listenInitializeLinks = new Listener<MessageBoxEvent>()
     {
         public void handleEvent(MessageBoxEvent ce) {
             Button btn = ce.getButtonClicked();
@@ -714,7 +817,7 @@ public class MenuToolbarView extends View
         }
     };
 
-    final Listener<MessageBoxEvent> listenLinkAllRecordPairs = new Listener<MessageBoxEvent>()
+    final Listener<MessageBoxEvent> listenRegenerateLinks = new Listener<MessageBoxEvent>()
     {
         public void handleEvent(MessageBoxEvent ce) {
             Button btn = ce.getButtonClicked();
@@ -725,7 +828,7 @@ public class MenuToolbarView extends View
         }
     };
 
-    final Listener<MessageBoxEvent> listenInitiailCustomConfiguration = new Listener<MessageBoxEvent>()
+    final Listener<MessageBoxEvent> listenRegenerateFields = new Listener<MessageBoxEvent>()
     {
         public void handleEvent(MessageBoxEvent ce) {
             Button btn = ce.getButtonClicked();
@@ -751,6 +854,91 @@ public class MenuToolbarView extends View
     protected void handleEvent(AppEvent event) {
         if (event.getType() == AppEvents.InitMenu) {
             initUI();
+        } else if (event.getType() == AppEvents.UpdateConfigurationMenu) {
+
+            SystemConfigurationWeb systemInfo = (SystemConfigurationWeb) Registry.get(Constants.SYSTEM_CONFIGURATION_INFO);
+            // Info.display("Information",""+systemInfo.getBlockingAlgorithmName());
+            // Info.display("Information",""+systemInfo.getMatchingAlgorithmName());
+
+            // Blocking Algorithm
+            int index = 0;
+            if (menuItemBlocking != null) {
+                index = blockingMenu.indexOf(menuItemBlocking);
+                blockingMenu.remove(menuItemBlocking);
+            }
+            if (systemInfo != null && systemInfo.getBlockingAlgorithmName().contains("Traditional Blocking Algorithm (High Performance)")) {
+                menuItemBlocking = new MenuItem("Blocking Configuration",// "Traditional Blocking High Performance",
+                        IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
+                        {
+                            @Override
+                            public void componentSelected(MenuEvent ce) {
+                                Dispatcher.get().dispatch(AppEvents.BlockingHPConfigurationView);
+                            }
+                        });
+                blockingMenu.insert(menuItemBlocking, index);
+            } else if (systemInfo != null && systemInfo.getBlockingAlgorithmName().contains("Traditional Blocking Algorithm")) {
+                    menuItemBlocking = new MenuItem("Blocking Configuration",// "Traditional Blocking Configuration",
+                            IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
+                            {
+                                @Override
+                                public void componentSelected(MenuEvent ce) {
+                                    Dispatcher.get().dispatch(AppEvents.BlockingConfigurationView);
+                                }
+                            });
+                    blockingMenu.insert(menuItemBlocking, index);
+            } else if (systemInfo != null
+                    && systemInfo.getBlockingAlgorithmName().contains("Sorted Neighborhood Blocking Algorithm")) {
+                menuItemBlocking = new MenuItem("Blocking Configuration",// "Sorted Neighborhood Blocking",
+                        IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
+                        {
+                            @Override
+                            public void componentSelected(MenuEvent ce) {
+                                Dispatcher.get().dispatch(AppEvents.SortedNeighborhoodBlockingConfigurationView);
+                            }
+                        });
+                blockingMenu.insert(menuItemBlocking, index);
+            } else if (systemInfo != null
+                    && systemInfo.getBlockingAlgorithmName().contains("Suffix Array Blocking Algorithm")) {
+                menuItemBlocking = new MenuItem("Blocking Configuration",// "Suffix Array Blocking",
+                        IconHelper.create("images/bricks.png"), new SelectionListener<MenuEvent>()
+                        {
+                            @Override
+                            public void componentSelected(MenuEvent ce) {
+                                Dispatcher.get().dispatch(AppEvents.SuffixArrayBlockingConfigurationView);
+                            }
+                        });
+                blockingMenu.insert(menuItemBlocking, index);
+            }
+
+            // Matching Algorithm
+            index = 0;
+            if (menuItemMatching != null) {
+                index = matchingMenu.indexOf(menuItemMatching);
+                matchingMenu.remove(menuItemMatching);
+            }
+
+            if (systemInfo != null && systemInfo.getMatchingAlgorithmName().contains("Deterministic Matching Algorithm")) {
+                menuItemMatching = new MenuItem("Matching Configuration",// "Deterministic Matching Configuration",
+                        IconHelper.create("images/wrench_orange.png"), new SelectionListener<MenuEvent>()
+                        {
+                            @Override
+                            public void componentSelected(MenuEvent ce) {
+                                Dispatcher.get().dispatch(AppEvents.DeterministicMatchConfigurationView);
+                            }
+                        });
+                matchingMenu.insert(menuItemMatching, index);
+            } else if (systemInfo != null
+                    && systemInfo.getMatchingAlgorithmName().contains("Probabilistic Matching Algorithm")) {
+                menuItemMatching = new MenuItem("Matching Configuration",// "Probabilistic Matching Configuration",
+                        IconHelper.create("images/wrench_orange.png"), new SelectionListener<MenuEvent>()
+                        {
+                            @Override
+                            public void componentSelected(MenuEvent ce) {
+                                Dispatcher.get().dispatch(AppEvents.MatchConfigurationView);
+                            }
+                        });
+                matchingMenu.insert(menuItemMatching, index);
+            }
         }
     }
 }

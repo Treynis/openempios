@@ -34,8 +34,8 @@ import org.openempi.webapp.client.ConfigurationDataServiceAsync;
 import org.openempi.webapp.client.Constants;
 import org.openempi.webapp.client.domain.AuthenticationException;
 import org.openempi.webapp.client.model.EntityWeb;
-import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
-import org.openempi.webapp.client.model.MatchFieldWeb;
+import org.openempi.webapp.client.model.MatchRuleEntryListWeb;
+import org.openempi.webapp.client.model.MatchRuleWeb;
 import org.openempi.webapp.client.mvc.Controller;
 
 
@@ -43,7 +43,7 @@ public class DeterministicMatchConfigurationController extends Controller
 {
 	private DeterministicMatchConfigurationView matchConfigurationView;
 
-	public DeterministicMatchConfigurationController() {		
+	public DeterministicMatchConfigurationController() {
 		this.registerEventTypes(AppEvents.DeterministicMatchConfigurationReceived);
 		this.registerEventTypes(AppEvents.DeterministicMatchConfigurationRequest);
 		this.registerEventTypes(AppEvents.DeterministicMatchConfigurationSave);
@@ -69,19 +69,20 @@ public class DeterministicMatchConfigurationController extends Controller
 
 	private void saveMatchConfiguration(AppEvent event) {
 		ConfigurationDataServiceAsync configurationDataService = getConfigurationDataService();
-		ExactMatchingConfigurationWeb configuration = (ExactMatchingConfigurationWeb) event.getData();	
+		MatchRuleEntryListWeb configuration = (MatchRuleEntryListWeb) event.getData();
 	    EntityWeb currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
 	    if (currentEntity != null) {
 	        configuration.setEntityName(currentEntity.getName());
 	    }
+
 		configurationDataService.saveExactMatchingConfiguration(configuration, (new AsyncCallback<String>() {
 	      public void onFailure(Throwable caught) {
-	    	  
+
 				if (caught instanceof AuthenticationException) {
 					Dispatcher.get().dispatch(AppEvents.Logout);
 					return;
 				}
-		    	forwardToView(matchConfigurationView, AppEvents.Error, caught.getMessage());	 
+		    	forwardToView(matchConfigurationView, AppEvents.Error, caught.getMessage());
 	      }
 
 	      public void onSuccess(String message) {
@@ -93,9 +94,14 @@ public class DeterministicMatchConfigurationController extends Controller
 
 	private void requestMatchConfigurationData() {
 		ConfigurationDataServiceAsync configurationDataService = getConfigurationDataService();
-		configurationDataService.loadExactMatchingConfiguration(new AsyncCallback<ExactMatchingConfigurationWeb>() {
+        EntityWeb entity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+        String entityName = "";
+        if (entity != null) {
+            entityName = entity.getName();
+        }
+		configurationDataService.loadExactMatchingConfiguration(entityName, new AsyncCallback<MatchRuleEntryListWeb>() {
 	      public void onFailure(Throwable caught) {
-	    	  
+
 				if (caught instanceof AuthenticationException) {
 					Dispatcher.get().dispatch(AppEvents.Logout);
 					return;
@@ -103,11 +109,11 @@ public class DeterministicMatchConfigurationController extends Controller
 				Dispatcher.forwardEvent(AppEvents.Error, caught);
 	      }
 
-	      public void onSuccess(ExactMatchingConfigurationWeb result) {
-	    	  Log.debug("Received the exact matching configuration data: " + result);
-	    	  for (MatchFieldWeb field : result.getMatchFields()) {
+	      public void onSuccess(MatchRuleEntryListWeb result) {
+	    	  /* Log.debug("Received the exact matching configuration data: " + result);
+	    	  for (MatchRuleWeb field : result.getMatchRuleEntries()) {
 	    		  Log.debug("Match Field: " + field.getFieldName() + "," + field.getComparatorFunctionName() + "," + field.getMatchThreshold());
-	    	  }
+	    	  } */
 	        forwardToView(matchConfigurationView, AppEvents.DeterministicMatchConfigurationReceived, result);
 	      }
 	    });

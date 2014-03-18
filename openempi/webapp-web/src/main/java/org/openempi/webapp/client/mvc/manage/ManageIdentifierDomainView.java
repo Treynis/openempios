@@ -71,14 +71,15 @@ public class ManageIdentifierDomainView extends View
 {
 	private Grid<IdentifierDomainWeb> grid;
 	private ListStore<IdentifierDomainWeb> store = new ListStore<IdentifierDomainWeb>();
-	
+
 	private Dialog  addIdentifierDomainDialog = null;
 	private String  addEditDeleteMode = "ADD";
-	
+
+	private IdentifierDomainWeb globalIdentifierDomain;
 	private IdentifierDomainWeb editedIdentifierDomain;
 
-	private TextField<String> IdentifierName = new TextField<String>();
-	private TextField<String> IdentifierDescription = new TextField<String>();
+	private TextField<String> identifierName = new TextField<String>();
+	private TextField<String> identifierDescription = new TextField<String>();
 	private TextField<String> namespaceIdentifier = new TextField<String>();
 	private TextField<String> universalIdentifier = new TextField<String>();
 	private TextField<String> universalIdentifierType = new TextField<String>();
@@ -86,11 +87,11 @@ public class ManageIdentifierDomainView extends View
 	private Button addDomainButton;
 	private Button updateDomainButton;
 	private Button removeDomainButton;
-	
-	private Map<String,PermissionWeb> permissions = null;
-	
+
+	private Map<String, PermissionWeb> permissions = null;
+
 	private LayoutContainer container;
-	
+
 	@SuppressWarnings("unchecked")
 	public ManageIdentifierDomainView(Controller controller) {
 		super(controller);
@@ -101,96 +102,101 @@ public class ManageIdentifierDomainView extends View
 	protected void handleEvent(AppEvent event) {
 		if (event.getType() == AppEvents.ManageIdentifierDomainView) {
 			initUI();
-		}else if (event.getType() == AppEvents.Logout) {
-			
-			if( addIdentifierDomainDialog.isVisible() )
+		} else if (event.getType() == AppEvents.Logout) {
+
+			if (addIdentifierDomainDialog != null && addIdentifierDomainDialog.isVisible()) {
 				addIdentifierDomainDialog.close();
-			
+			}
+
   		    Dispatcher.get().dispatch(AppEvents.Logout);
-			
+
 		} else if (event.getType() == AppEvents.ManageIdentifierDomainReceived) {
-			
+
 			// Info.display("Information", "ManageIdentifierDomainReceived");
+
+            globalIdentifierDomain = Registry.get(Constants.GLOBAL_IDENTITY_DOMAIN);
+            // Info.display("Information", "Global Identifier Domain: " + globalIdentifierDomain.getIdentifierDomainName());
+
 			store.removeAll();
-				
-			List<IdentifierDomainWeb> identifierDomains = (List<IdentifierDomainWeb>) event.getData();					
+
+			List<IdentifierDomainWeb> identifierDomains = (List<IdentifierDomainWeb>) event.getData();
 			store.add(identifierDomains);
-			
+
 			grid.getSelectionModel().select(0, true);
 			grid.getSelectionModel().deselect(0);
-			
-		} else if (event.getType() == AppEvents.ManageIdentifierDomainAddComplete) {		
-			
-	        MessageBox.alert("Information", "A new Identifier Domain was successfully saved", null);  	 	 
-	        
-	        IdentifierDomainWeb newDomain = (IdentifierDomainWeb) event.getData();	
+
+		} else if (event.getType() == AppEvents.ManageIdentifierDomainAddComplete) {
+
+	        MessageBox.alert("Information", "A new Identifier Domain was successfully saved", null);
+
+	        IdentifierDomainWeb newDomain = (IdentifierDomainWeb) event.getData();
 	        // Info.display("Information", "New Domain ID: " + newDomain.getIdentifierDomainId());
-	       	store.add(newDomain);	 
-	       	
+	       	store.add(newDomain);
+
 			// controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainRequest));
-			List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);								
+			List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);
 			domainEntries.add(newDomain);
 			Registry.register(Constants.IDENTITY_DOMAINS, domainEntries);
-			
-		} else if (event.getType() == AppEvents.ManageIdentifierDomainUpdateComplete) {			
-			
-	       	store.remove(editedIdentifierDomain);	       	
-	        IdentifierDomainWeb updateDomain = (IdentifierDomainWeb) event.getData();	
-	       	store.add(updateDomain);	   
-	       	
+
+		} else if (event.getType() == AppEvents.ManageIdentifierDomainUpdateComplete) {
+
+	       	store.remove(editedIdentifierDomain);
+	        IdentifierDomainWeb updateDomain = (IdentifierDomainWeb) event.getData();
+	       	store.add(updateDomain);
+
 			//controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainRequest));
-			List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);		
-			domainEntries.remove(editedIdentifierDomain);			
+			List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);
+			domainEntries.remove(editedIdentifierDomain);
 			domainEntries.add(updateDomain);
 			Registry.register(Constants.IDENTITY_DOMAINS, domainEntries);
-			
+
 			// Basic search list
-			if( Registry.get(Constants.BASIC_SEARCH_LIST) != null ) {
+			if (Registry.get(Constants.BASIC_SEARCH_LIST) != null) {
 				List<PersonWeb> basicPersonList = Registry.get(Constants.BASIC_SEARCH_LIST);
-				// Info.display("Information", "basicPersonList: "+basicPersonList.size());	
-				
-				for (PersonWeb personWeb : basicPersonList ) {
-					for( PersonIdentifierWeb identifier : personWeb.getPersonIdentifiers() ) {
-						if( identifier.getIdentifierDomain().getIdentifierDomainId().intValue() == updateDomain.getIdentifierDomainId().intValue() ) {
+				// Info.display("Information", "basicPersonList: "+basicPersonList.size());
+
+				for (PersonWeb personWeb : basicPersonList) {
+					for (PersonIdentifierWeb identifier : personWeb.getPersonIdentifiers()) {
+						if (identifier.getIdentifierDomain().getIdentifierDomainId().intValue() == updateDomain.getIdentifierDomainId().intValue()) {
 							identifier.setIdentifierDomain(updateDomain);
-						}			
-					}		
-				}		
+						}
+					}
+				}
 			    Registry.register(Constants.BASIC_SEARCH_LIST, basicPersonList);
-			    
-			} 
+
+			}
 
 			// Advanced search list
-			if( Registry.get(Constants.ADVANCED_SEARCH_LIST) != null ) {
+			if (Registry.get(Constants.ADVANCED_SEARCH_LIST) != null) {
 				List<PersonWeb> advancedPersonList = Registry.get(Constants.ADVANCED_SEARCH_LIST);
-				// Info.display("Information", "basicPersonList: "+advancedPersonList.size());	
-				
-				for (PersonWeb personWeb : advancedPersonList ) {
-					for( PersonIdentifierWeb identifier : personWeb.getPersonIdentifiers() ) {
-						if( identifier.getIdentifierDomain().getIdentifierDomainId().intValue() == updateDomain.getIdentifierDomainId().intValue() ) {
+				// Info.display("Information", "basicPersonList: "+advancedPersonList.size());
+
+				for (PersonWeb personWeb : advancedPersonList) {
+					for (PersonIdentifierWeb identifier : personWeb.getPersonIdentifiers()) {
+						if (identifier.getIdentifierDomain().getIdentifierDomainId().intValue() == updateDomain.getIdentifierDomainId().intValue()) {
 							identifier.setIdentifierDomain(updateDomain);
-						}			
-					}		
-				}		
+						}
+					}
+				}
 			    Registry.register(Constants.ADVANCED_SEARCH_LIST, advancedPersonList);
-			    
-			} 
-			
-	        MessageBox.alert("Information", "The Identifier Domain was successfully updated", null); 
-	        
-		} else if (event.getType() == AppEvents.ManageIdentifierDomainDeleteComplete) {			
-			
-	        MessageBox.alert("Information", "The Identifier Domain was successfully deleted", null);  	  
+
+			}
+
+	        MessageBox.alert("Information", "The Identifier Domain was successfully updated", null);
+
+		} else if (event.getType() == AppEvents.ManageIdentifierDomainDeleteComplete) {
+
+	        MessageBox.alert("Information", "The Identifier Domain was successfully removed", null);
         	store.remove(editedIdentifierDomain);
-        	
+
 			// controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainRequest));
-			List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);								
+			List<IdentifierDomainWeb> domainEntries = Registry.get(Constants.IDENTITY_DOMAINS);
 			domainEntries.remove(editedIdentifierDomain);
-			Registry.register(Constants.IDENTITY_DOMAINS, domainEntries);	
-			
-		} else if (event.getType() == AppEvents.Error) {			
+			Registry.register(Constants.IDENTITY_DOMAINS, domainEntries);
+
+		} else if (event.getType() == AppEvents.Error) {
 			String message = event.getData();
-	        MessageBox.alert("Information", "Failure: " + message, null);  			
+	        MessageBox.alert("Information", "Failure: " + message, null);
 		}
 	}
 
@@ -198,34 +204,34 @@ public class ManageIdentifierDomainView extends View
 		long time = new java.util.Date().getTime();
 		GWT.log("Initializing the UI ", null);
 
-		permissions = Registry.get(Constants.LOGIN_USER_PERMISSIONS);   
-		
+		permissions = Registry.get(Constants.LOGIN_USER_PERMISSIONS);
+
 		controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainRequest));
-		
+
 		buildAddEditDeleteDomainDialog();
-		
+
 		container = new LayoutContainer();
 		container.setLayout(new CenterLayout());
-		
+
 		ColumnConfig nameColumn = new ColumnConfig("identifierDomainName", "Name", 110);
 		ColumnConfig descriptionColumn = new ColumnConfig("identifierDomainDescription", "Description", 120);
 		ColumnConfig namespaceIdentifierColumn = new ColumnConfig("namespaceIdentifier", "Namespace Identifier", 150);
 		ColumnConfig universalIdentifierColumn = new ColumnConfig("universalIdentifier", "Universal Identifier", 150);
 		ColumnConfig universalIdentifierTypeColumn = new ColumnConfig("universalIdentifierTypeCode", "Universal Identifier Type", 150);
-		
+
 		List<ColumnConfig> config = new ArrayList<ColumnConfig>();
 		config.add(nameColumn);
 		config.add(descriptionColumn);
 		config.add(namespaceIdentifierColumn);
 		config.add(universalIdentifierColumn);
-		config.add(universalIdentifierTypeColumn);		
+		config.add(universalIdentifierTypeColumn);
 		final ColumnModel cm = new ColumnModel(config);
 
 		grid = new Grid<IdentifierDomainWeb>(store, cm);
 		grid.setBorders(true);
 		grid.setAutoWidth(true);
-		grid.setStripeRows(true); 
-		grid.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);	
+		grid.setStripeRows(true);
+		grid.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 		grid.setHeight(320);
 
 		ContentPanel cp = new ContentPanel();
@@ -251,67 +257,77 @@ public class ManageIdentifierDomainView extends View
 					Button ok = addIdentifierDomainDialog.getButtonById("ok");
 					ok.setText("Add");
 					addIdentifierDomainDialog.show();
-					
+
 					readOnlyFields(false);
-					IdentifierName.clear();
-					IdentifierDescription.clear();
+					identifierName.clear();
+					identifierDescription.clear();
 					namespaceIdentifier.clear();
 					universalIdentifier.clear();
 					universalIdentifierType.clear();
 				}
 			});
-		
+
 		updateDomainButton =
 			new Button("Edit Identifier Domain", IconHelper.create("images/folder_edit.png"), new SelectionListener<ButtonEvent>() {
 		  		@Override
 		  		public void componentSelected(ButtonEvent ce) {
 		  			IdentifierDomainWeb editField = grid.getSelectionModel().getSelectedItem();
 					if (editField == null) {
-						Info.display("Information", "You must first select a field to be edited before pressing the \"Edit Field\" button.");
+						Info.display("Information", "You must first select a field to be edited before pressing the \"Edit Identifier Domain\" button.");
 						return;
 					}
+                    if (globalIdentifierDomain != null &&
+                        editField.getIdentifierDomainName().equals(globalIdentifierDomain.getIdentifierDomainName())) {
+                        MessageBox.alert("Information", "The identifier domain selected is Global Identifier Domain that cannot be edited", null);
+                        return;
+                    }
+
 					addEditDeleteMode = "EDIT";
 					addIdentifierDomainDialog.setHeading("Edit Identifier Domain");
 					Button ok = addIdentifierDomainDialog.getButtonById("ok");
 					ok.setText("Update");
 					addIdentifierDomainDialog.show();
-				
+
 					editedIdentifierDomain = editField;
-					
+
 					readOnlyFields(false);
-					IdentifierName.setValue(editField.getIdentifierDomainName());
-					IdentifierDescription.setValue(editField.getIdentifierDomainDescription());
+					identifierName.setValue(editField.getIdentifierDomainName());
+					identifierDescription.setValue(editField.getIdentifierDomainDescription());
 					namespaceIdentifier.setValue(editField.getNamespaceIdentifier());
 					universalIdentifier.setValue(editField.getUniversalIdentifier());
 					universalIdentifierType.setValue(editField.getUniversalIdentifierTypeCode());
-					
 		  		}
 		    });
-		
+
 		removeDomainButton =
-			new Button("Delete Identifier Domain", IconHelper.create("images/folder_delete.png"), new SelectionListener<ButtonEvent>() {
+			new Button("Remove Identifier Domain", IconHelper.create("images/folder_delete.png"), new SelectionListener<ButtonEvent>() {
 				@Override
 				public void componentSelected(ButtonEvent ce) {
 		  			IdentifierDomainWeb removeField = grid.getSelectionModel().getSelectedItem();
 					if (removeField == null) {
-						Info.display("Information", "You must first select a field to be deleted before pressing the \"Remove Round\" button.");
+						Info.display("Information", "You must first select a field to be removed before pressing the \"Remove Identifier Domain\" button.");
 						return;
 					}
+                    if (globalIdentifierDomain != null &&
+                        removeField.getIdentifierDomainName().equals(globalIdentifierDomain.getIdentifierDomainName())) {
+                        MessageBox.alert("Information", "The identifier domain selected is Global Identifier Domain that cannot be removed", null);
+                        return;
+                    }
+
 					addEditDeleteMode = "DELETE";
-					addIdentifierDomainDialog.setHeading("Delete Identifier Domain");
+					addIdentifierDomainDialog.setHeading("Remove Identifier Domain");
 					Button ok = addIdentifierDomainDialog.getButtonById("ok");
-					ok.setText("Delete");
-					addIdentifierDomainDialog.show();	
-					
+					ok.setText("Remove");
+					addIdentifierDomainDialog.show();
+
 					editedIdentifierDomain = removeField;
-					
+
 					readOnlyFields(true);
-					IdentifierName.setValue(removeField.getIdentifierDomainName());
-					IdentifierDescription.setValue(removeField.getIdentifierDomainDescription());
+					identifierName.setValue(removeField.getIdentifierDomainName());
+					identifierDescription.setValue(removeField.getIdentifierDomainDescription());
 					namespaceIdentifier.setValue(removeField.getNamespaceIdentifier());
 					universalIdentifier.setValue(removeField.getUniversalIdentifier());
 					universalIdentifierType.setValue(removeField.getUniversalIdentifierTypeCode());
-					
 				}
 		    });
 		buttonContainer.add(addDomainButton);
@@ -320,7 +336,7 @@ public class ManageIdentifierDomainView extends View
 
 
 		grid.getSelectionModel().addListener(Events.SelectionChange, new Listener<SelectionChangedEvent<IdentifierDomainWeb>>() {
-			
+
 				public void handleEvent(SelectionChangedEvent<IdentifierDomainWeb> be) {
 					List<IdentifierDomainWeb> selection = be.getSelection();
 
@@ -331,16 +347,15 @@ public class ManageIdentifierDomainView extends View
 
 			public void handleEvent(GridEvent<IdentifierDomainWeb> be) {
 				IdentifierDomainWeb selectField = grid.getSelectionModel().getSelectedItem();
-				
 			}
 		});
-		
+
 
 	    // check permissions
 		checkPermissins();
-		
+
 		cp.add(buttonContainer);
-		
+
 		cp.add(grid);
 
 		container.add(cp);
@@ -349,53 +364,54 @@ public class ManageIdentifierDomainView extends View
 		wrapper.removeAll();
 		wrapper.add(container);
 		wrapper.layout();
-		GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime()-time), null);
-	}	
+		GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime() - time), null);
+	}
 
 	private void checkPermissins() {
 	    // check permissions
-	    if( permissions != null ) {
+	    if (permissions != null) {
 		    PermissionWeb permission = permissions.get(Permission.IDENTIFIER_DOMAIN_ADD);
 			if (permission == null) {
 				addDomainButton.disable();
 			}
-	
+
 		    permission = permissions.get(Permission.IDENTIFIER_DOMAIN_EDIT);
 			if (permission == null) {
 				updateDomainButton.disable();
 			}
-			
+
 		    permission = permissions.get(Permission.IDENTIFIER_DOMAIN_DELETE);
 			if (permission == null) {
 				removeDomainButton.disable();
 			}
 	    }
 	}
-	
+
 	private void readOnlyFields(boolean enable) {
-		IdentifierName.setReadOnly(enable);
-		IdentifierDescription.setReadOnly(enable);
+	    identifierName.setReadOnly(enable);
+	    identifierDescription.setReadOnly(enable);
 		namespaceIdentifier.setReadOnly(enable);
 		universalIdentifier.setReadOnly(enable);
 		universalIdentifierType.setReadOnly(enable);
 	}
-	
-	final Listener<MessageBoxEvent> listenConfirmDelete = new Listener<MessageBoxEvent>() {  
-	        public void handleEvent(MessageBoxEvent ce) {  
-	          Button btn = ce.getButtonClicked();  
-	          if( btn.getText().equals("Yes")) {
-	        	  
-				  controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainDelete, editedIdentifierDomain));	
-				  if (addIdentifierDomainDialog.isVisible())
+
+	final Listener<MessageBoxEvent> listenConfirmDelete = new Listener<MessageBoxEvent>() {
+	        public void handleEvent(MessageBoxEvent ce) {
+	          Button btn = ce.getButtonClicked();
+	          if (btn.getText().equals("Yes")) {
+				  controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainDelete, editedIdentifierDomain));
+				  if (addIdentifierDomainDialog.isVisible()) {
 					  addIdentifierDomainDialog.close();
+				  }
 	          }
-	        }  
-	};  
-	    
+	        }
+	};
+
 	private void buildAddEditDeleteDomainDialog() {
-		if(addIdentifierDomainDialog != null)
+		if (addIdentifierDomainDialog != null) {
 			return;
-		
+		}
+
 		addIdentifierDomainDialog = new Dialog();
 		addIdentifierDomainDialog.setBodyBorder(false);
 		addIdentifierDomainDialog.setIcon(IconHelper.create("images/folder_go.png"));
@@ -407,86 +423,86 @@ public class ManageIdentifierDomainView extends View
 		addIdentifierDomainDialog.getButtonById(Dialog.OK).addSelectionListener(new SelectionListener<ButtonEvent>() {
 			@Override
 			public void componentSelected(ButtonEvent ce) {
-				if ( (IdentifierName.getValue() != null && namespaceIdentifier.getValue() != null ) ||
-					 (IdentifierName.getValue() != null && universalIdentifier.getValue() != null && universalIdentifierType.getValue() != null) ) {
-					
+				if ((identifierName.getValue() != null && namespaceIdentifier.getValue() != null) ||
+					 (identifierName.getValue() != null && universalIdentifier.getValue() != null && universalIdentifierType.getValue() != null)) {
+
 					IdentifierDomainWeb newIdentifierDomain = new IdentifierDomainWeb();
-					
-					newIdentifierDomain.setIdentifierDomainName(IdentifierName.getValue());
-					newIdentifierDomain.setIdentifierDomainDescription(IdentifierDescription.getValue());
+
+					newIdentifierDomain.setIdentifierDomainName(identifierName.getValue());
+					newIdentifierDomain.setIdentifierDomainDescription(identifierDescription.getValue());
 					newIdentifierDomain.setNamespaceIdentifier(namespaceIdentifier.getValue());
 					newIdentifierDomain.setUniversalIdentifier(universalIdentifier.getValue());
 					newIdentifierDomain.setUniversalIdentifierTypeCode(universalIdentifierType.getValue());
-					
-					if (addEditDeleteMode.equals("ADD")) {  // Add	
+
+					if (addEditDeleteMode.equals("ADD")) {  // Add
 			        	// check duplicate domain
 			        	for (IdentifierDomainWeb domain : grid.getStore().getModels()) {
-			        		  if( domain.getIdentifierDomainName().equals( newIdentifierDomain.getIdentifierDomainName() ) ) {
-				        	      MessageBox.alert("Information", "There is a duplicate domain name in Identifier Domain List", null);  		
-				        	      return;			        			  
+			        		  if (domain.getIdentifierDomainName().equals( newIdentifierDomain.getIdentifierDomainName())) {
+				        	      MessageBox.alert("Information", "There is a duplicate domain name in Identifier Domain List", null);
+				        	      return;
 			        		  }
-			        		  if( domain.getNamespaceIdentifier().equals( newIdentifierDomain.getNamespaceIdentifier() ) ) {
-				        	      MessageBox.alert("Information", "There is a duplicate Namespace Identifier in Identifier Domain List", null);  		
-				        	      return;			        			  
+			        		  if (domain.getNamespaceIdentifier().equals( newIdentifierDomain.getNamespaceIdentifier())) {
+				        	      MessageBox.alert("Information", "There is a duplicate Namespace Identifier in Identifier Domain List", null);
+				        	      return;
 			        		  }
-			        		  
-			        		  if( domain.getUniversalIdentifier().equals( newIdentifierDomain.getUniversalIdentifier()) && 
-			        			  domain.getUniversalIdentifierTypeCode().equals( newIdentifierDomain.getUniversalIdentifierTypeCode()) ) {
-				        	      MessageBox.alert("Information", "There is a duplicate Universal Identifier with Universal Identifier Type in Identifier Domain List", null);  		
-				        	      return;			        			  
+
+			        		  if (domain.getUniversalIdentifier().equals( newIdentifierDomain.getUniversalIdentifier()) && 
+			        			  domain.getUniversalIdentifierTypeCode().equals( newIdentifierDomain.getUniversalIdentifierTypeCode())) {
+				        	      MessageBox.alert("Information", "There is a duplicate Universal Identifier with Universal Identifier Type in Identifier Domain List", null);
+				        	      return;
 			        		  }
-			        	}										
-						controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainAdd, newIdentifierDomain));					
+			        	}
+						controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainAdd, newIdentifierDomain));
 					} else if (addEditDeleteMode.equals("EDIT")) { // Edit
-						
-			        	for (IdentifierDomainWeb domain : grid.getStore().getModels()) {			        		
-			        		if( domain.getIdentifierDomainName() != editedIdentifierDomain.getIdentifierDomainName() ) {
-			        			
-				        		  if( domain.getIdentifierDomainName().equals( newIdentifierDomain.getIdentifierDomainName() ) ) {
-					        	      MessageBox.alert("Information", "There is a duplicate domain name in Identifier Domain List", null);  		
-					        	      return;			        			  
+
+			        	for (IdentifierDomainWeb domain : grid.getStore().getModels()) {
+			        		if (domain.getIdentifierDomainName() != editedIdentifierDomain.getIdentifierDomainName()) {
+
+				        		  if (domain.getIdentifierDomainName().equals( newIdentifierDomain.getIdentifierDomainName())) {
+					        	      MessageBox.alert("Information", "There is a duplicate domain name in Identifier Domain List", null);
+					        	      return;
 				        		  }
-				        		  if( domain.getNamespaceIdentifier().equals( newIdentifierDomain.getNamespaceIdentifier() ) ) {
-					        	      MessageBox.alert("Information", "There is a duplicate Namespace Identifier in Identifier Domain List", null);  		
-					        	      return;			        			  
+				        		  if (domain.getNamespaceIdentifier().equals( newIdentifierDomain.getNamespaceIdentifier())) {
+					        	      MessageBox.alert("Information", "There is a duplicate Namespace Identifier in Identifier Domain List", null);
+					        	      return;
 				        		  }
-				        		  
-				        		  if( domain.getUniversalIdentifier().equals( newIdentifierDomain.getUniversalIdentifier()) && 
-				        			  domain.getUniversalIdentifierTypeCode().equals( newIdentifierDomain.getUniversalIdentifierTypeCode()) ) {
-					        	      MessageBox.alert("Information", "There is a duplicate Universal Identifier with Universal Identifier Type in Identifier Domain List", null);  		
-					        	      return;			        			  
+
+				        		  if (domain.getUniversalIdentifier().equals( newIdentifierDomain.getUniversalIdentifier()) && 
+				        			  domain.getUniversalIdentifierTypeCode().equals( newIdentifierDomain.getUniversalIdentifierTypeCode())) {
+					        	      MessageBox.alert("Information", "There is a duplicate Universal Identifier with Universal Identifier Type in Identifier Domain List", null);
+					        	      return;
 				        		  }
 			        		}
-			        	}										
-						newIdentifierDomain.setIdentifierDomainId(editedIdentifierDomain.getIdentifierDomainId());	
-						controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainUpdate, newIdentifierDomain));	
+			        	}
+						newIdentifierDomain.setIdentifierDomainId(editedIdentifierDomain.getIdentifierDomainId());
+						controller.handleEvent(new AppEvent(AppEvents.ManageIdentifierDomainUpdate, newIdentifierDomain));
 					} else if (addEditDeleteMode.equals("DELETE")) { // Delete
-						
-		        	  	MessageBox.confirm("Confirm", "Delete operation cannot be undone. Are you sure you want to delete this domain?", listenConfirmDelete); 		
+
+		        	  	MessageBox.confirm("Confirm", "Remove operation cannot be undone. Are you sure you want to remove this domain?", listenConfirmDelete);
 		        	  	return;
-					}				
+					}
 		        	addIdentifierDomainDialog.close();
-		        	
+
 				} else {
-					if( IdentifierName.getValue() == null ) {
-		        	    MessageBox.alert("Information", "Identifier Name is required.", null);  
-						return;	
-					} 	
-					if( namespaceIdentifier.getValue() == null && (universalIdentifier.getValue() == null || universalIdentifierType.getValue() == null)) {
-		        	    MessageBox.alert("Information", "Ether Namespace Identifier is required or Universal Identifier with Universal Identifier Type are required", null);  
-						return;	
-					} 											
+					if (identifierName.getValue() == null) {
+		        	    MessageBox.alert("Information", "Identifier Name is required.", null);
+						return;
+					}
+					if (namespaceIdentifier.getValue() == null && (universalIdentifier.getValue() == null || universalIdentifierType.getValue() == null)) {
+		        	    MessageBox.alert("Information", "Ether Namespace Identifier is required or Universal Identifier with Universal Identifier Type are required", null);
+						return;
+					}
 				}
 			}
 	    });
-		
+
 		addIdentifierDomainDialog.getButtonById(Dialog.CANCEL).addSelectionListener(new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
 	        	  addIdentifierDomainDialog.close();
 	          }
 	    });
-		
+
 		ContentPanel cp = new ContentPanel();
 		cp.setHeading("Identifier Domain");
 		cp.setFrame(true);
@@ -497,42 +513,42 @@ public class ManageIdentifierDomainView extends View
 		cp.setLayout(formLayout);
 		cp.setSize(420, 270);
 
-		IdentifierName.setFieldLabel("Name");
-		cp.add(IdentifierName);
-		
-		IdentifierDescription.setFieldLabel("Description");
-		cp.add(IdentifierDescription);
-		
+		identifierName.setFieldLabel("Name");
+		cp.add(identifierName);
+
+		identifierDescription.setFieldLabel("Description");
+		cp.add(identifierDescription);
+
 		namespaceIdentifier.setFieldLabel("Namespace Identifier");
 		universalIdentifier.setFieldLabel("Universal Identifier");
 		universalIdentifierType.setFieldLabel("Universal Identifier Type");
 
-	    FormPanel namespace = new FormPanel(); 
+	    FormPanel namespace = new FormPanel();
 	    namespace.setHeaderVisible(false);
 	    namespace.setFrame(true);
 	    namespace.setLabelWidth(140);
 	    namespace.setWidth(390);
-	    namespace.setTitle("Namespace Identifier");  
+	    namespace.setTitle("Namespace Identifier");
 
 	    namespace.add(namespaceIdentifier);
-	
-	    FormPanel universal = new FormPanel(); 
+
+	    FormPanel universal = new FormPanel();
 	    universal.setHeaderVisible(false);
 	    universal.setFrame(true);
 
 	    universal.setLabelWidth(140);
 	    universal.setWidth(390);
-	    universal.setTitle("Universal Identifier");  
-		
+	    universal.setTitle("Universal Identifier");
+
 	    universal.add(universalIdentifier);
 	    universal.add(universalIdentifierType);
-	    
+
 	    LabelField space = new LabelField("");
-	    
+
 		cp.add(space);
 		cp.add(namespace);
-		cp.add(universal);		
-		
+		cp.add(universal);
+
 		addIdentifierDomainDialog.add(cp);
 	}
 }

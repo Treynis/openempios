@@ -37,6 +37,8 @@ import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
 import org.openempi.webapp.client.model.IdentifierWeb;
 import org.openempi.webapp.client.model.MatchConfigurationWeb;
 import org.openempi.webapp.client.model.MatchFieldWeb;
+import org.openempi.webapp.client.model.MatchRuleEntryListWeb;
+import org.openempi.webapp.client.model.MatchRuleWeb;
 import org.openempi.webapp.client.model.RecordLinkWeb;
 import org.openempi.webapp.client.model.RecordLinksListWeb;
 import org.openempi.webapp.client.model.RecordSearchCriteriaWeb;
@@ -163,9 +165,29 @@ public class EntityLinkView extends BaseEntityView
 
 		} else if (event.getType() == AppEvents.DeterministicMatchConfigurationReceived) {
 	    	// Info.display("Information", "DeterministicMatchConfigurationReceived");
+//            ExactMatchingConfigurationWeb config = (ExactMatchingConfigurationWeb) event.getData();
+//            fields = (List<MatchFieldWeb>) config.getMatchFields();
 
-			ExactMatchingConfigurationWeb config = (ExactMatchingConfigurationWeb) event.getData();
-			fields = (List<MatchFieldWeb>) config.getMatchFields();
+            MatchRuleEntryListWeb config = (MatchRuleEntryListWeb) event.getData();
+            List<MatchRuleWeb> matchRuleFields = config.getMatchRuleEntries();
+
+            fields = new ArrayList<MatchFieldWeb>();
+            for (MatchRuleWeb ruleField : matchRuleFields) {
+                 boolean found = false;
+                 for (MatchFieldWeb  matchField: fields) {
+                     if (ruleField.getFieldName().equals(matchField.getFieldName())) {
+                        found = true;
+                     }
+                 }
+                 // keep the item unique in fields
+                 if (!found) {
+                     MatchFieldWeb matchFieldWeb = new MatchFieldWeb();
+                     matchFieldWeb.setFieldName(ruleField.getFieldName());
+                     matchFieldWeb.setFieldDescription(Utility.convertToDescription(ruleField.getFieldName()));
+                     fields.add(matchFieldWeb);
+                     // Info.display("Information", "matchFieldWeb: "+matchFieldWeb.getFieldName());
+                 }
+            }
 
 			if (Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL) != null) {
 
@@ -201,10 +223,12 @@ public class EntityLinkView extends BaseEntityView
 				currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
 	            fields = (List<MatchFieldWeb>) config.getMatchFields();
 	            for (MatchFieldWeb matchField : fields) {
-	                EntityAttributeWeb attribute = currentEntity.findEntityAttributeByName(matchField.getFieldName());
+/*	                EntityAttributeWeb attribute = currentEntity.findEntityAttributeByName(matchField.getFieldName());
 	                if (attribute != null) {
 	                    matchField.setFieldDescription(attribute.getDisplayName());
 	                }
+*/
+	                matchField.setFieldDescription(Utility.convertToDescription(matchField.getFieldName()));
 	            }
 
 				initEntityUI(currentEntity);

@@ -42,7 +42,7 @@ public class MatchConfigurationController extends Controller
 {
 	private MatchConfigurationView matchConfigurationView;
 
-	public MatchConfigurationController() {		
+	public MatchConfigurationController() {
 		this.registerEventTypes(AppEvents.MatchConfigurationReceived);
 		this.registerEventTypes(AppEvents.MatchConfigurationRequest);
 		this.registerEventTypes(AppEvents.MatchConfigurationSave);
@@ -80,7 +80,7 @@ public class MatchConfigurationController extends Controller
 		}
 		configurationDataService.saveProbabilisticMatchingConfiguration(configuration, (new AsyncCallback<String>() {
 	      public void onFailure(Throwable caught) {
-	    	  
+
 				if (caught instanceof AuthenticationException) {
 					Dispatcher.get().dispatch(AppEvents.Logout);
 					return;
@@ -101,9 +101,14 @@ public class MatchConfigurationController extends Controller
 
 	private void requestMatchConfigurationData() {
 		ConfigurationDataServiceAsync configurationDataService = getConfigurationDataService();
-		configurationDataService.loadProbabilisticMatchingConfiguration(new AsyncCallback<MatchConfigurationWeb>() {
+        EntityWeb entity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+        String entityName = "";
+        if (entity != null) {
+            entityName = entity.getName();
+        }
+		configurationDataService.loadProbabilisticMatchingConfiguration(entityName, new AsyncCallback<MatchConfigurationWeb>() {
 	      public void onFailure(Throwable caught) {
-	    	  
+
 				if (caught instanceof AuthenticationException) {
 					Dispatcher.get().dispatch(AppEvents.Logout);
 					return;
@@ -119,9 +124,14 @@ public class MatchConfigurationController extends Controller
 
     private void requestMatchVectorConfigurationData() {
         ConfigurationDataServiceAsync configurationDataService = getConfigurationDataService();
-        configurationDataService.loadVectorConfiguration(new AsyncCallback<List<VectorConfigurationWeb>>() {
+        EntityWeb entity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+        String entityName = "";
+        if (entity != null) {
+            entityName = entity.getName();
+        }
+        configurationDataService.loadVectorConfiguration(entityName, new AsyncCallback<List<VectorConfigurationWeb>>() {
           public void onFailure(Throwable caught) {
-              
+
                 if (caught instanceof AuthenticationException) {
                     Dispatcher.get().dispatch(AppEvents.Logout);
                     return;

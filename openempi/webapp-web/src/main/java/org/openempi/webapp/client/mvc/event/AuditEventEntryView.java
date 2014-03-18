@@ -164,6 +164,7 @@ public class AuditEventEntryView extends BaseEntityView
                  * for (AuditEventTypeWeb type : auditEventTypes) { Info.display("Information", "Event Types: "+
                  * type.getAuditEventTypeCd() + ", " + type.getAuditEventTypeName()); }
                  */
+                eventTypesStore.removeAll();
                 eventTypesStore.add(auditEventTypes);
             }
 

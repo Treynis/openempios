@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
 		<artifactId>openempi</artifactId>
-		<version>3.0.0.alpha1</version>
+		<version>3.0.0-alpha2</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
@@ -59,11 +59,6 @@
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
 			<artifactId>openempi-file-loader-map</artifactId>
-			<version>${release.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-record-cache</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>

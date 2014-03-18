@@ -6,7 +6,7 @@
 	<artifactId>openempi</artifactId>
 	<packaging>pom</packaging>
 	<name>OpenEMPI Application</name>
-	<version>3.0.0.alpha1</version>
+	<version>3.0.0-alpha2</version>
 	<description>
 	Is an open source implementation of an Enterprise Master Patient (EMPI) which is a repository that maintains
 	a registry of all patients across an enterprise. An EMPI provides many benefits including:
@@ -104,6 +104,7 @@
 		<module>webapp-server</module>
 		<module>restful-webservices</module>
 		<module>webapp-web</module>
+		<module>cluster-node</module>
 		<module>test-suite</module>
 	</modules>
 
@@ -787,7 +788,7 @@
 		</plugins>
 	</reporting>
 	<properties>
-		<release.version>3.0.0.alpha1</release.version>
+		<release.version>3.0.0-alpha2</release.version>
 		
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -850,7 +851,7 @@
 		<jdbc.password>openempi</jdbc.password>
 
 		<activemq.version>5.4.2</activemq.version>
-		<aspectj.version>1.6.0</aspectj.version>
+		<aspectj.version>1.7.3</aspectj.version>
 		<clickstream.version>1.0.2</clickstream.version>
 		<commons.beanutils.version>1.8.0</commons.beanutils.version>
 		<commons.codec.version>1.6</commons.codec.version>
@@ -866,12 +867,13 @@
 		<dwr.version>2.0.1</dwr.version>
 		<ehcache.version>2.6.2</ehcache.version>  
                 <bigmemory.version>3.7.2</bigmemory.version>
-                <ehcache-ee.version>2.6.2</ehcache-ee.version>
+                <ehcache-ee.version>2.6.5</ehcache-ee.version>
                 <ehcache-probe.version>1.0.3</ehcache-probe.version>
-		<hibernate.annotations.version>3.3.0.ga</hibernate.annotations.version>
-		<hibernate.validator.version>3.0.0.ga</hibernate.validator.version>
-		<hibernate.search.version>3.0.0.GA</hibernate.search.version>
-		<hibernate.version>3.2.6.ga</hibernate.version>
+		<hazelcast.version>3.1.2</hazelcast.version>
+		<hibernate.annotations.version>3.4.0.GA</hibernate.annotations.version>
+		<hibernate.validator.version>3.1.0.GA</hibernate.validator.version>
+		<hibernate.search.version>3.1.0.GA</hibernate.search.version>
+		<hibernate.version>3.3.2.GA</hibernate.version>
 		<jasperreports.version>4.5.0</jasperreports.version>
 		<javamail.version>1.4</javamail.version>
 		<jboss.home>${env.JBOSS_HOME}</jboss.home>
@@ -879,7 +881,7 @@
 		<jstl.version>1.1.2</jstl.version>
 		<log4j.version>1.2.15</log4j.version>
 		<slf4j.version>1.6.1</slf4j.version>
-		<orientdb.version>1.6</orientdb.version>
+		<orientdb.version>1.7-rc2-SNAPSHOT</orientdb.version>
 		<oscache.version>2.3</oscache.version>
 		<sitemesh.version>2.2.1</sitemesh.version>
 		<spring.security.version>2.0.1</spring.security.version>

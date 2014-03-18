@@ -22,6 +22,7 @@ package org.openhie.openempi.configuration;
 
 import org.openhie.openempi.blocking.basicblockinghp.BasicBlockingConstants;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.service.BaseServiceTestCase;
 
 public class BasicBlockingConfigurationTest extends BaseServiceTestCase
@@ -31,13 +32,11 @@ public class BasicBlockingConfigurationTest extends BaseServiceTestCase
 		Configuration configuration = Context.getConfiguration();
 		configuration.init();
 		log.debug("Configuration is: " + configuration);
-		java.util.List<CustomField> customFields = configuration.getCustomFields();
-		for (CustomField customField : customFields) {
-			log.debug("Custom field is: " + customField);
-		}
 		
+		Entity entity = getTestEntity();
 		java.util.List<BlockingRound> blockingRounds = (java.util.List<BlockingRound>)
-			configuration.lookupConfigurationEntry(BasicBlockingConstants.BLOCKING_ROUNDS_REGISTRY_KEY);
+			configuration.lookupConfigurationEntry(entity.getName(),
+			        BasicBlockingConstants.BLOCKING_ROUNDS_REGISTRY_KEY);
 		for (BlockingRound blockingRound : blockingRounds) {
 			log.debug("Blocking round: " + blockingRound);
 		}

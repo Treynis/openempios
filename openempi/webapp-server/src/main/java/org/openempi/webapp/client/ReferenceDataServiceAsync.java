@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.openempi.webapp.client.model.IdentifierDomainTypeCodeWeb;
 import org.openempi.webapp.client.model.IdentifierDomainWeb;
+import org.openempi.webapp.client.model.JobStatusWeb;
+import org.openempi.webapp.client.model.JobTypeWeb;
 import org.openempi.webapp.client.model.SystemConfigurationWeb;
 import org.openempi.webapp.client.model.AuditEventTypeWeb;
 import org.openempi.webapp.client.model.EntityAttributeDatatypeWeb;
@@ -33,14 +35,16 @@ import com.google.gwt.user.client.rpc.AsyncCallback;
 
 public interface ReferenceDataServiceAsync
 {
+    public void getGlobalIdentifierDomain(AsyncCallback<IdentifierDomainWeb> callback);
+
 	public void getIdentifierDomains(AsyncCallback<List<IdentifierDomainWeb>> callback);
 
 	public void getIdentifierDomainTypeCodes(AsyncCallback<List<IdentifierDomainTypeCodeWeb>> callback);
-	
+
 	public void getAuditEventTypeCodes(AsyncCallback<List<AuditEventTypeWeb>> callback);
-	
+
 	public void getPersonModelAllAttributeNames(AsyncCallback<List<String>> callback);
-	
+
 	public void getPersonModelAttributeNames(AsyncCallback<List<String>> callback);
 
 	public void getPersonModelCustomFieldNames(AsyncCallback<List<String>> callback);
@@ -48,10 +52,14 @@ public interface ReferenceDataServiceAsync
 	public void getTransformationFunctionNames(AsyncCallback<List<String>> callback);
 
 	public void getComparatorFunctionNames(AsyncCallback<List<String>> callback);
-	
-	public void getSystemConfigurationInfo(AsyncCallback<SystemConfigurationWeb> callback);
-	
+
+	public void getSystemConfigurationInfo(String entityName, AsyncCallback<SystemConfigurationWeb> callback);
+
 	public void getEntityAttributeDatatypes(AsyncCallback<List<EntityAttributeDatatypeWeb>> callback);
-	
+
 	public void getValidationRules(AsyncCallback<List<EntityValidationRuleWeb>> callback);
+
+    public void getJobTypes(AsyncCallback<List<JobTypeWeb>> callback);
+
+    public void getJobStatuses(AsyncCallback<List<JobStatusWeb>> callback);
 }

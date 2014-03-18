@@ -37,6 +37,8 @@ import org.openempi.webapp.client.model.EntityAttributeWeb;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.model.IdentifierDomainTypeCodeWeb;
 import org.openempi.webapp.client.model.IdentifierDomainWeb;
+import org.openempi.webapp.client.model.JobStatusWeb;
+import org.openempi.webapp.client.model.JobTypeWeb;
 import org.openempi.webapp.client.model.ModelPropertyWeb;
 import org.openempi.webapp.client.model.RoleWeb;
 import org.openempi.webapp.client.model.SystemConfigurationWeb;
@@ -64,6 +66,7 @@ public class AppController extends Controller {
 	public AppController() {
 		registerEventTypes(AppEvents.Error);
 		registerEventTypes(AppEvents.ComparatorFunctionNamesReceived);
+	    registerEventTypes(AppEvents.GlobalIdentifierDomainReceived);
 		registerEventTypes(AppEvents.IdentifierDomainsReceived);
 		registerEventTypes(AppEvents.IdentifierDomainTypeCodesReceived);
 		registerEventTypes(AppEvents.AuditEventTypeCodesReceived);
@@ -79,6 +82,8 @@ public class AppController extends Controller {
 		registerEventTypes(AppEvents.TransformationFunctionNamesReceived);
 		registerEventTypes(AppEvents.EntityAttributeDatatypesReceived);
 		registerEventTypes(AppEvents.ValidationRuleReceived);
+        registerEventTypes(AppEvents.JobTypesReceived);
+        registerEventTypes(AppEvents.JobStatusesReceived);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -95,6 +100,9 @@ public class AppController extends Controller {
 			authenticate(user);
 		} else if (type == AppEvents.Error) {
 			onError(event);
+        } else if (type == AppEvents.GlobalIdentifierDomainReceived) {
+            IdentifierDomainWeb domain = event.getData();
+            Registry.register(Constants.GLOBAL_IDENTITY_DOMAIN, domain);
 		} else if (type == AppEvents.IdentifierDomainsReceived) {
 			List<IdentifierDomainWeb> domains = event.getData();
 			Registry.register(Constants.IDENTITY_DOMAINS, domains);
@@ -157,8 +165,14 @@ public class AppController extends Controller {
             Log.info("The system is configured with blocking algorithm: " + systemConfigInfo.getBlockingAlgorithmName());
             Log.info("The system is configured with matching algorithm: " + systemConfigInfo.getMatchingAlgorithmName());
             Registry.register(Constants.SYSTEM_CONFIGURATION_INFO, systemConfigInfo);
-            
+
 	        Dispatcher.forwardEvent(AppEvents.InitMenu);
+        } else if (type == AppEvents.JobTypesReceived) {
+            List<JobTypeWeb> jobTypes = event.getData();
+            Registry.register(Constants.JOB_TYPES, jobTypes);
+        } else if (type == AppEvents.JobStatusesReceived) {
+            List<JobStatusWeb> jobStatuses = event.getData();
+            Registry.register(Constants.JOB_STATUS, jobStatuses);
 		} else if (type == AppEvents.EntitiesRequest) {
 
 	    	loadEntities();
@@ -213,6 +227,22 @@ public class AppController extends Controller {
 			}
 		});
 
+        referenceDataService.getGlobalIdentifierDomain(new AsyncCallback<IdentifierDomainWeb>() {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                Dispatcher.forwardEvent(AppEvents.Error, caught);
+                Info.display("Information", "Error: " + caught.getMessage());
+            }
+
+            public void onSuccess(IdentifierDomainWeb result) {
+                Dispatcher.forwardEvent(AppEvents.GlobalIdentifierDomainReceived, result);
+                // Info.display("Information", "We've got the codes: " + result);
+            }
+        });
 
 		referenceDataService.getIdentifierDomains(new AsyncCallback<List<IdentifierDomainWeb>>() {
 			public void onFailure(Throwable caught) {
@@ -325,7 +355,7 @@ public class AppController extends Controller {
 				Dispatcher.forwardEvent(AppEvents.ValidationRuleReceived, result);
 			}
 	    });
-		
+/*
         referenceDataService.getSystemConfigurationInfo(new AsyncCallback<SystemConfigurationWeb>() {
             public void onFailure(Throwable caught) {
 
@@ -338,6 +368,37 @@ public class AppController extends Controller {
 
             public void onSuccess(SystemConfigurationWeb result) {
                 Dispatcher.forwardEvent(AppEvents.SystemConfigurationInfoReceived, result);
+            }
+        });
+*/
+
+        referenceDataService.getJobTypes(new AsyncCallback<List<JobTypeWeb>>() {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                Dispatcher.forwardEvent(AppEvents.Error, caught);
+            }
+
+            public void onSuccess(List<JobTypeWeb> result) {
+                Dispatcher.forwardEvent(AppEvents.JobTypesReceived, result);
+            }
+        });
+
+        referenceDataService.getJobStatuses(new AsyncCallback<List<JobStatusWeb>>() {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                Dispatcher.forwardEvent(AppEvents.Error, caught);
+            }
+
+            public void onSuccess(List<JobStatusWeb> result) {
+                Dispatcher.forwardEvent(AppEvents.JobStatusesReceived, result);
             }
         });
 
@@ -402,12 +463,36 @@ public class AppController extends Controller {
 					EntityWeb entity =  result.get(0);
 				    Registry.register(Constants.ENTITY_ATTRIBUTE_MODEL, entity);
 
-				    // setEntityAttribureNamesToRegistry(entity);
+                    loadSystemConfigurationInfo(entity);
+
+                    // setEntityAttribureNamesToRegistry(entity);
 				    loadCustomFieldsConfigurationData(entity);
 				}
 		    }
 		});
 	}
+
+    private void loadSystemConfigurationInfo(EntityWeb entity) {
+        String entityName = "";
+        if (entity != null) {
+            entityName = entity.getName();
+        }
+
+        referenceDataService.getSystemConfigurationInfo(entityName, new AsyncCallback<SystemConfigurationWeb>() {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                Dispatcher.forwardEvent(AppEvents.Error, caught);
+            }
+
+            public void onSuccess(SystemConfigurationWeb result) {
+                Dispatcher.forwardEvent(AppEvents.SystemConfigurationInfoReceived, result);
+            }
+        });
+    }
 
 	private void loadCustomFieldsConfigurationData(EntityWeb entity) {
 		String entityName = "";

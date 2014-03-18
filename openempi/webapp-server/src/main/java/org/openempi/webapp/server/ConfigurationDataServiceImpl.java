@@ -32,9 +32,10 @@ import javax.servlet.ServletException;
 import org.openempi.webapp.client.ConfigurationDataService;
 import org.openempi.webapp.client.model.CustomFieldWeb;
 import org.openempi.webapp.client.model.EntityWeb;
-import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
 import org.openempi.webapp.client.model.MatchConfigurationWeb;
 import org.openempi.webapp.client.model.MatchFieldWeb;
+import org.openempi.webapp.client.model.MatchRuleEntryListWeb;
+import org.openempi.webapp.client.model.MatchRuleWeb;
 import org.openempi.webapp.client.model.StringComparatorFunctionWeb;
 import org.openempi.webapp.client.model.TransformationFunctionWeb;
 import org.openempi.webapp.client.model.VectorConfigurationWeb;
@@ -45,13 +46,17 @@ import org.openhie.openempi.configuration.ConfigurationLoader;
 import org.openhie.openempi.configuration.ConfigurationRegistry;
 import org.openhie.openempi.configuration.CustomField;
 import org.openhie.openempi.configuration.MatchField;
+import org.openhie.openempi.configuration.MatchRule;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.matching.exactmatching.ExactMatchingConstants;
 import org.openhie.openempi.model.VectorConfiguration;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
 
 public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet implements ConfigurationDataService
 {
-	public final static String FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY = "falseNegativeProbability";
+    private static final long serialVersionUID = 2707492638994310226L;
+    
+    public final static String FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY = "falseNegativeProbability";
 	public final static String FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY = "falsePositiveProbability";
 	public final static String CONFIGURATION_DIRECTORY_REGISTRY_KEY = "configDirectory";
 
@@ -86,7 +91,7 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
 	public List<StringComparatorFunctionWeb> getStringComparatorFunctionList() {
 		log.debug("Received request to retrieve a list of string comparator function.");
 		List<StringComparatorFunctionWeb> functionList = new ArrayList<StringComparatorFunctionWeb>();
-		String[] functionNames = 
+		String[] functionNames =
 			Context.getApplicationContext().getBeanNamesForType(org.openhie.openempi.stringcomparison.metrics.AbstractDistanceMetric.class);
 		System.out.println("String Comparator Function Names:");
 		for (String functionName: functionNames) {
@@ -102,7 +107,7 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
 		log.debug("Received request to retrieve a list of transformation functions.");
 		try {
 			List<TransformationFunctionWeb> functionList = new ArrayList<TransformationFunctionWeb>();
-			String[] functionNames = 
+			String[] functionNames =
 				Context.getApplicationContext().getBeanNamesForType(org.openhie.openempi.transformation.function.AbstractTransformationFunction.class);
 			System.out.println("Transormation Function Names:");
 			for (String functionName: functionNames) {
@@ -149,37 +154,37 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
 	}
 
 	@SuppressWarnings("unchecked")
-	public ExactMatchingConfigurationWeb loadExactMatchingConfiguration() throws Exception {
-		log.debug("Received request to retrieve the exact matching configuration data.");
+    public MatchRuleEntryListWeb loadExactMatchingConfiguration(String entityName) throws Exception {
+        log.debug("Received request to retrieve the exact matching configuration data.");
 
-		authenticateCaller();
-		try {
-			Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-					.lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
-			List<MatchField> fields = (List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
-			if (fields == null || fields.size() == 0) {
-				log.error("The Exact Matching service has not been configured properly; no match fields have been defined.");
-				throw new RuntimeException("The Exact Matching service has not been configured properly.");
-			}
-			List<MatchFieldWeb> webConfig = convertToClientModel(fields);
-			ExactMatchingConfigurationWeb matchConfigurationWeb = new ExactMatchingConfigurationWeb();
-            String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
-            matchConfigurationWeb.setEntityName(entityName);
-			matchConfigurationWeb.setMatchFields(webConfig);
-			return matchConfigurationWeb;
-		} catch (Throwable t) {
-			log.error("Failed to execute: " + t.getMessage(), t);
-			throw new RuntimeException(t);
-		}
-	}
+        authenticateCaller();
+        try {
+            Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
+                    .lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
+            List<MatchRule> rules = (List<MatchRule>) configurationData
+                    .get(ExactMatchingConstants.EXACT_MATCHING_RULES_REGISTRY_KEY);
+            if (rules == null || rules.size() == 0) {
+                log.error("The Exact Matching service has not been configured properly; no match rules have been defined.");
+                throw new RuntimeException("The Exact Matching service has not been configured properly.");
+            }
+            
+            MatchRuleEntryListWeb matchEntry = new MatchRuleEntryListWeb();
+            matchEntry.setMatchRuleEntries(convertRuleToClientModel(rules));
+            matchEntry.setEntityName(entityName);
+            return matchEntry;
+        } catch (Throwable t) {
+            log.error("Failed to execute: " + t.getMessage(), t);
+            throw new RuntimeException(t);
+        }
+    }
 
-    public List<VectorConfigurationWeb> loadVectorConfiguration() throws Exception {
+    public List<VectorConfigurationWeb> loadVectorConfiguration(String entityName) throws Exception {
         log.debug("Received request to retrieve the vector configuration data.");
 
         authenticateCaller();
         @SuppressWarnings("unchecked")
         Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-                .lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
+                .lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
         if (configurationData == null) {
             log.warn("Unable to find any vector configuration data.");
             return new ArrayList<VectorConfigurationWeb>();
@@ -204,20 +209,20 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
     }
 
 	@SuppressWarnings("unchecked")
-	public MatchConfigurationWeb loadProbabilisticMatchingConfiguration() throws Exception {
+	public MatchConfigurationWeb loadProbabilisticMatchingConfiguration(String entityName) throws Exception {
 		log.debug("Received request to retrieve the probabilistic configuration.");
 
 		authenticateCaller();
 		try {
 			Map<String, Object> configurationData = (Map<String, Object>) Context.getConfiguration()
-					.lookupConfigurationEntry(ConfigurationRegistry.MATCH_CONFIGURATION);
+					.lookupConfigurationEntry(entityName, ConfigurationRegistry.MATCH_CONFIGURATION);
 			List<MatchField> fields = (List<MatchField>) configurationData.get(Constants.MATCHING_FIELDS_REGISTRY_KEY);
 			if (fields == null || fields.size() == 0) {
 				log.error("The Probabilistic Matching service has not been configured properly; no match fields have been defined.");
 				throw new RuntimeException("The Probabilistic Matching service has not been configured properly.");
 			}
 			MatchConfigurationWeb matchConfigurationWeb = new MatchConfigurationWeb();
-			String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
+			// String entityName = (String) configurationData.get(ENTITY_NAME_KEY);
 			matchConfigurationWeb.setEntityName(entityName);
 			matchConfigurationWeb.setMatchFields(convertToClientModel(fields));
 			Float falseNegativeProbability = (Float) configurationData.get(FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY);
@@ -319,7 +324,14 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
 		String returnMessage = "";
 		try {
 			Configuration configuration = Context.getConfiguration();
-			ConfigurationLoader loader = configuration.getMatchingConfigurationLoader();
+			ConfigurationLoader loader = configuration
+			        .getMatchingConfigurationLoader(matchConfigurationWeb.getEntityName());
+            if (loader == null) {
+                log.error("Unable to find a loader for saving the configuration of the matching algorithm.");
+                returnMessage = "No loader has been configured for storing the configuration information.";
+                return returnMessage;
+            }
+			
 			List<MatchField> fields = convertMatchFieldsFromClientModel(matchConfigurationWeb.getMatchFields());
 			Map<String, Object> configurationData = new java.util.HashMap<String,Object>();
 			configurationData.put(Constants.MATCHING_FIELDS_REGISTRY_KEY, fields);
@@ -395,26 +407,32 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
 		data.put(PROBABILISTIC_MATCHING_LOGGING_BY_VECTORS_FRACTION_KEY, config.getLoggingByVectorsFraction());
 	}
 
-	public String saveExactMatchingConfiguration(ExactMatchingConfigurationWeb matchingConfig) throws Exception {
-		log.debug("Received request to save exact matching configuration.");
+    public String saveExactMatchingConfiguration(MatchRuleEntryListWeb matchingConfig) throws Exception {
+        log.debug("Received request to save exact matching configuration.");
 
-		authenticateCaller();
-		String returnMessage = "";
-		try {
-			Configuration configuration = Context.getConfiguration();
-			ConfigurationLoader loader = configuration.getMatchingConfigurationLoader();
-			List<MatchField> fields = convertMatchFieldsFromClientModel(matchingConfig.getMatchFields());
-			Map<String, Object> configurationData = new java.util.HashMap<String, Object>();
-			configurationData.put(Constants.MATCHING_FIELDS_REGISTRY_KEY, fields);
-	        configurationData.put(ENTITY_NAME_KEY, matchingConfig.getEntityName());
+        authenticateCaller();
+        String returnMessage = "";
+        try {
+            Configuration configuration = Context.getConfiguration();
+            ConfigurationLoader loader = configuration
+                    .getMatchingConfigurationLoader(matchingConfig.getEntityName());
+            if (loader == null) {
+                log.error("Unable to find a loader for saving the configuration of the matching algorithm.");
+                returnMessage = "No loader has been configured for storing the configuration information.";
+                return returnMessage;
+            }
+            List<MatchRule> rules = convertRuleFromClientModel(matchingConfig.getMatchRuleEntries());
 
-			loader.saveAndRegisterComponentConfiguration(configuration, configurationData);
-		} catch (Exception e) {
-			log.warn("Failed while saving the exact matching configuration: " + e, e);
-			throw new RuntimeException("Failed while saving the matching configuration data: " + e.getMessage());
-		}
-		return returnMessage;
-	}
+            Map<String, Object> configurationData = new java.util.HashMap<String, Object>();
+            configurationData.put(ExactMatchingConstants.EXACT_MATCHING_RULES_REGISTRY_KEY, rules);
+            configurationData.put(ENTITY_NAME_KEY, matchingConfig.getEntityName());
+            loader.saveAndRegisterComponentConfiguration(configuration, configurationData);
+        } catch (Exception e) {
+            log.warn("Failed while saving the exact matching configuration: " + e, e);
+            throw new RuntimeException("Failed while saving the matching configuration data: " + e.getMessage());
+        }
+        return returnMessage;
+    }
 
 	public String saveCustomFieldsConfiguration(EntityWeb entityModel, List<CustomFieldWeb> customFieldsWeb) throws Exception {
 		log.debug("Received request to save a list of custom fields.");
@@ -482,6 +500,61 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
 		return map;
 	}
 
+    private List<MatchRuleWeb> convertRuleToClientModel(List<MatchRule> rules) {
+        List<MatchRuleWeb> fields = new java.util.ArrayList<MatchRuleWeb>(rules.size());
+        int matchingRuleIndex = 1;
+        for (MatchRule matchRule : rules) {
+            int matchingFieldIndex = 1;
+            for (org.openhie.openempi.configuration.MatchField field : matchRule.getFields()) {
+                String comparatorFunctionName = "";
+                if (field.getComparatorFunction() != null && field.getComparatorFunction().getFunctionName() != null) {
+                    comparatorFunctionName = field.getComparatorFunction().getFunctionName();
+                }
+                float threshold = 0;
+                if (field.getMatchThreshold() > 0) {
+                    threshold = Math.round(field.getMatchThreshold()*1000)/1000.0f;
+                }
+                MatchRuleWeb clientField = new MatchRuleWeb(matchingRuleIndex, matchingFieldIndex,
+                                                            field.getFieldName(), field.getFieldName(),
+                                                            comparatorFunctionName, comparatorFunctionName, threshold);
+
+                fields.add(clientField);
+                matchingFieldIndex++;
+            }
+            matchingRuleIndex++;
+        }
+        return fields;
+    }
+
+    private List<MatchRule> convertRuleFromClientModel(List<MatchRuleWeb> matchingConfiguration) {
+        int ruleCount = 0;
+        for (MatchRuleWeb rule : matchingConfiguration) {
+            if (rule.getMatchRule() > ruleCount) {
+                ruleCount = rule.getMatchRule();
+            }
+        }
+        List<MatchRule> rules = new java.util.ArrayList<MatchRule>(ruleCount);
+        for (int currRule = 1; currRule <= ruleCount; currRule++) {
+            MatchRule rule = new MatchRule();
+            for (MatchRuleWeb matchRule : matchingConfiguration) {
+                if (matchRule.getMatchRule() == currRule) {
+
+                    MatchField matchField = new MatchField();
+                    matchField.setFieldName(matchRule.getFieldName());
+
+                    if (matchRule.getComparatorFunctionName() != null) {
+                        matchField.setComparatorFunction(new ComparatorFunction(matchRule.getComparatorFunctionName()));
+                    }
+                    if (matchRule.getMatchThreshold() != null) {
+                        matchField.setMatchThreshold(matchRule.getMatchThreshold());
+                    }
+                    rule.addField(matchField);
+                }
+            }
+            rules.add(rule);
+        }
+        return rules;
+    }
 	private List<MatchField> convertMatchFieldsFromClientModel(List<MatchFieldWeb> matchFieldsWeb) {
 		List<MatchField> matchFields = new ArrayList<MatchField>();
 		for (MatchFieldWeb matchFieldWeb: matchFieldsWeb) {

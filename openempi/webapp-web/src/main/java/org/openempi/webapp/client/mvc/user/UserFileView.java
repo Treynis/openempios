@@ -84,21 +84,21 @@ public class UserFileView extends View
 
 //	private CheckBox importOnly;
 //	private CheckBox skipHeaderLine;
-	
+
 	List<FileLoaderConfigurationWeb> fileLoaderConfigurations;
 	FileLoaderConfigurationWeb currentFileLoader;
-	
-	private Dialog fileLoaderConfigurationsDialog;	
+
+	private Dialog fileLoaderConfigurationsDialog;
 	private ContentPanel fileLoaderConfigurationsPanel;
 	private ContentPanel dynamicFieldsPanel;
-	
+
 		private ComboBox<FileLoaderConfigurationWeb> fileLoadersCombo;
 		private ListStore<FileLoaderConfigurationWeb> fileLoadersStroe = new GroupingStore<FileLoaderConfigurationWeb>();
 
 	private EntityWeb currentEntity;
-	
+
 	private List<UserFileWeb> userFileEntries;
-		
+
 	public UserFileView(Controller controller) {
 		super(controller);
 	}
@@ -107,67 +107,67 @@ public class UserFileView extends View
 	@Override
 	protected void handleEvent(AppEvent event) {
 		if (event.getType() == AppEvents.FileListView) {
-			currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);	
-			
+			currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+
 			grid = null;
 			initUI();
 		} else if (event.getType() == AppEvents.FileLoaderConfigurations) {
 
 			fileLoaderConfigurations = event.getData();
-	      	
+
 			controller.handleEvent(new AppEvent(AppEvents.FileListUpdate, null));
-			
+
 		} else if (event.getType() == AppEvents.FileListRender) {
 			displayRecords((List<UserFileWeb>) event.getData());
-			
+
 			// File Loader Configurations
 			fileLoadersStroe.removeAll();
 		    for (FileLoaderConfigurationWeb fileLoaderConfig : fileLoaderConfigurations) {
-		    	// Info.display("File Loader :", fileLoaderConfig.getLoaderName()); 	 
-		    	if( currentFileLoader == null ) {
+		    	// Info.display("File Loader :", fileLoaderConfig.getLoaderName());
+		    	if (currentFileLoader == null) {
 		    		currentFileLoader = fileLoaderConfig;
 		    	}
- 			    fileLoadersStroe.add(fileLoaderConfig);			  
-		    }  
-		    
+ 			    fileLoadersStroe.add(fileLoaderConfig);
+		    }
+
 		    showDefaultCursor();
 
 		} else if (event.getType() == AppEvents.FileListRenderDataProfile) {
-			displayRecords((List<UserFileWeb>) event.getData());	
-			
+			displayRecords((List<UserFileWeb>) event.getData());
+
 		    showDefaultCursor();
 
     		List<UserFileWeb> fileList = store.getModels();
   		    for (UserFileWeb userFile : fileList) {
   			     if (userFile.getProfileProcessed().equals("In Processing")) {
-  				     MessageBox.alert("Information", "The existing Data Profile operation is not finished yet. Please wait until the operation is finished", null);  
+  				     MessageBox.alert("Information", "The existing Data Profile operation is not finished yet. Please wait until the operation is finished", null);
   				     return;
   			     }
   		    }
-		    		  
-      	    // controller.handleEvent(new AppEvent(AppEvents.FileEntryDataProfile, userFileEntries));
-      	    MessageBox.confirm("Confirm", "Data Profile operation will take a while to finish. Are you sure you want to continue?", listenConfirm); 		
-      	    return;				    
 
-		} else if (event.getType() == AppEvents.FileEntryImportSuccess) {	
-			
+      	    // controller.handleEvent(new AppEvent(AppEvents.FileEntryDataProfile, userFileEntries));
+      	    MessageBox.confirm("Confirm", "Data Profile operation will take a while to finish. Are you sure you want to continue?", listenConfirm);
+      	    return;
+
+		} else if (event.getType() == AppEvents.FileEntryImportSuccess) {
+
 			showDefaultCursor();
-			
+
 			String message = event.getData();
-	        MessageBox.alert("Information", "" + message, null);  		
-	    
-		} else if (event.getType() == AppEvents.FileEntryDataProfileSuccess) {	
-			
+	        MessageBox.alert("Information", "" + message, null);
+
+		} else if (event.getType() == AppEvents.FileEntryDataProfileSuccess) {
+
 			showDefaultCursor();
-			
+
 			String message = event.getData();
-	        MessageBox.alert("Information", "" + message, null);  		
-		} else if (event.getType() == AppEvents.Error) {	
-			
+	        MessageBox.alert("Information", "" + message, null);
+		} else if (event.getType() == AppEvents.Error) {
+
 			showDefaultCursor();
-			
+
 			String message = event.getData();
-	        MessageBox.alert("Information", "Failure: " + message, null);  			
+	        MessageBox.alert("Information", "Failure: " + message, null);
 		}
 	}
 
@@ -192,11 +192,11 @@ public class UserFileView extends View
 //		column.setAlignment(HorizontalAlignment.RIGHT);
 		column.setDateTimeFormat(DateTimeFormat.getFullDateTimeFormat());
 		configs.add(column);
-		
+
 		column = new ColumnConfig("imported", "Imported?", 70);
 		column.setAlignment(HorizontalAlignment.RIGHT);
 		configs.add(column);
-		
+
 		column = new ColumnConfig("rowsImported", "Rows Imported", 115);
 		column.setAlignment(HorizontalAlignment.RIGHT);
 		configs.add(column);
@@ -208,11 +208,11 @@ public class UserFileView extends View
 		column = new ColumnConfig("profiled", "Profiled?", 100);
 		column.setAlignment(HorizontalAlignment.RIGHT);
 		configs.add(column);
-		
+
 		column = new ColumnConfig("profileProcessed", "Profile Status", 150);
 		column.setAlignment(HorizontalAlignment.RIGHT);
 		configs.add(column);
-		
+
 		ColumnModel cm = new ColumnModel(configs);
 
 		container = new LayoutContainer();
@@ -226,25 +226,25 @@ public class UserFileView extends View
 		cp.setSize(1000, 400);
 
 		ToolBar toolBar = new ToolBar();
-		
-		Label space = new Label("");	
-/*		importOnly = new CheckBox();  
-		importOnly.setBoxLabel("Import Only");  
-		importOnly.setValue(false);  		
-		skipHeaderLine = new CheckBox();  
-		skipHeaderLine.setBoxLabel("Skip Header Line");  
-		skipHeaderLine.setValue(true);  
+
+		Label space = new Label("");
+/*		importOnly = new CheckBox();
+		importOnly.setBoxLabel("Import Only");
+		importOnly.setValue(false);
+		skipHeaderLine = new CheckBox();
+		skipHeaderLine.setBoxLabel("Skip Header Line");
+		skipHeaderLine.setValue(true);
 */
 		toolBar.add(space);
 /*		toolBar.add(importOnly);
 		toolBar.add(skipHeaderLine);
-*/	
+*/
 		Label text = new Label("Entity Model: None");
-		if( currentEntity != null ) {
-			text.setText("Entity Model: "+currentEntity.getDisplayName()+" ");
+		if (currentEntity != null) {
+			text.setText("Entity Model: " + currentEntity.getDisplayName() + " ");
 		}
 		toolBar.add(text);
-		
+
 		toolBar.add(new SeparatorToolItem());
 		toolBar.add(new Button("Import", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
 	          @Override
@@ -431,59 +431,75 @@ public class UserFileView extends View
 		fileLoaderConfigurationsDialog.setHeading("File Loader configuration");
 		fileLoaderConfigurationsDialog.setButtons(Dialog.OKCANCEL);
 		fileLoaderConfigurationsDialog.setModal(true);
-		
-		
+
+
 		fileLoaderConfigurationsDialog.getButtonById(Dialog.OK).addSelectionListener(new SelectionListener<ButtonEvent>() {		
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
 	        	String loaderName = currentFileLoader.getLoaderName();
 	        	// Info.display("Information", "Loader Name: "+loaderName);
-	        	
+
 	    		List<ParameterTypeWeb> types = currentFileLoader.getParameterTypes();	
 	    		List<Field<?>> fields = currentFileLoader.getFields();
 	          	// Info.display("Information", "Fields size: "+types.size());
-	    		
+
+	    		// check the text fields are not empty for flexibleDataLoader
+	    		if (loaderName.equals("flexibleDataLoader")) {
+    	            for (int i = 0; i < types.size(); i++) {
+                         ParameterTypeWeb type = types.get(i);
+                         Field<?> field = fields.get(i);
+                         if (type.getDisplayType().equals("TEXTFIELD")) {
+                             String text = (String) field.getValue();
+                             // Info.display("Field value: ", text);
+                             if (text == null || text.isEmpty()) {
+                                 Info.display("Warning", "The " + type.getDisplayName() + " field cannot be empty.");
+                                 return;
+                             }
+                         }
+    	            }
+	    		}
+
 	  			java.util.HashMap<String,Object> map = new java.util.HashMap<String,Object>();
-				for (int i=0; i<types.size(); i++){
+				for (int i = 0; i < types.size(); i++) {
 					 ParameterTypeWeb type = types.get(i);
 					 Field<?> field = fields.get(i);
-					 
+
 		          	 // Info.display("Information", "Field Name: "+type.getName());
 		          	 // Info.display("Information", "Field Type: "+type.getDisplayType());
 
-		     		if(type.getDisplayType().equals("CHECKBOX")) {
+		     		if (type.getDisplayType().equals("CHECKBOX")) {
 		     		   CheckBoxGroup checkGroup = (CheckBoxGroup) field;
 		     	       if (checkGroup.getValue() == null) {
 					       // Info.display("Information", "checkbox string; value: "+type.getName() + "; null");
-		     	    	   map.put(type.getName(),false);
+		     	    	   map.put(type.getName(), false);
 
 		     	       } else {
 		     	    	   // Info.display("Information", "checkbox string; value: "+type.getName()+"; "+checkGroup.getValue().getValue());
 		     	    	   map.put(type.getName(),checkGroup.getValue().getValue());
 		     	       }
 		     		}
-		     		
-		     		if(type.getDisplayType().equals("TEXTFIELD")) {
+
+		     		if (type.getDisplayType().equals("TEXTFIELD")) {
 		     			// Info.display("Information", "text field string; value: "+ type.getName()+"; " +field.getValue());
 		     			map.put(type.getName(),field.getValue());
-		     		}			          	 
+		     		}
 				}
-				
-				
+
+
 	     		showWaitCursor();
-	     		
-	        	List<UserFileWeb> userFileEntries = grid.getSelectionModel().getSelectedItems();	
-	        	  
+
+	        	List<UserFileWeb> userFileEntries = grid.getSelectionModel().getSelectedItems();
+
 	        	// set values for importOnly and skipHeaderLine and etc.
 	        	for (UserFileWeb userFile : userFileEntries) {
-	        		  userFile.setEntity(currentEntity);	
+	        		  userFile.setEntity(currentEntity);
 	        		  userFile.setFileLoaderName(loaderName);
-	        		  userFile.setFileLoaderMap(map);		      			
+	        		  userFile.setFileLoaderMap(map);
 	        	}
 	        	controller.handleEvent(new AppEvent(AppEvents.FileEntryImport, userFileEntries));
- 
-	        	  
-	        	fileLoaderConfigurationsDialog.close();					        	  	 
+
+
+	        	fileLoaderConfigurationsDialog.close();
 	          }
 	    });
 
@@ -554,7 +570,7 @@ public class UserFileView extends View
 		List<ParameterTypeWeb> types = fileLoaderConfig.getParameterTypes();	
 		List<Field<?>> dtos = new java.util.ArrayList<Field<?>>(types.size());
       	for (ParameterTypeWeb type : types) {	
-      		Field<?> field = CreateDynamicField(type);
+      		Field<?> field = CreateDynamicField(fileLoaderName, type);
       		if(field != null ) {
       			dynamicFieldsPanel.add( field);
       			dtos.add(field);
@@ -565,16 +581,21 @@ public class UserFileView extends View
 		return dynamicFieldsPanel;
 	}
 	
-	private  Field<?> CreateDynamicField(ParameterTypeWeb type) {
+	private  Field<?> CreateDynamicField(String fileLoaderName, ParameterTypeWeb type) {
 		Field<?> field;
 		if(type.getDisplayType().equals("CHECKBOX")) {
 			
 		   CheckBox checkBox = new CheckBox();  ;
 		   checkBox.setBoxLabel("");  		   
 		   checkBox.setValue(false); 
-		   if(type.getName().equals("skipHeaderLine")) {
-			   checkBox.setValue(true); 			   
+		   if (fileLoaderName.equals("flexibleDataLoader")) {
+    		   if(type.getName().equals("skipHeaderLine")) {
+    			   checkBox.setValue(true); 			   
+    		   }
 		   }
+           if(type.getName().equals("isMassiveInsert")) {
+               checkBox.setValue(false);                
+           }
 		   CheckBoxGroup checkGroup = new CheckBoxGroup();  
 		   checkGroup.setFieldLabel(type.getDisplayName());  
 		   checkGroup.add(checkBox);  

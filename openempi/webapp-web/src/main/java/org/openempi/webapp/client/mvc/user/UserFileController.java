@@ -20,17 +20,20 @@
  */
 package org.openempi.webapp.client.mvc.user;
 
+import java.util.Date;
 import java.util.List;
 
 import org.openempi.webapp.client.AppEvents;
 import org.openempi.webapp.client.Constants;
 import org.openempi.webapp.client.domain.AuthenticationException;
+import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.model.UserFileWeb;
 import org.openempi.webapp.client.model.FileLoaderConfigurationWeb;
 import org.openempi.webapp.client.model.UserWeb;
 import org.openempi.webapp.client.mvc.Controller;
 
 import com.extjs.gxt.ui.client.Registry;
+import com.extjs.gxt.ui.client.data.BaseModelData;
 import com.extjs.gxt.ui.client.event.EventType;
 import com.extjs.gxt.ui.client.mvc.AppEvent;
 import com.extjs.gxt.ui.client.mvc.Dispatcher;
@@ -105,6 +108,11 @@ public class UserFileController extends Controller
 
     private void importUserFileEntries(List<UserFileWeb> fileEntries) {
         // Info.display("Information", "importUserFileEntries");
+        final EntityWeb currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+        if (currentEntity == null) {
+            return;
+        }
+
         final int fileEntrySize = fileEntries.size();
         final int[] failureCount = {0};
         final int[] processCount = {0};
@@ -130,7 +138,7 @@ public class UserFileController extends Controller
                         } else {
                             error = "There are " + failureCount[0] + " files import failure.";
                         }
-
+                        logInfoMessage(currentEntity.getName(), error, new Date());
                         forwardToView(userFileView, AppEvents.Error, error);
                     }
                 }
@@ -149,17 +157,18 @@ public class UserFileController extends Controller
                                 } else {
                                     error = "There are " + failureCount[0] + " files import failure.";
                                 }
-
+                                logInfoMessage(currentEntity.getName(), error, new Date());
                                 forwardToView(userFileView, AppEvents.Error, error);
                             }
                         } else {
-                            Info.display("Information", value);
+                            // Info.display("Information", value);
+                            Info.display("Information", "Initiating the process of importing file.");
                             if (fileEntrySize == 1) {
-                                forwardToView(userFileView, AppEvents.FileEntryImportSuccess,
-                                        "File successfully imported");
+                                logInfoMessage(currentEntity.getName(), "Initiating the process of importing file.", new Date());
+                                forwardToView(userFileView, AppEvents.FileEntryImportSuccess, "Initiating the process of importing file");
                             } else {
-                                forwardToView(userFileView, AppEvents.FileEntryImportSuccess,
-                                        "Files successfully imported");
+                                logInfoMessage(currentEntity.getName(), "Initiating the process of importing files.", new Date());
+                                forwardToView(userFileView, AppEvents.FileEntryImportSuccess, "Initiating the process of importing files");
                             }
                         }
                     }
@@ -169,6 +178,10 @@ public class UserFileController extends Controller
     }
 
     private void dataProfileFileEntries(List<UserFileWeb> fileEntries) {
+        final EntityWeb currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+        if (currentEntity == null) {
+            return;
+        }
 
         UserFileWeb userFile = fileEntries.get(0);
         getUserFileDataService().dataProfileUserFile(userFile, new AsyncCallback<String>()
@@ -180,7 +193,8 @@ public class UserFileController extends Controller
                     Dispatcher.get().dispatch(AppEvents.Logout);
                     return;
                 }
-
+                String error = "There is data profile operation failure.";
+                logInfoMessage(currentEntity.getName(), error, new Date());
                 forwardToView(userFileView, AppEvents.Error, caught.getMessage());
             }
 
@@ -188,8 +202,8 @@ public class UserFileController extends Controller
 
                 updateUserFileData();
 
-                forwardToView(userFileView, AppEvents.FileEntryDataProfileSuccess,
-                        "Data Profile operation successfully launched");
+                logInfoMessage(currentEntity.getName(), "Initiating the process of data profile operation.", new Date());
+                forwardToView(userFileView, AppEvents.FileEntryDataProfileSuccess, "Initiating the process of data profile operation");
             }
         });
     }
@@ -239,7 +253,7 @@ public class UserFileController extends Controller
     private void updateUserFileDataProfile() {
         UserWeb loginUser = Registry.get(Constants.LOGIN_USER);
         if (loginUser != null) {
-            getUserFileDataService().getUserFiles(loginUser.getUsername(), new AsyncCallback<List<UserFileWeb>>()
+            getUserFileDataService().getUserFiles(loginUser.getUsername(), false, new AsyncCallback<List<UserFileWeb>>()
             {
                 public void onFailure(Throwable caught) {
 
@@ -258,4 +272,12 @@ public class UserFileController extends Controller
 
     }
 
+    public void logInfoMessage(String entity, String message, Date time) {
+        BaseModelData infoMessage = new BaseModelData();
+        infoMessage.set("entity", entity);
+        infoMessage.set("message", message);
+        // infoMessage.set("time", Utility.DateTimeToString(time));
+        infoMessage.set("time", time);
+        Dispatcher.forwardEvent(AppEvents.InformationMessage, infoMessage);
+    }
 }

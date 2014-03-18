@@ -28,19 +28,23 @@ import org.openempi.webapp.client.model.SystemConfigurationWeb;
 import org.openempi.webapp.client.model.AuditEventTypeWeb;
 import org.openempi.webapp.client.model.EntityAttributeDatatypeWeb;
 import org.openempi.webapp.client.model.EntityValidationRuleWeb;
+import org.openempi.webapp.client.model.JobTypeWeb;
+import org.openempi.webapp.client.model.JobStatusWeb;
 
 import com.google.gwt.user.client.rpc.RemoteService;
 
 public interface ReferenceDataService extends RemoteService
 {
+    public IdentifierDomainWeb getGlobalIdentifierDomain();
+
 	public List<IdentifierDomainWeb> getIdentifierDomains();
-	
+
 	public List<IdentifierDomainTypeCodeWeb> getIdentifierDomainTypeCodes();
-	
+
 	public List<AuditEventTypeWeb> getAuditEventTypeCodes();
-	
+
 	public List<String> getPersonModelAllAttributeNames();
-	
+
 	public List<String> getPersonModelAttributeNames();
 
 	public List<String> getPersonModelCustomFieldNames();
@@ -48,10 +52,14 @@ public interface ReferenceDataService extends RemoteService
 	public List<String> getTransformationFunctionNames();
 
 	public List<String> getComparatorFunctionNames();
-	
-	public SystemConfigurationWeb getSystemConfigurationInfo();
-	
+
+	public SystemConfigurationWeb getSystemConfigurationInfo(String entityName);
+
 	public List<EntityAttributeDatatypeWeb> getEntityAttributeDatatypes();
-	
+
 	public List<EntityValidationRuleWeb> getValidationRules();
+
+	public List<JobTypeWeb> getJobTypes();
+
+	public List<JobStatusWeb> getJobStatuses();
 }

@@ -97,7 +97,12 @@ public class BlockingConfigurationController extends Controller
 
 	private void requestBlockingConfigurationData() {
 		BlockingDataServiceAsync blockingService = getBlockingDataService();
-		blockingService.loadTraditionalBlockingConfigurationData(new AsyncCallback<BlockingEntryListWeb>() {
+        EntityWeb entity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+        String entityName = "";
+        if (entity != null) {
+            entityName = entity.getName();
+        }
+		blockingService.loadTraditionalBlockingConfigurationData(entityName, new AsyncCallback<BlockingEntryListWeb>() {
 	      public void onFailure(Throwable caught) {
 
 				if (caught instanceof AuthenticationException) {

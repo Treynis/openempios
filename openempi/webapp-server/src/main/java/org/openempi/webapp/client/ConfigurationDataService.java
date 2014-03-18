@@ -25,7 +25,7 @@ import java.util.List;
 import org.openempi.webapp.client.model.CustomFieldWeb;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.model.MatchConfigurationWeb;
-import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
+import org.openempi.webapp.client.model.MatchRuleEntryListWeb;
 import org.openempi.webapp.client.model.StringComparatorFunctionWeb;
 import org.openempi.webapp.client.model.TransformationFunctionWeb;
 import org.openempi.webapp.client.model.VectorConfigurationWeb;
@@ -39,16 +39,16 @@ public interface ConfigurationDataService extends RemoteService
 	public List<TransformationFunctionWeb> getTransfromationFunctionList();
 
 	public List<CustomFieldWeb> loadCustomFieldsConfiguration(String entityName) throws Exception;
-	
-    public List<VectorConfigurationWeb> loadVectorConfiguration() throws Exception;
 
-	public MatchConfigurationWeb loadProbabilisticMatchingConfiguration() throws Exception;
-	
-	public ExactMatchingConfigurationWeb loadExactMatchingConfiguration() throws Exception;
+    public List<VectorConfigurationWeb> loadVectorConfiguration(String entityName) throws Exception;
+
+	public MatchConfigurationWeb loadProbabilisticMatchingConfiguration(String entityName) throws Exception;
+
+	public MatchRuleEntryListWeb loadExactMatchingConfiguration(String entityName) throws Exception;
 
 	public String saveCustomFieldsConfiguration(EntityWeb entityModel, List<CustomFieldWeb> customFieldsConfiguration) throws Exception;
 
-	public String saveExactMatchingConfiguration(ExactMatchingConfigurationWeb matchConfiguration) throws Exception;
-	
+    public String saveExactMatchingConfiguration(MatchRuleEntryListWeb matchConfiguration) throws Exception;
+
 	public String saveProbabilisticMatchingConfiguration(MatchConfigurationWeb matchConfiguration) throws Exception;
 }

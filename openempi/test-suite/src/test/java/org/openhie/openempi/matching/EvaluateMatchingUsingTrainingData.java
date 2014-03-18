@@ -112,7 +112,7 @@ public class EvaluateMatchingUsingTrainingData extends BaseServiceTestCase
 	private void scoreLink(Link link) {
 		RecordPair pair = buildPairFromLink(link);
 		try {
-			pair = Context.getMatchingService().match(pair);
+			pair = Context.getMatchingService(getTestEntity().getName()).match(pair);
 		} catch (ApplicationException e) {
 			log.warn("Unable to score the record pair: " + e, e);
 		}

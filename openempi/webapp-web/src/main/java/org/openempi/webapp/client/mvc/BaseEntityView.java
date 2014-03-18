@@ -40,6 +40,7 @@ import com.extjs.gxt.ui.client.widget.form.CheckBox;
 import com.extjs.gxt.ui.client.widget.form.CheckBoxGroup;
 import com.extjs.gxt.ui.client.widget.form.ComboBox;
 import com.extjs.gxt.ui.client.widget.form.DateField;
+import com.extjs.gxt.ui.client.widget.form.DateTimePropertyEditor;
 import com.extjs.gxt.ui.client.widget.form.Field;
 import com.extjs.gxt.ui.client.widget.form.FieldSet;
 import com.extjs.gxt.ui.client.widget.form.FormPanel;
@@ -48,6 +49,8 @@ import com.extjs.gxt.ui.client.widget.form.TextField;
 import com.extjs.gxt.ui.client.widget.form.ComboBox.TriggerAction;
 import com.extjs.gxt.ui.client.widget.layout.FormLayout;
 import com.extjs.gxt.ui.client.widget.Info;
+import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.client.ui.RootPanel;
 
 public class BaseEntityView extends View
 {
@@ -331,12 +334,23 @@ public class BaseEntityView extends View
             break;
 
         case DATE:
-        case TIMESTAMP:
             // Info.display("field Type: ","Date" );
             DateField fieldDate = new DateField();
             fieldDate.setFieldLabel(attribute.getDisplayName());
+            fieldDate.setToolTip("yyyy-MM-dd");
 
             field = fieldDate;
+            break;
+
+        case TIMESTAMP:
+            // Info.display("field Type: ","TIMESTAMP" );
+            DateTimePropertyEditor dateFormat = new DateTimePropertyEditor("yyyy-MM-dd HH:mm");
+            DateField fieldTimestamp = new DateField();
+            fieldTimestamp.setFieldLabel(attribute.getDisplayName());
+            fieldTimestamp.setToolTip("yyyy-MM-dd HH:mm");
+            fieldTimestamp.setPropertyEditor(dateFormat);
+
+            field = fieldTimestamp;
             break;
 
         default:
@@ -380,5 +394,13 @@ public class BaseEntityView extends View
             return fieldSet;
         }
         return null;
+    }
+    
+    public static void showWaitCursor() {
+        DOM.setStyleAttribute(RootPanel.getBodyElement(), "cursor", "wait");
+    }
+     
+    public static void showDefaultCursor() {
+        DOM.setStyleAttribute(RootPanel.getBodyElement(), "cursor", "default");
     }
 }

@@ -67,7 +67,13 @@
     <servlet-class>org.openempi.webapp.server.ReportDownloadServlet</servlet-class>
     <load-on-startup>3</load-on-startup>
   </servlet>
-    
+
+  <servlet>
+    <servlet-name>entityDownloadService</servlet-name>
+    <servlet-class>org.openempi.webapp.server.EntityDownloadServlet</servlet-class>
+    <load-on-startup>3</load-on-startup>
+  </servlet>
+      
   <servlet>
     <servlet-name>blockingDataService</servlet-name>
     <servlet-class>org.openempi.webapp.server.BlockingDataServiceImpl</servlet-class>
@@ -83,12 +89,6 @@
   <servlet>
     <servlet-name>eventNotificationServiceImpl</servlet-name>
     <servlet-class>org.openempi.webapp.server.EventNotificationServiceImpl</servlet-class>
-    <load-on-startup>3</load-on-startup>
-  </servlet>
-  
-  <servlet>
-    <servlet-name>fileLoaderDataServiceImpl</servlet-name>
-    <servlet-class>org.openempi.webapp.server.FileLoaderDataServiceImpl</servlet-class>
     <load-on-startup>3</load-on-startup>
   </servlet>
 
@@ -139,7 +139,13 @@
     <servlet-class>org.openempi.webapp.server.EntityInstanceDataServiceImpl</servlet-class>
     <load-on-startup>3</load-on-startup>
   </servlet>
-          
+
+  <servlet>
+    <servlet-name>jobQueueDataService</servlet-name>
+    <servlet-class>org.openempi.webapp.server.JobQueueDataServiceImpl</servlet-class>
+    <load-on-startup>3</load-on-startup>
+  </servlet>
+  
   <servlet>
     <servlet-name>userDataService</servlet-name>
     <servlet-class>org.openempi.webapp.server.UserDataServiceImpl</servlet-class>
@@ -179,7 +185,7 @@
     </init-param>    
     <load-on-startup>15</load-on-startup>
   </servlet>
-  
+  <!--
   <servlet>
     <servlet-name>CXFServlet</servlet-name>
     <display-name>CXF Servlet</display-name>
@@ -190,7 +196,7 @@
     </init-param>
     <load-on-startup>16</load-on-startup> 
   </servlet>
-  
+  -->
   <!--   
   <servlet>
     <servlet-name>logging</servlet-name>
@@ -217,11 +223,6 @@
   <servlet-mapping>
     <servlet-name>eventNotificationServiceImpl</servlet-name>
     <url-pattern>/org.openempi.webapp.Application/eventNotificationService</url-pattern>
-  </servlet-mapping>
-  
-  <servlet-mapping>
-    <servlet-name>fileLoaderDataServiceImpl</servlet-name>
-    <url-pattern>/org.openempi.webapp.Application/fileLoaderDataService</url-pattern>
   </servlet-mapping>
 
   <servlet-mapping>
@@ -263,7 +264,12 @@
     <servlet-name>entityInstanceDataService</servlet-name>
     <url-pattern>/org.openempi.webapp.Application/entityInstanceDataService</url-pattern>
   </servlet-mapping>
-     
+
+  <servlet-mapping>
+    <servlet-name>jobQueueDataService</servlet-name>
+    <url-pattern>/org.openempi.webapp.Application/jobQueueDataService</url-pattern>
+  </servlet-mapping>
+  
    <servlet-mapping>
     <servlet-name>userDataService</servlet-name>
     <url-pattern>/org.openempi.webapp.Application/userDataService</url-pattern>
@@ -277,6 +283,11 @@
   <servlet-mapping>
     <servlet-name>reportDownloadService</servlet-name>
     <url-pattern>/reportDownloadService</url-pattern>
+  </servlet-mapping>
+  
+  <servlet-mapping>
+    <servlet-name>entityDownloadService</servlet-name>
+    <url-pattern>/entityDownloadService</url-pattern>
   </servlet-mapping>
   
 <!-- 
@@ -297,11 +308,12 @@
     <servlet-name>jersey-rest-servlet</servlet-name>
     <url-pattern>/openempi-ws-rest/*</url-pattern>
   </servlet-mapping>
+<!--
   <servlet-mapping>
     <servlet-name>CXFServlet</servlet-name>
     <url-pattern>/services/*</url-pattern>
   </servlet-mapping>
-  
+  -->
   <session-config>
         <session-timeout>30</session-timeout>
   </session-config>

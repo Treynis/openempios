@@ -26,11 +26,13 @@ import com.extjs.gxt.ui.client.event.EventType;
 import com.extjs.gxt.ui.client.mvc.AppEvent;
 import com.extjs.gxt.ui.client.mvc.Controller;
 
-public class MenuToolbarController extends Controller {
+public class MenuToolbarController extends Controller
+{
 	private MenuToolbarView menuToolbarView;
 
 	public MenuToolbarController() {
 		registerEventTypes(AppEvents.InitMenu);
+	    registerEventTypes(AppEvents.UpdateConfigurationMenu);
 	}
 
 	public void initialize() {
@@ -42,7 +44,9 @@ public class MenuToolbarController extends Controller {
 		EventType type = event.getType();
 		if (type == AppEvents.InitMenu) {
 			onInit(event);
-		}
+        } else if (type == AppEvents.UpdateConfigurationMenu) {
+            forwardToView(menuToolbarView, event);
+        }
 	}
 
 	private void onInit(AppEvent event) {

@@ -49,12 +49,9 @@ import com.extjs.gxt.ui.client.widget.Dialog;
 import com.extjs.gxt.ui.client.widget.Info;
 import com.extjs.gxt.ui.client.widget.LayoutContainer;
 import com.extjs.gxt.ui.client.widget.MessageBox;
-import com.extjs.gxt.ui.client.widget.Status;
 import com.extjs.gxt.ui.client.widget.button.Button;
 import com.extjs.gxt.ui.client.widget.form.ComboBox;
-import com.extjs.gxt.ui.client.widget.form.LabelField;
 import com.extjs.gxt.ui.client.widget.form.ComboBox.TriggerAction;
-import com.extjs.gxt.ui.client.widget.form.SpinnerField;
 import com.extjs.gxt.ui.client.widget.grid.ColumnConfig;
 import com.extjs.gxt.ui.client.widget.grid.ColumnModel;
 import com.extjs.gxt.ui.client.widget.grid.Grid;
@@ -73,12 +70,15 @@ import com.google.gwt.core.client.GWT;
 
 public class BlockingConfigurationView extends View
 {
-	private Grid<BaseFieldWeb> grid;
-	private GroupingStore<BaseFieldWeb> store = new GroupingStore<BaseFieldWeb>();
+	private Grid<BaseFieldWeb> roundGrid;
+	private GroupingStore<BaseFieldWeb> roundStore = new GroupingStore<BaseFieldWeb>();
+
 	private Dialog addBlockingRoundDialog = null;
+    private Boolean addOrEditRoundMode = true;
+    private int editedMatchRound = 0;
+    private ComboBox<ModelPropertyWeb> listCombo = null;
 	private ListStore<ModelPropertyWeb> listStore = new ListStore<ModelPropertyWeb>();
 	private Grid<BaseFieldWeb> addRoundGrid;
-    private SpinnerField maximumBlockSizeSpin;
 
 	private LayoutContainer container;
 
@@ -93,7 +93,7 @@ public class BlockingConfigurationView extends View
 		if (event.getType() == AppEvents.BlockingConfigurationView) {
 			initUI();
 		} else if (event.getType() == AppEvents.BlockingConfigurationReceived) {
-			store.removeAll();
+		    roundStore.removeAll();
 
 			BlockingEntryListWeb configuration = (BlockingEntryListWeb) event.getData();
 			List<BaseFieldWeb> fields = configuration.getBlockingRoundEntries();
@@ -101,15 +101,8 @@ public class BlockingConfigurationView extends View
 			// Blocking rounds
 			for (BaseFieldWeb baseField : fields) {
 				baseField.setFieldDescription(Utility.convertToDescription(baseField.getFieldName()));
-				store.add(baseField);
+				roundStore.add(baseField);
 			}
-
-	         // Maximum block size
-            maximumBlockSizeSpin.setValue(0);
-	        Integer maximumBlockSize = configuration.getMaximumBlockSize();
-	        if (maximumBlockSize != null) {
-    			maximumBlockSizeSpin.setValue(maximumBlockSize);
-	        }
 		} else if (event.getType() == AppEvents.BlockingConfigurationSaveComplete) {
 			// String message = event.getData();
 			// Info.display("Information", "Person was successfully added with message " + message);
@@ -132,7 +125,7 @@ public class BlockingConfigurationView extends View
 			listStore.add(attributeNames);
 		}
 
-		store.groupBy("blockingRound");
+		roundStore.groupBy("blockingRound");
 		controller.handleEvent(new AppEvent(AppEvents.BlockingConfigurationRequest));
 
 		buildAddBlockingRoundDialog();
@@ -160,9 +153,9 @@ public class BlockingConfigurationView extends View
 				return f + ": " + data.group + " (" + data.models.size() + " " + l + ")";
 			} });
 
-		grid = new Grid<BaseFieldWeb>(store, cm);
-		grid.setView(view);
-		grid.setBorders(true);
+		roundGrid = new Grid<BaseFieldWeb>(roundStore, cm);
+		roundGrid.setView(view);
+		roundGrid.setBorders(true);
 
 		ContentPanel cp = new ContentPanel();
 		cp.setHeading("Traditional Blocking Configuration");
@@ -172,49 +165,73 @@ public class BlockingConfigurationView extends View
 		cp.setSize(500, 350);
 
 		ToolBar toolBar = new ToolBar();
-	    LabelField maximumBlockSizeSpinLabel = new LabelField("Maximum Block Size ");
-        maximumBlockSizeSpin = new SpinnerField();
-        maximumBlockSizeSpin.setAllowDecimals(false);
-        maximumBlockSizeSpin.setAllowNegative(false);
-        maximumBlockSizeSpin.setFieldLabel("Maximum Block Size: ");
-        maximumBlockSizeSpin.setMinValue(0);
-        maximumBlockSizeSpin.setMaxValue(1000);
-        maximumBlockSizeSpin.setWidth(60);
-
-        // add some space for error icon
-        Status emptyStatus = new Status();
-        emptyStatus.setText("");
-        emptyStatus.setWidth(15);
-
-        toolBar.add(maximumBlockSizeSpinLabel);
-        toolBar.add(maximumBlockSizeSpin);
-        toolBar.add(emptyStatus);
-
 		toolBar.add(new Button("Add Round", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
 	        	  // Make sure we are starting with a clean slate
+                  addBlockingRoundDialog.setIcon(IconHelper.create("images/folder_go.png"));
+                  addBlockingRoundDialog.setHeading("Add Blocking Round");
+                  Button ok = addBlockingRoundDialog.getButtonById("ok");
+//                  ok.setText("Add Round");
+
+                  addOrEditRoundMode = true;
 	        	  addRoundGrid.getStore().removeAll();
 	        	  addBlockingRoundDialog.show();
+
+                  listCombo.clearSelections();
 	          }
 	    }));
+        toolBar.add(new SeparatorToolItem());
+        toolBar.add(new Button("Edit Round", IconHelper.create("images/folder_edit.png"), new SelectionListener<ButtonEvent>() {
+            @Override
+            public void componentSelected(ButtonEvent ce) {
+                BaseFieldWeb editField = roundGrid.getSelectionModel().getSelectedItem();
+                if (editField == null) {
+                    Info.display("Information","You must first select a field in the Round to be edited before pressing the \"Edit Round\" button.");
+                    return;
+                }
+
+                addBlockingRoundDialog.setIcon(IconHelper.create("images/folder_edit.png"));
+                addBlockingRoundDialog.setHeading("Edit Blocking Round");
+                Button ok = addBlockingRoundDialog.getButtonById("ok");
+//                ok.setText("Edit Round");
+
+                addOrEditRoundMode = false;
+                addRoundGrid.getStore().removeAll();
+                editedMatchRound = editField.getBlockingRound();
+                for (BaseFieldWeb field : roundGrid.getStore().getModels()) {
+                    if (field.getBlockingRound() == editField.getBlockingRound()) {
+
+                        BaseFieldWeb roundFieldWeb = new BaseFieldWeb();
+                        roundFieldWeb.setFieldIndex(field.getFieldIndex());
+                        roundFieldWeb.setFieldName(field.getFieldName());
+                        roundFieldWeb.setFieldDescription(field.getFieldDescription());
+                        addRoundGrid.getStore().add(roundFieldWeb);
+                    }
+                }
+                addBlockingRoundDialog.show();
+
+                listCombo.clearSelections();
+
+            }
+        }));
 		toolBar.add(new SeparatorToolItem());
 		toolBar.add(new Button("Remove Round", IconHelper.create("images/folder_delete.png"), new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
-	        	  BaseFieldWeb removeField = grid.getSelectionModel().getSelectedItem();
+	        	  BaseFieldWeb removeField = roundGrid.getSelectionModel().getSelectedItem();
 	        	  if (removeField == null) {
 	        		  Info.display("Information","You must first select a field in the round to be deleted before pressing the \"Remove Round\" button.");
 	        		  return;
 	        	  }
-	        	  for (BaseFieldWeb field : grid.getStore().getModels()) {
+	        	  for (BaseFieldWeb field : roundGrid.getStore().getModels()) {
 	        		  if (field.getBlockingRound() == removeField.getBlockingRound()) {
-	        			  store.remove(field);
+	        		      roundStore.remove(field);
 	        		  } else if (field.getBlockingRound() > removeField.getBlockingRound()) {
 	        			  BaseFieldWeb theField = field;
-	        			  store.remove(field);
+	        			  roundStore.remove(field);
 	        			  theField.setBlockingRound(theField.getBlockingRound() - 1);
-	        			  store.add(theField);
+	        			  roundStore.add(theField);
 	        		  }
 	        	  }
 	          }
@@ -235,14 +252,13 @@ public class BlockingConfigurationView extends View
 
 	              BlockingEntryListWeb configuration = new BlockingEntryListWeb();
 
-	              configuration.setMaximumBlockSize(maximumBlockSizeSpin.getValue().intValue());
-	              configuration.setBlockingRoundtEntries(grid.getStore().getModels());
+	              configuration.setBlockingRoundtEntries(roundGrid.getStore().getModels());
 
 	        	  controller.handleEvent(new AppEvent(AppEvents.BlockingConfigurationSave, configuration));
 	          }
 	    }), layoutData);
 		cp.setBottomComponent(c);
-		cp.add(grid);
+		cp.add(roundGrid);
 
 		container.add(cp);
 
@@ -279,13 +295,13 @@ public class BlockingConfigurationView extends View
 		addBlockingRoundDialog.getButtonById(Dialog.OK).addSelectionListener(new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
-
+	            if (addOrEditRoundMode) { // Add  Round
 	        	  // check duplicate Round
-				  int roundCount = getCurrentRoundCount(store);
+				  int roundCount = getCurrentRoundCount(roundStore);
 				  for (int i = 1; i <= roundCount; i++) {
 					  // get round with index i
 					  List<BaseFieldWeb> round = new ArrayList<BaseFieldWeb>();
-					  for (BaseFieldWeb fieldInRound : store.getModels()) {
+					  for (BaseFieldWeb fieldInRound : roundStore.getModels()) {
 						   if (fieldInRound.getBlockingRound() == i) {
 							   round.add(fieldInRound);
 						   }
@@ -312,12 +328,60 @@ public class BlockingConfigurationView extends View
 					  }
 				  }
 
-	        	  int roundIndex = getCurrentRoundCount(store) + 1;
+	        	  int roundIndex = getCurrentRoundCount(roundStore) + 1;
 	        	  for (BaseFieldWeb field : addRoundGrid.getStore().getModels()) {
-	        		  store.add(new BaseFieldWeb(roundIndex, field.getFieldIndex(), field.getFieldName(), field.getFieldDescription()));
+	        	      roundStore.add(new BaseFieldWeb(roundIndex, field.getFieldIndex(), field.getFieldName(), field.getFieldDescription()));
 	        	  }
+                } else { // Edit Round
+                    // check duplicate Round
+                    int roundCount = getCurrentRoundCount(roundStore);
+                    for (int i = 1; i <= roundCount; i++) {
+                        if (editedMatchRound == i) {
+                            continue;
+                        }
 
-	        	  addBlockingRoundDialog.hide();
+                        // get round with index i
+                        List<BaseFieldWeb> round = new ArrayList<BaseFieldWeb>();
+                        for (BaseFieldWeb fieldInRound : roundStore.getModels()) {
+                             if (fieldInRound.getBlockingRound() == i) {
+                                 round.add(fieldInRound);
+                             }
+                        }
+
+                        // check round same as round added in Grid
+                        boolean sameRound = true;
+                        if (round.size() ==  addRoundGrid.getStore().getModels().size()) {
+                            int roundIndex = 0;
+                            for (BaseFieldWeb field : addRoundGrid.getStore().getModels()) {
+                                if (!field.getFieldName().equals(round.get(roundIndex).getFieldName())) {
+                                    sameRound = false;
+                                }
+                                roundIndex++;
+                            }
+                        } else {
+                            sameRound = false;
+                        }
+
+                        if (sameRound) {
+                            // Info.display("Information", "same round.");
+                            MessageBox.alert("Information", "There is a duplicate blocking round in Blocking Configuration", listenInfoMsg);
+                            return;
+                        }
+                    }
+
+                    // remove old rounds
+                    for (BaseFieldWeb field : roundGrid.getStore().getModels()) {
+                        if (field.getBlockingRound() == editedMatchRound) {
+                            roundStore.remove(field);
+                        }
+                    }
+                    // add new rounds
+                    for (BaseFieldWeb field : addRoundGrid.getStore().getModels()) {
+                        roundStore.add(new BaseFieldWeb(editedMatchRound, field.getFieldIndex(), field.getFieldName(), field.getFieldDescription()));
+                    }
+                }
+	        	addBlockingRoundDialog.hide();
+
 	          }
 
 			  private int getCurrentRoundCount(GroupingStore<BaseFieldWeb> store) {
@@ -347,21 +411,21 @@ public class BlockingConfigurationView extends View
 
 		ToolBar toolBar = new ToolBar();
 
-		final ComboBox<ModelPropertyWeb> combo = new ComboBox<ModelPropertyWeb>();
-		combo.setEmptyText("Select a field...");
-		combo.setForceSelection(true);
+		listCombo = new ComboBox<ModelPropertyWeb>();
+		listCombo.setEmptyText("Select a field...");
+		listCombo.setForceSelection(true);
 //		combo.setDisplayField("name");
-		combo.setDisplayField("description");
-		combo.setWidth(150);
-		combo.setStore(listStore);
-		combo.setTypeAhead(true);
-		combo.setTriggerAction(TriggerAction.ALL);
+		listCombo.setDisplayField("description");
+		listCombo.setWidth(150);
+		listCombo.setStore(listStore);
+		listCombo.setTypeAhead(true);
+		listCombo.setTriggerAction(TriggerAction.ALL);
 
-		toolBar.add(combo);
+		toolBar.add(listCombo);
 		toolBar.add(new Button("Add Field", IconHelper.create("images/folder_go.png"), new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
-	        	  List<ModelPropertyWeb> selection = combo.getSelection();
+	        	  List<ModelPropertyWeb> selection = listCombo.getSelection();
 	        	  if (selection == null || selection.size() == 0) {
 	        		  Info.display("Information", "Please select a field before pressing the \"Add Field\" button.");
 	        		  return;
@@ -390,7 +454,17 @@ public class BlockingConfigurationView extends View
 	        		  Info.display("Information","You must first select a field before pressing the \"Remove Field\" button.");
 	        		  return;
 	        	  }
-	        	  addRoundGrid.getStore().remove(field);
+                  Integer removedFieldIndex = field.getFieldIndex();
+                  addRoundGrid.getStore().remove(field);
+
+                  // switch indexes
+                  for (BaseFieldWeb item : addRoundGrid.getStore().getModels()) {
+                       Integer fieldIndex = item.getFieldIndex();
+                       if (fieldIndex > removedFieldIndex) {
+                           item.setFieldIndex(fieldIndex-1);
+                       }
+                  }
+                  addRoundGrid.getView().refresh(false);
 	          }
 	    }));
 		cp.setTopComponent(toolBar);

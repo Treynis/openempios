@@ -19,6 +19,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 package org.openhie.openempi.blocking;
+import java.util.Date;
 import java.util.List;
 
 import org.openhie.openempi.context.Context;
@@ -31,11 +32,13 @@ public class BlockingServiceTest extends BaseServiceTestCase
 {
 	public void testGetRecordPairs() {
 		try {
+		    Thread.sleep(30000);
 			List<Entity> entities = Context.getEntityDefinitionManagerService().loadEntities();
 			assertTrue("No entities have been defined.", entities.size() > 0);
 			Entity testEntity = entities.get(0);
 			
-			BlockingService blockingService = Context.getBlockingService();
+            long startTime = new Date().getTime();
+			BlockingService blockingService = Context.getBlockingService(testEntity.getName());
 			RecordPairSource recordPairSource = blockingService.getRecordPairSource(testEntity);
 			int i=0;
 			for (RecordPairIterator iter = recordPairSource.iterator(); iter.hasNext(); ) {
@@ -43,9 +46,13 @@ public class BlockingServiceTest extends BaseServiceTestCase
 				if (log.isTraceEnabled()) {
 					log.trace("Comparing records " + pair.getLeftRecord().getRecordId() + " and " + pair.getRightRecord().getRecordId());
 				}
+				if (i % 100000 == 0) {
+				    System.out.println("Loaded " + i + " record pairs so far.");
+				}
 				i++;
 			}
-			System.out.println("Loaded " + i + " record pairs.");
+			long endTime = new Date().getTime();
+			System.out.println("Loaded " + i + " record pairs in " + (endTime-startTime) + " msec.");
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println(e);

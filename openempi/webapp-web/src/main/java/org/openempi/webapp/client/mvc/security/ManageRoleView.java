@@ -65,26 +65,26 @@ public class ManageRoleView extends View
 {
 	private Grid<RoleWeb> grid;
 	private ListStore<RoleWeb> store = new ListStore<RoleWeb>();
-	
+
 	private Dialog  roleDialog = null;
 	private String  addEditDeleteMode = "ADD";
-	
+
 	private RoleWeb editedRole;
 
-	private TextField<String> RoleName = new TextField<String>();
-	private TextField<String> RoleDescription = new TextField<String>();
+	private TextField<String> roleName = new TextField<String>();
+	private TextField<String> roleDescription = new TextField<String>();
 
-	CheckBoxListView<PermissionWeb> permissionCheckBoxList;
+	private CheckBoxListView<PermissionWeb> permissionCheckBoxList;
 	private ListStore<PermissionWeb> permissionStore = new ListStore<PermissionWeb>();;
-	
+
 	private LayoutContainer container;
-	
+
 	private Button addRoleButton;
 	private Button updateRoleButton;
 	private Button removeRoleButton;
-	
-	private Map<String,PermissionWeb> permissions = null;
-	
+
+	private Map<String, PermissionWeb> permissions = null;
+
 	@SuppressWarnings("unchecked")
 	public ManageRoleView(Controller controller) {
 		super(controller);
@@ -96,182 +96,182 @@ public class ManageRoleView extends View
 		if (event.getType() == AppEvents.ManageRoleView) {
 			initUI();
 		} else if (event.getType() == AppEvents.ManageRoleReceived) {
-			
+
 			// Info.display("Information", "ManageRoleReceived");
-			List<RoleWeb> roles = (List<RoleWeb>) event.getData();			
-			store.removeAll();		
+			List<RoleWeb> roles = (List<RoleWeb>) event.getData();
+			store.removeAll();
 			store.add(roles);
-			
+
 			grid.getSelectionModel().select(0, true);
 			grid.getSelectionModel().deselect(0);
-			
+
 		} else if (event.getType() == AppEvents.RoleUpdateRenderData) {
-			
+
 			RoleWeb renderRole = (RoleWeb) event.getData();
 			// Info.display("Information", "Role: "+ editedRole.getName());
-			
+
 	    	List<PermissionWeb> permissionList = Registry.get(Constants.PERMISSION_LIST);
 			permissionStore.removeAll();
-			permissionStore.add(permissionList);	
-			
+			permissionStore.add(permissionList);
+
 			roleDialog.setHeading("Edit Role");
 			Button ok = roleDialog.getButtonById("ok");
 			ok.setText("Update");
 			roleDialog.show();
-			
+
 			readOnlyFields(false);
 			displayRecords(renderRole);
-			
+
 		} else if (event.getType() == AppEvents.RoleDeleteRenderData) {
-			
+
 			RoleWeb renderRole = (RoleWeb) event.getData();
 			// Info.display("Information", "Role: "+ editedRole.getName());
-			
+
 	    	List<PermissionWeb> permissionList = Registry.get(Constants.PERMISSION_LIST);
 			permissionStore.removeAll();
-			permissionStore.add(permissionList);	
-			
-			roleDialog.setHeading("Delete Role");
+			permissionStore.add(permissionList);
+
+			roleDialog.setHeading("Remove Role");
 			Button ok = roleDialog.getButtonById("ok");
-			ok.setText("Delete");
+			ok.setText("Remove");
 			roleDialog.show();
-			
+
 			readOnlyFields(true);
 			displayRecords(renderRole);
-						
-		} else if (event.getType() == AppEvents.ManageRoleAddComplete) {			 
-	        
-	        RoleWeb newRole = (RoleWeb) event.getData();	
-	       	store.add(newRole);	 
-	       	
-			List<RoleWeb> roleEntries = Registry.get(Constants.ROLE_LIST);								
+
+		} else if (event.getType() == AppEvents.ManageRoleAddComplete) {
+
+	        RoleWeb newRole = (RoleWeb) event.getData();
+	       	store.add(newRole);
+
+			List<RoleWeb> roleEntries = Registry.get(Constants.ROLE_LIST);
 			roleEntries.add(newRole);
 			Registry.register(Constants.ROLE_LIST, roleEntries);
-			
-	        MessageBox.alert("Information", "A new role was successfully saved", null);  	 
-			
-		} else if (event.getType() == AppEvents.ManageRoleUpdateComplete) {			
-			
-	       	store.remove(editedRole);	       	
-	        RoleWeb updateRole = (RoleWeb) event.getData();	
-	       	store.add(updateRole);	   
-	       	
-			List<RoleWeb> roleEntries = Registry.get(Constants.ROLE_LIST);		
-			roleEntries.remove(editedRole);			
+
+	        MessageBox.alert("Information", "A new role was successfully saved", null);
+
+		} else if (event.getType() == AppEvents.ManageRoleUpdateComplete) {
+
+	       	store.remove(editedRole);
+	        RoleWeb updateRole = (RoleWeb) event.getData();
+	       	store.add(updateRole);
+
+			List<RoleWeb> roleEntries = Registry.get(Constants.ROLE_LIST);
+			roleEntries.remove(editedRole);
 			roleEntries.add(updateRole);
 			Registry.register(Constants.ROLE_LIST, roleEntries);
-			
-	        MessageBox.alert("Information", "The role was successfully updated", null); 
-	        
-		} else if (event.getType() == AppEvents.ManageRoleDeleteComplete) {			
-			
+
+	        MessageBox.alert("Information", "The role was successfully updated", null);
+
+		} else if (event.getType() == AppEvents.ManageRoleDeleteComplete) {
+
         	store.remove(editedRole);
-        	
-			List<RoleWeb> domainEntries = Registry.get(Constants.ROLE_LIST);								
+
+			List<RoleWeb> domainEntries = Registry.get(Constants.ROLE_LIST);
 			domainEntries.remove(editedRole);
-			Registry.register(Constants.ROLE_LIST, domainEntries);	
-			
-	        MessageBox.alert("Information", "The role was successfully deleted", null);  	  
-			
-		} else if (event.getType() == AppEvents.Error) {			
+			Registry.register(Constants.ROLE_LIST, domainEntries);
+
+	        MessageBox.alert("Information", "The role was successfully removed", null);
+
+		} else if (event.getType() == AppEvents.Error) {
 			String message = event.getData();
-	        MessageBox.alert("Information", "Failure: " + message, null);  			
+	        MessageBox.alert("Information", "Failure: " + message, null);
 		}
 	}
 
 	private RoleWeb getNewRoleFromGUI() {
 		RoleWeb role = new RoleWeb();
-		
+
 		// Names
 		role.setName("");
 		role.setDescription("");
 
-		
-		return 	copyRoleFromGUI( role);
+
+		return 	copyRoleFromGUI(role);
 	}
-	
+
 	private RoleWeb copyRole(RoleWeb role) {
 		RoleWeb updatingRole = new RoleWeb();
-		
+
 		updatingRole.setId(role.getId());
 
 		// Name
-		updatingRole.setName( role.getName());
+		updatingRole.setName(role.getName());
 		updatingRole.setDescription(role.getDescription());
 
 		return updatingRole;
 	}
-	
+
 	private RoleWeb copyRoleFromGUI(RoleWeb updateRole) {
-		RoleWeb role = copyRole(updateRole);		
-		
+		RoleWeb role = copyRole(updateRole);
+
 		// Name
-		role.setName( RoleName.getValue());
-		role.setDescription( RoleDescription.getValue());
-		
+		role.setName(roleName.getValue());
+		role.setDescription(roleDescription.getValue());
+
 		// Assign Permissions
 		Set<PermissionWeb> permissionsWeb = new java.util.HashSet<PermissionWeb>(permissionCheckBoxList.getChecked().size());
-		for (PermissionWeb permission : permissionCheckBoxList.getChecked()) {			
+		for (PermissionWeb permission : permissionCheckBoxList.getChecked()) {
 			// Info.display("permission:", "permission:"+permission.getName());
 			permissionsWeb.add(permission);
 		}
 		role.setPermissions(permissionsWeb);
-	
+
 		return 	role;
 	}
-	
+
 	private void displayRecords(RoleWeb role) {
-		RoleName.setValue(role.getName());
-		RoleDescription.setValue(role.getDescription());
-		
-		if (role.getPermissions() != null && role.getPermissions().size() > 0 ) {			
-			for (PermissionWeb permission : role.getPermissions()) {	
-				
-				// Info.display("Permission:", "Permission:"+permission.getName());					
-				for(PermissionWeb m : permissionStore.getModels()) {
-					if(m.getName().equals(permission.getName())) {
+		roleName.setValue(role.getName());
+		roleDescription.setValue(role.getDescription());
+
+		if (role.getPermissions() != null && role.getPermissions().size() > 0) {
+			for (PermissionWeb permission : role.getPermissions()) {
+
+				// Info.display("Permission:", "Permission:"+permission.getName());
+				for (PermissionWeb m : permissionStore.getModels()) {
+					if (m.getName().equals(permission.getName())) {
 						permissionCheckBoxList.setChecked(m, true);
 					}
-				} 
+				}
 			}
-		}			
+		}
 	}
 
 	private void checkPermissins() {
-	    if( permissions != null ) {
+	    if (permissions != null) {
 		    PermissionWeb permission = permissions.get(Permission.USER_ADD);
 			if (permission == null) {
 				addRoleButton.disable();
 			}
-	
+
 		    permission = permissions.get(Permission.USER_EDIT);
 			if (permission == null) {
 				updateRoleButton.disable();
 			}
-			
+
 		    permission = permissions.get(Permission.USER_DELETE);
 			if (permission == null) {
 				removeRoleButton.disable();
 			}
-	    }	
+	    }
 	}
-	
+
 	private void initUI() {
 		long time = new java.util.Date().getTime();
 		GWT.log("Initializing the UI ", null);
 
-		permissions = Registry.get(Constants.LOGIN_USER_PERMISSIONS);   
-		
+		permissions = Registry.get(Constants.LOGIN_USER_PERMISSIONS);
+
 		controller.handleEvent(new AppEvent(AppEvents.ManageRoleRequest));
-		
+
 		buildAddEditDeleteDomainDialog();
-		
+
 		container = new LayoutContainer();
 		container.setLayout(new CenterLayout());
-		
+
 		ColumnConfig nameColumn = new ColumnConfig("name", "Name", 180);
 		ColumnConfig descriptionColumn = new ColumnConfig("description", "Description", 520);
-		
+
 		List<ColumnConfig> config = new ArrayList<ColumnConfig>();
 		config.add(nameColumn);
 		config.add(descriptionColumn);
@@ -280,8 +280,8 @@ public class ManageRoleView extends View
 		grid = new Grid<RoleWeb>(store, cm);
 		grid.setBorders(true);
 		grid.setAutoWidth(true);
-		grid.setStripeRows(true); 
-		grid.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);	
+		grid.setStripeRows(true);
+		grid.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 		grid.setHeight(320);
 
 		ContentPanel cp = new ContentPanel();
@@ -302,67 +302,67 @@ public class ManageRoleView extends View
 				@Override
 				public void componentSelected(ButtonEvent ce) {
 					// Make sure we are starting with a clean slate
-					addEditDeleteMode = "ADD";			
-					
+					addEditDeleteMode = "ADD";
+
 					roleDialog.setHeading("Add Role");
 					Button ok = roleDialog.getButtonById("ok");
 					ok.setText("Add");
 					roleDialog.show();
-					
+
 					readOnlyFields(false);
-					RoleName.clear();
-					RoleDescription.clear();
-					
+					roleName.clear();
+					roleDescription.clear();
+
 			    	List<PermissionWeb> permissionList = Registry.get(Constants.PERMISSION_LIST);
 					permissionStore.removeAll();
-					permissionStore.add(permissionList);	
+					permissionStore.add(permissionList);
 				}
 			});
-		
+
 		updateRoleButton =
 			new Button("Edit Role", IconHelper.create("images/user_edit.png"), new SelectionListener<ButtonEvent>() {
 		  		@Override
-		  		public void componentSelected(ButtonEvent ce) {		  			
+		  		public void componentSelected(ButtonEvent ce) {
 					addEditDeleteMode = "EDIT";
-					
+
 		  			editedRole = grid.getSelectionModel().getSelectedItem();
 					if (editedRole == null) {
 						Info.display("Information", "You must first select a field to be edited before pressing the \"Edit Role\" button.");
 						return;
-					} else{
+					} else {
 			        	// Info.display("Information", "The role: " +editedRole.getName());
-						controller.handleEvent(new AppEvent(AppEvents.ManageGetUpdateRole, editedRole));								
-					}	  
+						controller.handleEvent(new AppEvent(AppEvents.ManageGetUpdateRole, editedRole));
+					}
 
 		  		}
 		    });
-		
+
 		removeRoleButton =
-			new Button("Delete Role", IconHelper.create("images/user_delete.png"), new SelectionListener<ButtonEvent>() {
+			new Button("Remove Role", IconHelper.create("images/user_delete.png"), new SelectionListener<ButtonEvent>() {
 				@Override
 				public void componentSelected(ButtonEvent ce) {
 					addEditDeleteMode = "DELETE";
-					
+
 					editedRole = grid.getSelectionModel().getSelectedItem();
 					if (editedRole == null) {
-						Info.display("Information", "You must first select a field to be deleted before pressing the \"Delete Role\" button.");
+						Info.display("Information", "You must first select a field to be removed before pressing the \"Remove Role\" button.");
 						return;
-					} else{
+					} else {
 			        	// Info.display("Information", "The role: " +editedRole.getName());
-						controller.handleEvent(new AppEvent(AppEvents.ManageGetDeleteRole, editedRole));								
-					}	  
+						controller.handleEvent(new AppEvent(AppEvents.ManageGetDeleteRole, editedRole));
+					}
 				}
 		    });
-		
+
 		buttonContainer.add(addRoleButton);
 		buttonContainer.add(updateRoleButton);
 		buttonContainer.add(removeRoleButton);
 
 	    // check permissions
 		checkPermissins();
-		
+
 		cp.add(buttonContainer);
-		
+
 		cp.add(grid);
 
 		container.add(cp);
@@ -371,31 +371,33 @@ public class ManageRoleView extends View
 		wrapper.removeAll();
 		wrapper.add(container);
 		wrapper.layout();
-		GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime()-time), null);
-	}	
-	
+		GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime() - time), null);
+	}
+
 	private void readOnlyFields(boolean enable) {
-		RoleName.setReadOnly(enable);
-		RoleDescription.setReadOnly(enable);
+		roleName.setReadOnly(enable);
+		roleDescription.setReadOnly(enable);
 		permissionCheckBoxList.setEnabled(!enable);
 	}
-	
-	final Listener<MessageBoxEvent> listenConfirmDelete = new Listener<MessageBoxEvent>() {  
-	        public void handleEvent(MessageBoxEvent ce) {  
-	          Button btn = ce.getButtonClicked();  
-	          if( btn.getText().equals("Yes")) {
-	        	  
+
+	final Listener<MessageBoxEvent> listenConfirmDelete = new Listener<MessageBoxEvent>() {
+	        public void handleEvent(MessageBoxEvent ce) {
+	          Button btn = ce.getButtonClicked();
+	          if (btn.getText().equals("Yes")) {
+
 				  controller.handleEvent(new AppEvent(AppEvents.ManageRoleDelete, editedRole));	
-				  if (roleDialog.isVisible())
+				  if (roleDialog.isVisible()) {
 					  roleDialog.close();
+				  }
 	          }
-	        }  
-	};  
-	    
+	        }
+	};
+
 	private void buildAddEditDeleteDomainDialog() {
-		if(roleDialog != null)
+		if (roleDialog != null) {
 			return;
-		
+		}
+
 		roleDialog = new Dialog();
 		roleDialog.setBodyBorder(false);
 		roleDialog.setIcon(IconHelper.create("images/user_role.png"));
@@ -407,57 +409,57 @@ public class ManageRoleView extends View
 		roleDialog.getButtonById(Dialog.OK).addSelectionListener(new SelectionListener<ButtonEvent>() {
 			@Override
 			public void componentSelected(ButtonEvent ce) {
-				
-					if( !RoleName.isValid() ) {					
-						Info.display("test:", "Invalid fields");	
+
+					if (!roleName.isValid()) {
+						Info.display("test:", "Invalid fields");
 						return;
 					}
-					
-					if (addEditDeleteMode.equals("ADD")) {  // Add	
-						RoleWeb newRole = getNewRoleFromGUI();		 
-						
+
+					if (addEditDeleteMode.equals("ADD")) {  // Add
+						RoleWeb newRole = getNewRoleFromGUI();
+
 			        	// check duplicate role name
 				    	List<RoleWeb> roleList = Registry.get(Constants.ROLE_LIST);
 			        	for (RoleWeb role : roleList) {
-			        		  if( role.getName().equals( newRole.getName() ) ) {
-				        	      MessageBox.alert("Information", "There is a duplicate role name in existing roles", null);  		
-				        	      return;			        			  
+			        		  if (role.getName().equals(newRole.getName())) {
+				        	      MessageBox.alert("Information", "There is a duplicate role name in existing roles", null);
+				        	      return;
 			        		  }
 			        	}
-			        			
-						controller.handleEvent(new AppEvent(AppEvents.ManageRoleAdd, newRole));		
-						
+
+						controller.handleEvent(new AppEvent(AppEvents.ManageRoleAdd, newRole));
+
 					} else if (addEditDeleteMode.equals("EDIT")) { // Edit
-						RoleWeb updatingRole = copyRoleFromGUI(editedRole);	
-						
+						RoleWeb updatingRole = copyRoleFromGUI(editedRole);
+
 			        	// check duplicate role name except itself
 				    	List<RoleWeb> roleList = Registry.get(Constants.ROLE_LIST);
 			        	for (RoleWeb role : roleList) {
-			        		if( role.getId() != updatingRole.getId() ) {	        			
-				        		  if( role.getName().equals( updatingRole.getName() ) ) {
-					        	      MessageBox.alert("Information", "There is a duplicate role name in existing users", null);  		
-					        	      return;			        			  
+			        		if (role.getId() != updatingRole.getId()) {
+				        		  if (role.getName().equals(updatingRole.getName())) {
+					        	      MessageBox.alert("Information", "There is a duplicate role name in existing users", null);
+					        	      return;
 				        		  }
 			        		}
 			        	}
-						controller.handleEvent(new AppEvent(AppEvents.ManageRoleUpdate, updatingRole));	
-						
+						controller.handleEvent(new AppEvent(AppEvents.ManageRoleUpdate, updatingRole));
+
 					} else if (addEditDeleteMode.equals("DELETE")) { // Delete
-						
-		        	  	MessageBox.confirm("Confirm", "Delete operation cannot be undone. Are you sure you want to delete this role?", listenConfirmDelete); 		
+
+		        	  	MessageBox.confirm("Confirm", "Remove operation cannot be undone. Are you sure you want to remove this role?", listenConfirmDelete);
 		        	  	return;
-					}				
+					}
 		        	roleDialog.close();
 			}
 	    });
-		
+
 		roleDialog.getButtonById(Dialog.CANCEL).addSelectionListener(new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
 	        	  roleDialog.close();
 	          }
 	    });
-		
+
 		ContentPanel cp = new ContentPanel();
 		cp.setHeading("Role");
 		cp.setFrame(true);
@@ -468,25 +470,25 @@ public class ManageRoleView extends View
 		cp.setLayout(formLayout);
 		cp.setSize(420, 340);
 
-		RoleName.setFieldLabel("Name");
-		RoleName.setAllowBlank(false);
-		cp.add(RoleName);
-		
-		RoleDescription.setFieldLabel("Description");
-		cp.add(RoleDescription);
-		
-		LabelField  headingLabel = new LabelField("");	
+		roleName.setFieldLabel("Name");
+		roleName.setAllowBlank(false);
+		cp.add(roleName);
+
+		roleDescription.setFieldLabel("Description");
+		cp.add(roleDescription);
+
+		LabelField  headingLabel = new LabelField("");
 		headingLabel.setLabelStyle("font-weight:bold");
 		headingLabel.setFieldLabel("Permissions:");
-		cp.add(headingLabel);	
-		
+		cp.add(headingLabel);
+
 		permissionCheckBoxList =  new CheckBoxListView<PermissionWeb>();
 		permissionCheckBoxList.setTitle("test");
-		permissionCheckBoxList.setDisplayProperty("name"); 
+		permissionCheckBoxList.setDisplayProperty("name");
 		permissionCheckBoxList.setStore(permissionStore);
-		permissionCheckBoxList.setHeight(220);	
+		permissionCheckBoxList.setHeight(220);
 		cp.add(permissionCheckBoxList);
-		
+
 		roleDialog.add(cp);
 	}
 }

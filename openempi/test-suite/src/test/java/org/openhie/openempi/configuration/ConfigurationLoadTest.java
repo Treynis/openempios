@@ -47,7 +47,6 @@ public class ConfigurationLoadTest
 			System.out.println("Type is " + mpiconfig.getClass());
 			log.debug("Admin Configuration is: " + configDocument.getMpiConfig().getAdminConfiguration());
 			log.debug("Blocking Configuration is: " + configDocument.getMpiConfig().getBlockingConfigurationArray());
-			log.debug("Custom Fields Configuration is: " + configDocument.getMpiConfig().getCustomFields());
 			log.debug("Global Identifier Configuration is: " + configDocument.getMpiConfig().getGlobalIdentifier());
 			log.debug("Matching Configuration is: " + configDocument.getMpiConfig().getMatchingConfigurationArray());
 		} catch (XmlException e) {
