@@ -34,8 +34,6 @@ import com.extjs.gxt.ui.client.mvc.AppEvent;
 import com.extjs.gxt.ui.client.mvc.Dispatcher;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-import com.extjs.gxt.ui.client.widget.Info;
-
 public class JobQueueController extends Controller
 {
     private JobQueueView jobQueueView;

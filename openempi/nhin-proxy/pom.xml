@@ -2,14 +2,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>openempi</artifactId>
+        <artifactId>openempi-entity</artifactId>
         <groupId>org.openhie.openempi</groupId>
-        <version>3.0.0-alpha2</version>
+        <version>3.0.0-beta</version>
     </parent>
 
-    <artifactId>openempi-nhin-proxy</artifactId>
+    <artifactId>openempi-entity-nhin-proxy</artifactId>
     <packaging>ejb</packaging>
-    <name>OpenEMPI - NHIN Proxy</name>
+    <name>OpenEMPI Entity - NHIN Proxy</name>
     <url>http://www.openempi.org</url>
 
     <dependencies>

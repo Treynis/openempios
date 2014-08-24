@@ -23,10 +23,12 @@ package org.openempi.webapp.client.mvc.search;
 import java.util.List;
 
 import org.openempi.webapp.client.AppEvents;
+import org.openempi.webapp.client.Constants;
 import org.openempi.webapp.client.EntityDefinitionDataServiceAsync;
 import org.openempi.webapp.client.EntityInstanceDataServiceAsync;
 import org.openempi.webapp.client.domain.AuthenticationException;
 import org.openempi.webapp.client.model.EntityWeb;
+import org.openempi.webapp.client.model.RecordLinkWeb;
 import org.openempi.webapp.client.model.RecordWeb;
 import org.openempi.webapp.client.mvc.Controller;
 
@@ -124,6 +126,7 @@ public class SearchEntityController extends Controller
 
             EntityWeb entityModel = event.getData("entityModel");
             RecordWeb entity = event.getData();
+ 
             deleteEntity(entityModel, entity);
 
         } else if (type == AppEvents.EntityBasicDeleteFinished) {
@@ -141,6 +144,33 @@ public class SearchEntityController extends Controller
         } else if (type == AppEvents.EntityDeleteCancel) {
 
             forwardToView(searchEntityView, event);
+
+        } else if (type == AppEvents.EntityBasicLinkedPair) {
+            RecordWeb record = event.getData();
+            EntityWeb entityModel = event.getData("entityModel");
+            RecordWeb linkedRecord = event.getData("linkedRecord");
+
+            loadBasicLinkedPairList(entityModel, linkedRecord, record);
+
+        } else if (type == AppEvents.ProcessBasicUnlink) {
+            RecordLinkWeb linkPair = event.getData();
+            EntityWeb entityModel = event.getData("entityModel");
+
+            processBasicUnlink(entityModel, linkPair);
+
+        } else if (type == AppEvents.EntityLinkedPair) {
+            RecordWeb record = event.getData();
+            EntityWeb entityModel = event.getData("entityModel");
+            RecordWeb linkedRecord = event.getData("linkedRecord");
+
+            loadLinkedPairList(entityModel, linkedRecord, record);
+
+        } else if (type == AppEvents.ProcessUnlink) {
+            RecordLinkWeb linkPair = event.getData();
+            EntityWeb entityModel = event.getData("entityModel");
+
+            processUnlink(entityModel, linkPair);
+
         }
     }
 
@@ -286,6 +316,96 @@ public class SearchEntityController extends Controller
             public void onSuccess(List<RecordWeb> result) {
 
                 forwardToView(fixedSearchEntityView, AppEvents.EntityLinksReceived, result);
+            }
+        });
+    }
+
+    private void loadBasicLinkedPairList(EntityWeb entityModel, RecordWeb linkedRecord, RecordWeb record) {
+        EntityInstanceDataServiceAsync entityDataService = getEntityInstanceDataService();
+
+        // Info.display("Information: ", "Submitting request to get link pairs");
+
+        entityDataService.loadRecordLinks(entityModel, linkedRecord.getRecordId(), record.getRecordId(), "M", new AsyncCallback<RecordLinkWeb>()
+        {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                forwardToView(fixedSearchEntityView, AppEvents.Error, caught.getMessage());
+            }
+
+            public void onSuccess(RecordLinkWeb result) {
+
+                forwardToView(fixedSearchEntityView, AppEvents.EntityBasicLinkPairReceived, result);
+            }
+        });
+    }
+
+    public void processBasicUnlink(EntityWeb entityModel, RecordLinkWeb pair) {
+        pair.setState(Constants.NON_MATCH);
+        EntityInstanceDataServiceAsync entityDataService = getEntityInstanceDataService();
+
+        entityDataService.updateRecordLink(entityModel, pair, new AsyncCallback<RecordLinkWeb>()
+        {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                Dispatcher.forwardEvent(AppEvents.Error, caught);
+            }
+
+            public void onSuccess(RecordLinkWeb value) {
+                forwardToView(fixedSearchEntityView, AppEvents.ProcessPairUnlinkedView, value);
+            }
+        });
+    }
+
+    private void loadLinkedPairList(EntityWeb entityModel, RecordWeb linkedRecord, RecordWeb record) {
+        EntityInstanceDataServiceAsync entityDataService = getEntityInstanceDataService();
+
+        // Info.display("Information: ", "Submitting request to get link pairs");
+
+        entityDataService.loadRecordLinks(entityModel, linkedRecord.getRecordId(), record.getRecordId(), "M", new AsyncCallback<RecordLinkWeb>()
+        {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                forwardToView(searchEntityView, AppEvents.Error, caught.getMessage());
+            }
+
+            public void onSuccess(RecordLinkWeb result) {
+
+                forwardToView(searchEntityView, AppEvents.EntityLinkPairReceived, result);
+            }
+        });
+    }
+
+    public void processUnlink(EntityWeb entityModel, RecordLinkWeb pair) {
+        pair.setState(Constants.NON_MATCH);
+        EntityInstanceDataServiceAsync entityDataService = getEntityInstanceDataService();
+
+        entityDataService.updateRecordLink(entityModel, pair, new AsyncCallback<RecordLinkWeb>()
+        {
+            public void onFailure(Throwable caught) {
+
+                if (caught instanceof AuthenticationException) {
+                    Dispatcher.get().dispatch(AppEvents.Logout);
+                    return;
+                }
+                Dispatcher.forwardEvent(AppEvents.Error, caught);
+            }
+
+            public void onSuccess(RecordLinkWeb value) {
+                forwardToView(searchEntityView, AppEvents.ProcessPairUnlinkedView, value);
             }
         });
     }

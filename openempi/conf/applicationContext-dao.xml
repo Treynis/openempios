@@ -110,7 +110,7 @@
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
-    <bean id="jobEntryDao" class="org.openhie.openempi.dao.hibernate.JobEntryDaoHibernate">
+    <bean id="jobEntryDao" class="org.openhie.openempi.jobqueue.dao.hibernate.JobEntryDaoHibernate">
         <property name="sessionFactory" ref="sessionFactory"/>  
     </bean>
     

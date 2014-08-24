@@ -7,14 +7,14 @@
 
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
-	<artifactId>openempi-core</artifactId>
+	<artifactId>openempi-entity-core</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - Core</name>
+	<name>OpenEMPI Entity - Core</name>
 
 	<build>
 		<plugins>
@@ -222,7 +222,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-configuration</artifactId>
+			<artifactId>openempi-entity-configuration</artifactId>
 			<version>${release.version}</version>
 		</dependency>		
 		<dependency>
@@ -342,11 +342,13 @@
 			<artifactId>orientdb-enterprise</artifactId>
 			<version>${orientdb.version}</version>
 		</dependency>
+<!--
 		<dependency>
 			<groupId>com.orientechnologies</groupId>
 			<artifactId>orientdb-tools</artifactId>
 			<version>${orientdb.version}</version>
 		</dependency>
+-->
 		<dependency>
 			<groupId>com.hazelcast</groupId>
 			<artifactId>hazelcast</artifactId>
@@ -438,6 +440,11 @@
 			<artifactId>hibernate-validator</artifactId>
 			<version>${hibernate.validator.version}</version>
 		</dependency>
+                <dependency>
+                        <groupId>javassist</groupId>
+                        <artifactId>javassist</artifactId>
+                        <version>3.12.1.GA</version>
+                </dependency>
 <!--
 		<dependency>
 			<groupId>org.hibernate</groupId>

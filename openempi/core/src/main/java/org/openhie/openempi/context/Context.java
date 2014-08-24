@@ -49,9 +49,11 @@ import org.openhie.openempi.entity.EntityDefinitionManagerService;
 import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.RecordQueryService;
+import org.openhie.openempi.jobqueue.JobQueueService;
 import org.openhie.openempi.loader.FileLoaderConfigurationService;
 import org.openhie.openempi.matching.MatchingLifecycleObserver;
 import org.openhie.openempi.matching.MatchingService;
+import org.openhie.openempi.matching.ShallowMatchingService;
 import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.User;
 import org.openhie.openempi.notification.EventObservable;
@@ -65,7 +67,6 @@ import org.openhie.openempi.service.PersonManagerService;
 import org.openhie.openempi.service.PersonQueryService;
 import org.openhie.openempi.service.UserManager;
 import org.openhie.openempi.service.ValidationService;
-import org.openhie.openempi.service.JobQueueService;
 import org.openhie.openempi.singlebestrecord.SingleBestRecordService;
 import org.openhie.openempi.stringcomparison.StringComparisonService;
 import org.openhie.openempi.transformation.TransformationService;
@@ -76,7 +77,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class Context implements ApplicationContextAware
 {
-	protected static final Log log = LogFactory.getLog(Context.class);
+    protected static final Log log = LogFactory.getLog(Context.class);
 	private static final int THREAD_POOL_SIZE = 5;
 	private static final int SCHEDULER_THREAD_POOL_SIZE = 5;
 	
@@ -97,6 +98,8 @@ public class Context implements ApplicationContextAware
 	private static Map<String,MatchingService> matchingServiceMap = new HashMap<String,MatchingService>();
     private static List<BlockingService> blockingServiceList = new ArrayList<BlockingService>();
     private static Map<String,BlockingService> blockingServiceMap = new HashMap<String,BlockingService>();
+    private static List<ShallowMatchingService> shallowMatchingServiceList = new ArrayList<ShallowMatchingService>();
+    private static Map<String,ShallowMatchingService> shallowMatchingServiceMap = new HashMap<String,ShallowMatchingService>();
 	private static AuditEventService auditEventService;
 	private static StringComparisonService stringComparisonService;
 	private static TransformationService transformationService;
@@ -138,6 +141,9 @@ public class Context implements ApplicationContextAware
 			for (MatchingService service : matchingServiceList) {
 			    startMatchingService(service);
 			}
+			for (ShallowMatchingService service : shallowMatchingServiceList) {
+			    startShallowMatchingService(service);
+			}
 			startNotificationService();
 			startScheduledTasks();
 			isInitialized = true;
@@ -152,15 +158,18 @@ public class Context implements ApplicationContextAware
     }
 
     public static void shutdown() {
+        stopScheduledTasks();
         for (MatchingService service : matchingServiceList) {
             stopMatchingService(service);
+        }
+        for (ShallowMatchingService service : shallowMatchingServiceList) {
+            stopShallowMatchingService(service);
         }
         for (BlockingService service : blockingServiceList) {
             stopBlockingService(service);
         }
         stopRecordCacheService(null);
 		stopPersistenceService(null);
-		stopScheduledTasks();
 		stopThreadPool();
 		clusterManager.stop();
 		isInitialized = false;		
@@ -216,6 +225,9 @@ public class Context implements ApplicationContextAware
 	}
 	
 	private static void stopScheduledTasks() {
+	    if (scheduler == null) {
+	        return;
+	    }
 		scheduler.shutdown();
 		try {
 			if (!scheduler.awaitTermination(60, TimeUnit.SECONDS)) {
@@ -282,7 +294,7 @@ public class Context implements ApplicationContextAware
 	    if (value == null || value.isEmpty()) {
 	        return false;
 	    }
-	    if (value.equalsIgnoreCase("true")) {
+	    if (value.equalsIgnoreCase(Constants.TRUE_VALUE)) {
 	        return true;
 	    }
 	    return false;
@@ -476,6 +488,24 @@ public class Context implements ApplicationContextAware
 		return future;
 	}
 	
+	public static Future<Object> scheduleRunnable(Runnable runnable) {
+	    try {
+	        Future<Object> future = threadPool.submit(runnable, new Object());
+	        return future;
+	    } catch (Throwable t) {
+	        log.error("Failed while attempting to execute runnable " + runnable + " due to: " + t, t);
+	        throw new RuntimeException(t);
+	    }
+	}
+	
+	public static void executeTask(Runnable command) {
+	    try {
+	        threadPool.execute(command);
+	    } catch (Throwable t) {
+	        log.error("Failed while attempting to execute command " + command + " due to: " + t, t);
+	    }
+	}
+	
 	private static void startPersistenceService() {
 		try {
 			PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver) Context.getEntityDefinitionManagerService();
@@ -545,13 +575,28 @@ public class Context implements ApplicationContextAware
 		try {
 			future.get();
 		} catch (InterruptedException e) {
-			log.error("Failed while starting up the blocking service: " + e, e);
-			throw new RuntimeException("Initialization failed while starting the blocking service.");
+			log.error("Failed while starting up the matching service: " + e, e);
+			throw new RuntimeException("Initialization failed while starting the matching service.");
 		} catch (ExecutionException e) {
-			log.error("Failed while starting up the blocking service: " + e, e);
-			throw new RuntimeException("Initialization failed while starting the blocking service.");
+			log.error("Failed while starting up the matching service: " + e, e);
+			throw new RuntimeException("Initialization failed while starting the matching service.");
 		}		
 	}
+    
+    private static void startShallowMatchingService(Object service) {
+        Callable<Object> task = new ServiceStarterStopper("Starting the shallow matching service at startup.",
+                ServiceStarterStopper.START_SERVICE, ServiceStarterStopper.SHALLOW_MATCHING_SERVICE, service);
+        Future<Object> future = threadPool.submit(task);
+        try {
+            future.get();
+        } catch (InterruptedException e) {
+            log.error("Failed while starting up the shallow matching  service: " + e, e);
+            throw new RuntimeException("Initialization failed while starting the shallow matching  service.");
+        } catch (ExecutionException e) {
+            log.error("Failed while starting up the shallow matching  service: " + e, e);
+            throw new RuntimeException("Initialization failed while starting the shallow matching  service.");
+        }       
+    }
 
 	private static void stopMatchingService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Shutting down the matching service before system shutdown.",
@@ -562,13 +607,30 @@ public class Context implements ApplicationContextAware
 		} catch (RejectedExecutionException e) {
 			log.warn("Was unable to initiate a stop request on the matching service: " + e, e);
 		} catch (InterruptedException e) {
-			log.error("Failed while shutting down the blocking service: " + e, e);
-			throw new RuntimeException("Initialization failed while shutting down the blocking service.");
+			log.error("Failed while shutting down the matching service: " + e, e);
+			throw new RuntimeException("Initialization failed while shutting down the matching service.");
 		} catch (ExecutionException e) {
-			log.error("Failed while shutting down the blocking service: " + e, e);
-			throw new RuntimeException("Initialization failed while shutting down the blocking service.");
+			log.error("Failed while shutting down the matching service: " + e, e);
+			throw new RuntimeException("Initialization failed while shutting down the matching service.");
 		}		
 	}
+
+    private static void stopShallowMatchingService(Object service) {
+        Callable<Object> task = new ServiceStarterStopper("Shutting down the shallow matching service before system shutdown.",
+                ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.SHALLOW_MATCHING_SERVICE, service);
+        try {
+            Future<Object> future = threadPool.submit(task);
+            future.get();
+        } catch (RejectedExecutionException e) {
+            log.warn("Was unable to initiate a stop request on the shallow matching service: " + e, e);
+        } catch (InterruptedException e) {
+            log.error("Failed while shutting down the shallow matching service: " + e, e);
+            throw new RuntimeException("Initialization failed while shutting down the shallow matching service.");
+        } catch (ExecutionException e) {
+            log.error("Failed while shutting down the shallow matching service: " + e, e);
+            throw new RuntimeException("Initialization failed while shutting down the shallow matching service.");
+        }       
+    }
 
 	public static PersonManagerService getPersonManagerService() {
 		return personService;
@@ -649,7 +711,7 @@ public class Context implements ApplicationContextAware
 	public void setValidationService(ValidationService validationService) {
 		Context.validationService = validationService;
 	}
-    
+
 	public synchronized static MatchingService getMatchingService(String entityName) {
         return matchingServiceMap.get(entityName);
 	}
@@ -665,6 +727,22 @@ public class Context implements ApplicationContextAware
 	    }
 	    matchingServiceList.add(matchingService);
 	}
+
+    public synchronized static ShallowMatchingService getShallowMatchingService(String entityName) {
+        return shallowMatchingServiceMap.get(entityName);
+    }
+
+    public static void registerCustomShallowMatchingService(String entityName, ShallowMatchingService matchingService) {
+        if (shallowMatchingServiceMap.get(entityName) == null) {
+            shallowMatchingServiceMap.put(entityName, matchingService);
+        }
+        for (ShallowMatchingService service : shallowMatchingServiceList) {
+            if (service.getMatchingServiceId() == matchingService.getMatchingServiceId()) {
+                return;
+            }
+        }
+        shallowMatchingServiceList.add(matchingService);
+    }
 
 	public static void registerCustomBlockingService(String entityName, BlockingService blockingService) {
         if (blockingServiceMap.get(entityName) == null) {
@@ -793,6 +871,7 @@ public class Context implements ApplicationContextAware
 		private final static int MATCHING_SERVICE = 3;
 		private final static int PERSISTENCE_SERVICE = 4;
         private final static int RECORD_CACHE_SERVICE = 5;
+        private final static int SHALLOW_MATCHING_SERVICE = 6;
 		
 		private String message;
 		private int operation;
@@ -827,7 +906,13 @@ public class Context implements ApplicationContextAware
 				if (matchingService != null) {
 					matchingService.startup();
 				}
-				return matchingService;	
+				return matchingService;
+            } else if (serviceType == SHALLOW_MATCHING_SERVICE) {
+                MatchingLifecycleObserver matchingService = (MatchingLifecycleObserver) service;
+                if (matchingService != null) {
+                    matchingService.startup();
+                }
+                return matchingService;				
 			} else if (serviceType == PERSISTENCE_SERVICE) {
 				PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver)
 				        Context.getEntityDefinitionManagerService();
@@ -864,6 +949,12 @@ public class Context implements ApplicationContextAware
 					matchingService.shutdown();
 				}
 				return matchingService;
+            } else if (serviceType == SHALLOW_MATCHING_SERVICE) {
+                MatchingLifecycleObserver matchingService = (MatchingLifecycleObserver) service;
+                if (matchingService != null) {
+                    matchingService.shutdown();
+                }
+                return matchingService;
 			} else if (serviceType == PERSISTENCE_SERVICE) {
 				PersistenceLifecycleObserver persistenceService = (PersistenceLifecycleObserver) 
 				        Context.getRecordManagerService();

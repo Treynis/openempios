@@ -24,24 +24,17 @@ import java.io.File;
 
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.ParameterType;
-import org.openhie.openempi.model.Person;
 
 
 public interface FileLoader
 {
 	public void init();
 	
-//	public void setPersonLoaderManager(PersonLoaderManager personManager);
-	
 	public void setLoaderAlias(String loaderAlias);
 	
 	public void setEntityLoaderManager(EntityLoaderManager entityManager);
 	
-	public String parseFile(boolean skipHeaderLine, Entity entity, File file);
-	
-	public String parseFile(boolean skipHeaderLine, Entity entity, File file, boolean populateCustomFields);
-	
-	public void loadPerson(Person person);
+	public FileLoaderResults parseFile(Entity entity, File file);
 	
 	public ParameterType[] getParameterTypes();
 	

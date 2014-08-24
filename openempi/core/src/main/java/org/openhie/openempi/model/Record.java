@@ -49,10 +49,12 @@ public class Record implements Serializable
 	private ConvertingWrapDynaBean dynaBean;
 	private RecordTypeDef recordTypeDefinition;
 	private Entity entity;
+	private boolean dirty = false;
 	private List<Identifier> identifiers;
 	private Map<String, Object> propertyMap;
 	
 	public Record() {
+	       this.propertyMap = new HashMap<String,Object>();
 	}
 	
 	public Record(Object object) {
@@ -111,7 +113,15 @@ public class Record implements Serializable
 		this.recordId = recordId;
 	}
 	
-	public void addIdentifier(Identifier id) {
+	public boolean isDirty() {
+        return dirty;
+    }
+
+    public void setDirty(boolean dirty) {
+        this.dirty = dirty;
+    }
+
+    public void addIdentifier(Identifier id) {
 		identifiers.add(id);
 	}
 	
@@ -155,6 +165,10 @@ public class Record implements Serializable
 		return obj;
 	}
 
+	public void setEntity(Entity entity) {
+	    this.entity = entity;
+	}
+	
 	public Entity getEntity() {
 		return entity;
 	}

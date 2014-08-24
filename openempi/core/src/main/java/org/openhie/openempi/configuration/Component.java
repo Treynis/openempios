@@ -102,7 +102,8 @@ public class Component extends BaseObject
 		BLOCKING(1, "blocking"),
 		MATCHING(2, "matching"),
 		FILELOADER(3, "fileloader"),
-        RECORDCACHE(4, "recordCache");
+        RECORDCACHE(4, "recordCache"),
+        SHALLOWMATCHING(5, "shallowMatching");
 		
 		private final int id;
 		private final String componentTypeName;

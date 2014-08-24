@@ -185,7 +185,7 @@ public class UserFileView extends View
 		ColumnConfig column = new ColumnConfig();
 		column.setId("name");
 		column.setHeader("File Name");
-		column.setWidth(150);
+		column.setWidth(200);
 		configs.add(column);
 
 		column = new ColumnConfig("dateCreated", "Date Created", 250);
@@ -197,21 +197,21 @@ public class UserFileView extends View
 		column.setAlignment(HorizontalAlignment.RIGHT);
 		configs.add(column);
 
-		column = new ColumnConfig("rowsImported", "Rows Imported", 115);
-		column.setAlignment(HorizontalAlignment.RIGHT);
-		configs.add(column);
-
-		column = new ColumnConfig("rowsProcessed", "Rows Processed", 115);
-		column.setAlignment(HorizontalAlignment.RIGHT);
-		configs.add(column);
-
-		column = new ColumnConfig("profiled", "Profiled?", 100);
-		column.setAlignment(HorizontalAlignment.RIGHT);
-		configs.add(column);
-
-		column = new ColumnConfig("profileProcessed", "Profile Status", 150);
-		column.setAlignment(HorizontalAlignment.RIGHT);
-		configs.add(column);
+//		column = new ColumnConfig("rowsImported", "Rows Imported", 115);
+//		column.setAlignment(HorizontalAlignment.RIGHT);
+//		configs.add(column);
+//
+//		column = new ColumnConfig("rowsProcessed", "Rows Processed", 115);
+//		column.setAlignment(HorizontalAlignment.RIGHT);
+//		configs.add(column);
+//
+//		column = new ColumnConfig("profiled", "Profiled?", 100);
+//		column.setAlignment(HorizontalAlignment.RIGHT);
+//		configs.add(column);
+//
+//		column = new ColumnConfig("profileProcessed", "Profile Status", 150);
+//		column.setAlignment(HorizontalAlignment.RIGHT);
+//		configs.add(column);
 
 		ColumnModel cm = new ColumnModel(configs);
 
@@ -223,22 +223,13 @@ public class UserFileView extends View
 		cp.setFrame(true);
 		cp.setIcon(IconHelper.create("images/folder.png"));
 		cp.setLayout(new FillLayout());
-		cp.setSize(1000, 400);
+		cp.setSize(720, 400);
 
 		ToolBar toolBar = new ToolBar();
 
 		Label space = new Label("");
-/*		importOnly = new CheckBox();
-		importOnly.setBoxLabel("Import Only");
-		importOnly.setValue(false);
-		skipHeaderLine = new CheckBox();
-		skipHeaderLine.setBoxLabel("Skip Header Line");
-		skipHeaderLine.setValue(true);
-*/
 		toolBar.add(space);
-/*		toolBar.add(importOnly);
-		toolBar.add(skipHeaderLine);
-*/
+
 		Label text = new Label("Entity Model: None");
 		if (currentEntity != null) {
 			text.setText("Entity Model: " + currentEntity.getDisplayName() + " ");
@@ -265,15 +256,6 @@ public class UserFileView extends View
 	        		  return;
 	        	  }
 	        	  
-/*	        	  showWaitCursor();
-	        	  
-	        	  // set values for importOnly and skipHeaderLine
-	        	  for (UserFileWeb userFile : userFileEntries) {
-	        		  userFile.setImportOnly(importOnly.getValue());
-	        		  userFile.setSkipHeaderLine(skipHeaderLine.getValue());		      			
-	        	  }
-	        	  controller.handleEvent(new AppEvent(AppEvents.FileEntryImport, userFileEntries));
-*/
 	  			  dynamicFieldsPanel = null;
 				  buildFileLoaderConfigurationsDialog();
 				  fileLoaderConfigurationsDialog.setHeading("Configure File Loader");
@@ -303,21 +285,11 @@ public class UserFileView extends View
 		toolBar.add(new Button("Profile", IconHelper.create("images/script.png"), new SelectionListener<ButtonEvent>() {
 	          @Override
 	          public void componentSelected(ButtonEvent ce) {
-/*	        	  if( currentEntity == null ) { 
-					  MessageBox.alert("Information", "No Entity Model selected.  Please select a Entity Model from Entity Model Design.", null); 
-	        		  return;	        	  
-	        	  }
-*/	        	  
-	        	  userFileEntries = grid.getSelectionModel().getSelectedItems();
+	              userFileEntries = grid.getSelectionModel().getSelectedItems();
 	        	  if (userFileEntries == null || userFileEntries.size() == 0 || userFileEntries.size() > 1) {
 	        		  Info.display("Information","You must select one entry before pressing the Data Profile button.");
 	        		  return;
 	        	  }
-	        	  
-/*		          for (UserFileWeb userFile : userFileEntries) {
-		        	   userFile.setEntity(currentEntity);			
-		          }
-*/
 				  controller.handleEvent(new AppEvent(AppEvents.FileListUpdateDataProfile, null));
 	          }
 	    }));
@@ -418,12 +390,8 @@ public class UserFileView extends View
 
 	//  FileLoaderConfigurationsDialog
 	private void buildFileLoaderConfigurationsDialog() {		
-/*		if(fileLoaderConfigurationsDialog != null) {
-			return;	
-		}
-*/
-		
-		fileLoaderConfigurationsDialog = new Dialog();
+
+	    fileLoaderConfigurationsDialog = new Dialog();
 		fileLoaderConfigurationsDialog.setBodyBorder(false);
 		fileLoaderConfigurationsDialog.setWidth(515);
 		fileLoaderConfigurationsDialog.setHeight(320);

@@ -76,15 +76,14 @@ public class DataProfiler extends BaseServiceImpl implements Runnable, Parameter
 		log.info("Executing the scheduled task: " + getClass());
 
 		try {
-
             RecordDataSource recordDataSource = getRecordDataSource();
             if (getEntity() == null) {
                 if (recordDataSource instanceof EntityRecordDataSource) {
                     log.info("Data profiler cannot find entity for EntityRecordDataSource.");
                     return;
                 } else {
-                    log.info("Data profiler has not been configured with the entity name that means data profile info cominig from file.");
-//                  return;
+                    log.info("Data profiler has not been configured with an entity name which implies "
+                            + "service if profiling data from a file.");
                 }
             }
             recordDataSource.init(entity);

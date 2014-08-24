@@ -772,7 +772,7 @@ public class MenuToolbarView extends View
         });
 
         ContentPanel cp = new ContentPanel();
-        cp.setHeading("About OpenEMPI");
+        cp.setHeading("About OpenEMPI Entity Edition");
         cp.setFrame(true);
         cp.setIcon(IconHelper.create("images/openempi.png"));
         FormLayout formLayout = new FormLayout();

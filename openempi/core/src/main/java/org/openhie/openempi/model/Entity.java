@@ -66,6 +66,7 @@ public class Entity extends BaseObject implements Serializable
 	private String name;
 	private String description;
 	private String displayName;
+	private Boolean synchronousMatching;
 	private Date dateCreated;
 	private User userCreatedBy;
 	private Date dateChanged;
@@ -137,7 +138,17 @@ public class Entity extends BaseObject implements Serializable
 		this.displayName = displayName;
 	}
 
-	@Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "synchronous_matching")
+    @XmlElement
+	public Boolean getSynchronousMatching() {
+        return synchronousMatching;
+    }
+
+    public void setSynchronousMatching(Boolean synchronousMatching) {
+        this.synchronousMatching = synchronousMatching;
+    }
+
+    @Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "date_created", nullable = false, length = 8)
 	public Date getDateCreated() {
 		return dateCreated;

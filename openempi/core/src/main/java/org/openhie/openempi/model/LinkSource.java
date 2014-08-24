@@ -41,6 +41,7 @@ public class LinkSource extends BaseObject implements Serializable
     public static final Integer EXACT_MATCHING_ALGORITHM_SOURCE = 2;
     public static final Integer PROBABILISTIC_MATCHING_ALGORITHM_SOURCE = 3;
     public static final Integer GOLD_STANDARD_SOURCE = 4;
+    public static final Integer SHALLOW_MATCHING_ALGORITHM_SOURCE = 5;
 
     private Integer linkSourceId;
     private String sourceName;

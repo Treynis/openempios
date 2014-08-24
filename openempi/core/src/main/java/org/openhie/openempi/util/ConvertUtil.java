@@ -433,6 +433,10 @@ public final class ConvertUtil
 		}
 
 		for (EntityAttribute attrib : entityDef.getAttributes()) {
+		    if (attrib.getIsCustom()) {
+		        log.debug("Attribute " + attrib.getName() + " is a custom field and will be skipped.");
+		        continue;
+		    }
 			String key = attrib.getName();
 			String methodName = "get" + Character.toUpperCase(key.charAt(0)) + key.substring(1);
 

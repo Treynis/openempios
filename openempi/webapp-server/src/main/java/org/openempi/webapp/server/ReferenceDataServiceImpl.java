@@ -36,15 +36,14 @@ import org.openempi.webapp.client.model.EntityAttributeDatatypeWeb;
 import org.openempi.webapp.client.model.EntityValidationRuleWeb;
 import org.openempi.webapp.client.model.JobTypeWeb;
 import org.openempi.webapp.client.model.JobStatusWeb;
+import org.openhie.openempi.jobqueue.JobQueueService;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.AuditEventType;
 import org.openhie.openempi.model.EntityAttributeDatatype;
 import org.openhie.openempi.model.JobStatus;
 import org.openhie.openempi.model.JobType;
-
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.service.IdentifierDomainService;
-import org.openhie.openempi.service.JobQueueService;
 import org.openhie.openempi.service.PersonQueryService;
 import org.openhie.openempi.service.AuditEventService;
 import org.openhie.openempi.configuration.ConfigurationRegistry;

@@ -34,6 +34,7 @@
 				<xs:element name="scheduled-tasks" type="mpi:scheduled-tasks" minOccurs="0"/>
 				<xs:element ref="mpi:blocking-configuration" minOccurs="1" maxOccurs="unbounded"/>
 				<xs:element ref="mpi:matching-configuration" minOccurs="1" maxOccurs="unbounded"/>
+				<xs:element ref="mpi:shallow-matching-configuration" minOccurs="1" maxOccurs="unbounded"/>
 				<xs:element ref="mpi:single-best-record" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element name="admin-configuration" type="mpi:admin-configuration" minOccurs="1"/>
 			</xs:sequence>
@@ -99,7 +100,11 @@
 	
 	<xs:complexType name="matching-configuration-type" abstract="true">
 	</xs:complexType>
-	<xs:element name="matching-configuration" abstract="true" type="mpi:matching-configuration-type"/>	
+	<xs:element name="matching-configuration" abstract="true" type="mpi:matching-configuration-type"/>
+	
+	<xs:complexType name="shallow-matching-configuration-type" abstract="true">
+	</xs:complexType>
+	<xs:element name="shallow-matching-configuration" abstract="true" type="mpi:shallow-matching-configuration-type"/>	
 	
 	<xs:complexType name="single-best-record-type" abstract="true">
 	</xs:complexType>

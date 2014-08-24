@@ -27,16 +27,6 @@
 	default-lazy-init="true">
 
 	<bean id="concurrentDataLoader" class="org.openhie.openempi.loader.ConcurrentFileLoader">
-		<property name="taskExecutor" ref="taskExecutor" />
 	</bean>
 
-	<bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
-		<property name="corePoolSize" value="10" />
-		<property name="maxPoolSize" value="50" />
-		<property name="queueCapacity" value="1" />
-		<property name="rejectedExecutionHandler" ref="generalCallerRunsPolicy"/>
-	</bean>
-
-	<bean id="generalCallerRunsPolicy" class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy" /> 
-   
 </beans>

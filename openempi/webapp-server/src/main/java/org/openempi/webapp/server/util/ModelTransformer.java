@@ -691,6 +691,7 @@ public class ModelTransformer
 		entityWeb.setDisplayName(entity.getDisplayName());
 		entityWeb.setDescription(entity.getDescription());
 		entityWeb.setDateCreated(entity.getDateCreated());
+		entityWeb.setSynchronousMatching(entity.getSynchronousMatching());
 
 		if (entity.getUserCreatedBy() != null) {
 			UserWeb user = mapToUser(entity.getUserCreatedBy(), UserWeb.class, false);
@@ -806,6 +807,7 @@ public class ModelTransformer
 		entity.setDisplayName(entityWeb.getDisplayName());
 		entity.setDescription(entityWeb.getDescription());
 		entity.setDateCreated(entityWeb.getDateCreated());
+		entity.setSynchronousMatching(entityWeb.getSynchronousMatching());
 
 		if (entityWeb.getUserCreatedBy() != null) {
 			User user = mapToUser(entityWeb.getUserCreatedBy(), User.class);

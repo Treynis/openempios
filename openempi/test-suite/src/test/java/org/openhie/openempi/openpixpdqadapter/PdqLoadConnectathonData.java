@@ -51,7 +51,7 @@ public class PdqLoadConnectathonData extends AbstractPdqTest
 				log.warn("The required entity named person has not been defined in the system.");
 				System.exit(-1);
 			}
-			fileLoaderManager.loadFile(testData.getAbsolutePath(), ConcurrentFileLoader.LOADER_ALIAS, entities.get(0));
+			fileLoaderManager.loadFile(entities.get(0), testData.getAbsolutePath(), ConcurrentFileLoader.LOADER_ALIAS);
 		} catch (Exception e) {			
         	log.error("Failed to load the PDQ test data from file " + testData.getAbsolutePath() + " due to: " + e.getMessage(), e);
 		}

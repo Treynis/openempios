@@ -3,10 +3,10 @@
 
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.openhie.openempi</groupId>
-	<artifactId>openempi</artifactId>
+	<artifactId>openempi-entity</artifactId>
 	<packaging>pom</packaging>
-	<name>OpenEMPI Application</name>
-	<version>3.0.0-alpha2</version>
+	<name>OpenEMPI Entity Application</name>
+	<version>3.0.0-beta</version>
 	<description>
 	Is an open source implementation of an Enterprise Master Patient (EMPI) which is a repository that maintains
 	a registry of all patients across an enterprise. An EMPI provides many benefits including:
@@ -92,8 +92,14 @@
 		<module>core</module>
 		<module>basic-blocking</module>
 		<module>basic-blocking-hp</module>
+<!--
+		<module>sorted-neighborhood-blocking</module>
+		<module>suffix-array-blocking</module>
+  -->
+		<module>record-cache</module>
 		<module>exact-matching</module>
 		<module>probabilistic-matching</module>
+		<module>shallow-matching</module>
 		<module>single-best-record</module>
 		<module>file-loader-hp</module>
 		<module>file-loader-map</module>
@@ -152,13 +158,15 @@
 				</configuration>
 			</plugin>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>2.0.2</version>
+				<version>2.3.2</version>
 				<configuration>
 					<source>1.6</source>
 					<target>1.6</target>
 					<debug>true</debug>
-					<debuglevel>source</debuglevel>
+					<debuglevel>lines,vars,source</debuglevel>
+					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -788,7 +796,7 @@
 		</plugins>
 	</reporting>
 	<properties>
-		<release.version>3.0.0-alpha2</release.version>
+		<release.version>3.0.0-beta</release.version>
 		
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -881,7 +889,7 @@
 		<jstl.version>1.1.2</jstl.version>
 		<log4j.version>1.2.15</log4j.version>
 		<slf4j.version>1.6.1</slf4j.version>
-		<orientdb.version>1.7-rc2-SNAPSHOT</orientdb.version>
+		<orientdb.version>1.7.2</orientdb.version>
 		<oscache.version>2.3</oscache.version>
 		<sitemesh.version>2.2.1</sitemesh.version>
 		<spring.security.version>2.0.1</spring.security.version>

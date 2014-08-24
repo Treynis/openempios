@@ -37,7 +37,7 @@ public class BlockingKeyValueGenerator
 		Object[] attributes = new Object[fields.size()];
 		int index=0;
 		for (BaseField field : fields) {
-			if( record.get(field.getFieldName()) != null) {
+			if (record.get(field.getFieldName()) != null) {
 				attributes[index] = harmonizeValue(record, field.getFieldName());
 			} else {
 				attributes[index] = "<null>";

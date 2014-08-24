@@ -47,33 +47,33 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
 	private boolean isMassiveInsert = Boolean.FALSE;
 	private Entity entity = null;
 	private boolean previewOnly = Boolean.FALSE;
-	private RecordManagerService entityManagerService;
-	private RecordQueryService entityQueryService;
+	private RecordManagerService recordManagerService;
+	private RecordQueryService recordQueryService;
 	private Map<String, Object> propertyMap;
 	
 	public void setupConnection(Map<String, Object> properties) {
 		
-		if (entityManagerService == null) {
-			entityManagerService = Context.getRecordManagerService();
+		if (recordManagerService == null) {
+		    recordManagerService = Context.getRecordManagerService();
 		}
-		if (entityQueryService == null) {
-			entityQueryService = Context.getRecordQueryService();
+		if (recordQueryService == null) {
+		    recordQueryService = Context.getRecordQueryService();
 		}
 		propertyMap = properties;
 		if (properties != null) {
 			
-			Object previewOnlyFlag = properties.get("previewOnly");
+			Object previewOnlyFlag = properties.get(FileLoaderParameters.PREVIEW_ONLY);
 			if (previewOnlyFlag != null  && previewOnlyFlag instanceof Boolean && previewOnlyFlag.equals(Boolean.TRUE)) {
 				previewOnly = true;
 			}
 
-			Object isImportFlag = properties.get("isImport");
+			Object isImportFlag = properties.get(FileLoaderParameters.IS_IMPORT);
 			if (isImportFlag != null  && isImportFlag instanceof Boolean && isImportFlag.equals(Boolean.TRUE)) {
 				log.info("Will be doing an import instead of an add");
 				isImport = true;
 			}
 			
-			Object entityName = properties.get("entityName");
+			Object entityName = properties.get(FileLoaderParameters.ENTITY_NAME);
             if (entityName != null  && entityName instanceof String) {
                 log.info("Will be doing an import for entity " + entityName);
                 entity = findLatestEntityVersionByName(Context.getEntityDefinitionManagerService(), (String) entityName);
@@ -83,11 +83,11 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
                 throw new RuntimeException("Unable to setup the file loader due to unspecified entity.");
             }
 			
-			Object isMassive = properties.get("isMassiveInsert");
+			Object isMassive = properties.get(FileLoaderParameters.IS_MASSIVE_INSERT);
 			if (isMassive != null && isMassive instanceof Boolean && isMassive.equals(Boolean.TRUE)) {
                 log.info("Will be doing a massive import");
 			    isMassiveInsert = Boolean.TRUE;
-                entityManagerService.declareIntent(entity, new IntentMassiveInsert());
+			    recordManagerService.declareIntent(entity, new IntentMassiveInsert());
 			}
 		}
 	}
@@ -98,7 +98,7 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
 	
 	public void shutdownConnection() {
 	    if (isMassiveInsert) {
-	        entityManagerService.declareIntent(entity, null);
+	        recordManagerService.declareIntent(entity, null);
 	    }
 	}
 
@@ -110,9 +110,9 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
 		}
 		
 		if (isImport) {
-			return entityManagerService.importRecord(entity, record);
+			return recordManagerService.importRecord(entity, record);
 		} else {
-			return entityManagerService.addRecord(entity, record);
+			return recordManagerService.addRecord(entity, record);
 		}
 	}
 
@@ -128,14 +128,14 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
         }
         
         if (isImport) {
-            return entityManagerService.importRecords(entity, records);
+            return recordManagerService.importRecords(entity, records);
         } else {
-            return entityManagerService.addRecords(entity, records);
+            return recordManagerService.addRecords(entity, records);
         }
     }
 
     public void declareIntent(Entity entity, DataAccessIntent intent) {
-        entityManagerService.declareIntent(entity, intent);
+        recordManagerService.declareIntent(entity, intent);
     }
     
     
@@ -173,18 +173,18 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
 	}
 
 	public RecordManagerService getEntityManagerService() {
-		return entityManagerService;
+		return recordManagerService;
 	}
 
-	public void setEntityManagerService(RecordManagerService entityManagerService) {
-		this.entityManagerService = entityManagerService;
+	public void setEntityManagerService(RecordManagerService recordManagerService) {
+		this.recordManagerService = recordManagerService;
 	}
 
-	public RecordQueryService getEntityQueryService() {
-		return entityQueryService;
+	public RecordQueryService getRecordQueryService() {
+		return recordQueryService;
 	}
 
-	public void setEntityQueryService(RecordQueryService entityQueryService) {
-		this.entityQueryService = entityQueryService;
+	public void setRecordQueryService(RecordQueryService recordQueryService) {
+		this.recordQueryService = recordQueryService;
 	}
 }

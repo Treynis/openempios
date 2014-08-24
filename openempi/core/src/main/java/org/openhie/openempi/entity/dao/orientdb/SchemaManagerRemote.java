@@ -64,10 +64,10 @@ public class SchemaManagerRemote extends SchemaManagerAbstract
                 .createUser(connectionManager.getUsername(), connectionManager.getPassword(),
                     new String[] { "admin" });
             log.debug("Created user: " + connectionManager.getUsername());
-            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useLightweightEdges=false");
-            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForEdgeLabel=false");
-            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForVertexLabel=false");
-            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useVertexFieldsForEdgeLabels=false");
+//            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useLightweightEdges=false");
+//            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForEdgeLabel=false");
+//            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useClassForVertexLabel=false");
+//            db.getRawGraph().setInternal(ODatabase.ATTRIBUTES.CUSTOM, "useVertexFieldsForEdgeLabels=false");
             Object props = db.getRawGraph().get(ODatabase.ATTRIBUTES.CUSTOM);
             log.debug("Database custom attributes " + props + " of type " + props.getClass());
         } catch (IOException e) {

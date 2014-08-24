@@ -49,6 +49,7 @@ import org.openhie.openempi.configuration.xml.MpiConfigDocument;
 import org.openhie.openempi.configuration.xml.MpiConfigDocument.MpiConfig;
 import org.openhie.openempi.configuration.xml.ScheduledTask;
 import org.openhie.openempi.configuration.xml.ScheduledTasks;
+import org.openhie.openempi.configuration.xml.ShallowMatchingConfigurationType;
 import org.openhie.openempi.configuration.xml.SingleBestRecordType;
 import org.openhie.openempi.configuration.xml.UpdateNotificationEntry;
 import org.openhie.openempi.configuration.xml.mpicomponent.ExtensionType;
@@ -57,6 +58,7 @@ import org.openhie.openempi.configuration.xml.mpicomponent.MpiComponentDefinitio
 import org.openhie.openempi.configuration.xml.mpicomponent.MpiComponentType;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.matching.MatchingService;
+import org.openhie.openempi.matching.ShallowMatchingService;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.User;
 import org.openhie.openempi.service.Parameterizable;
@@ -138,6 +140,12 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		} catch (Exception e) {
 			log.warn("Was unable to load the matching service configuration: " + e, e);
 		}
+
+        try {
+            processShallowMatchConfiguration(configuration);
+        } catch (Exception e) {
+            log.warn("Was unable to load the shallow matching service configuration: " + e, e);
+        }
 
 		try {
 			processSingleBestRecordConfiguration(configuration);
@@ -462,6 +470,47 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
     		Context.registerCustomMatchingService(entity, matchingService);
         }
 	}
+
+    private void processShallowMatchConfiguration(MpiConfigDocument configuration) {
+        if (configuration.getMpiConfig().getShallowMatchingConfigurationArray() == null) {
+            return;
+        }
+
+        int count = configuration.getMpiConfig().getShallowMatchingConfigurationArray().length;
+        for (int i = 0; i < count; i++) {
+            ShallowMatchingConfigurationType obj = configuration.getMpiConfig().getShallowMatchingConfigurationArray(i);
+            if (obj == null) {
+                log.warn("No shallow matching service configuration has been specified.");
+                return;
+            }
+            log.debug("Object is of type: " + obj.getDomNode().getNamespaceURI());
+            String namespaceUriStr = obj.getDomNode().getNamespaceURI();
+            URI namespaceURI = getNamespaceURI(namespaceUriStr);
+
+            String resourcePath = generateComponentResourcePath(namespaceURI);
+            Component component = loadAndRegisterComponentFromNamespaceUri(resourcePath);
+
+            String configurationLoaderBean = getExtensionBeanNameFromComponent(component);
+
+            ConfigurationLoader loader = (ConfigurationLoader) Context.getApplicationContext().getBean(configurationLoaderBean);
+            loader.loadAndRegisterComponentConfiguration(this, obj);
+
+            Component.Extension extension = component.getExtensionByExtensionInterface(ExtensionInterface.IMPLEMENTATION);
+            if (extension == null) {
+                log.error("Encountered a custom matching component with no implementation extension: " + component);
+                throw new InitializationException("Unable to locate an implementation component for custom matching component " + component.getName());
+            }
+            log.debug("Registering implementation of matching component named " + extension.getName() + " and implementation key " +
+                    extension.getImplementationKey());
+
+            String entity = loader.getComponentEntity();
+
+            ShallowMatchingService matchingService = (ShallowMatchingService)
+                Context.getApplicationContext().getBean(extension.getImplementationKey());
+            log.info("Registering shallow matching service " + matchingService + " for entity " + entity);
+            Context.registerCustomShallowMatchingService(entity, matchingService);
+        }
+    }
 
 	public String getExtensionBeanNameFromComponent(Component component) {
 		Component.Extension extension = component.getExtensionByExtensionInterface(ExtensionInterface.CONFIGURATION_LOADER);

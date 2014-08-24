@@ -190,6 +190,7 @@ public class RecordResourceServiceImpl extends BaseServiceImpl implements Record
             record =  Context.getRecordManagerService().updateRecord(entity, record);
             return record;
         } catch (ApplicationException e) {
+            log.error("Failed while processing update request: " + e, e);
             throw new ConflictException();
         }
     }

@@ -52,6 +52,9 @@ public class ConnectionManager
         try {
             long startTime = new Date().getTime();
             OrientBaseGraph db = new OrientGraphNoTx(entityStore.getStoreUrl());
+            if (log.isTraceEnabled()) {
+                log.trace("Getting connection via connectInitial, users is " + db.getRawGraph().getStorage().getUsers());
+            }
             long endTime = new Date().getTime();
             if (log.isTraceEnabled()) {
                 log.trace("Obtained a connection from the pool in " + (endTime - startTime) + " msec.");
@@ -70,6 +73,9 @@ public class ConnectionManager
             long startTime = new Date().getTime();
             OrientGraphFactory pool = getConnectionPool(entityStore, getUsername(), getPassword());
             OrientGraph connection = pool.getTx();
+            if (log.isTraceEnabled()) {
+                log.trace("Getting connection via connect, users is " + connection.getRawGraph().getStorage().getUsers());
+            }
             long endTime = new Date().getTime();
             if (log.isTraceEnabled()) {
                 log.trace("Obtained a connection from the pool in " + (endTime - startTime) + " msec.");

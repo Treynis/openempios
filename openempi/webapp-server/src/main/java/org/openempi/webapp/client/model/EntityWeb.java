@@ -84,6 +84,14 @@ public class EntityWeb extends BaseModelData
 		set("description", description);
 	}
 
+    public java.lang.Boolean getSynchronousMatching() {
+        return get("synchronousMatching");
+    }
+
+    public void setSynchronousMatching(java.lang.Boolean synchronousMatching) {
+        set("synchronousMatching", synchronousMatching);
+    }
+
 	public java.util.Date getDateCreated() {
 		return get("dateCreated");
 	}

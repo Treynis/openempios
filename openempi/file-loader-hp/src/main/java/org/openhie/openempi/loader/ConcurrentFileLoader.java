@@ -26,10 +26,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.StringTokenizer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.context.UserContext;
 import org.openhie.openempi.model.AttributeDatatype;
@@ -42,12 +42,9 @@ import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.ParameterType;
 import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.Record;
-import org.springframework.core.task.TaskRejectedException;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 public class ConcurrentFileLoader extends AbstractFileLoader
 {
-    private static final int SLEEP_TIME = 5000;
     public static final String LOADER_ALIAS = "concurrentDataLoader";
     public static final String SKIP_HEADER_LINE = "skipHeaderLine";
     public static final String IS_IMPORT = "isImport";
@@ -55,11 +52,9 @@ public class ConcurrentFileLoader extends AbstractFileLoader
     public static final String IS_IMPORT_DISPLAY = "Is Import";
 
     private static final int MAX_FIELD_COUNT = 32;
-    private static final int MAX_ATTEMPTS = 5;
 
     private String[] attributeFields = new String[MAX_FIELD_COUNT];
 
-    private ThreadPoolTaskExecutor taskExecutor;
     private UserContext userContext;
 
     public ConcurrentFileLoader() {
@@ -69,14 +64,13 @@ public class ConcurrentFileLoader extends AbstractFileLoader
     @Override
     public void init() {
         log.info("Initializing the Concurrent File Loader.");
-        taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
     }
 
     @Override
     protected boolean processLine(Entity entity, String line, int lineIndex) {
-        RecordParseTask parser = new RecordParseTask(entity, line, lineIndex);
-        Future<Object> future = taskExecutor.getThreadPoolExecutor().submit(parser, new Object());
+        RecordParseTask parser = new RecordParseTask(Context.getUserContext(), entity, line, lineIndex);
         try {
+            Future<Object> future = Context.scheduleRunnable(parser);
             future.get();
             return true;
         } catch (InterruptedException e) {
@@ -89,63 +83,56 @@ public class ConcurrentFileLoader extends AbstractFileLoader
 
     public void loadEntityRecord(Serializable key, Entity entity, Record record) {
 
-        // create load task
-        RecordLoaderTask task = new RecordLoaderTask(getEntityLoaderManager(), entity, record, userContext);
-        task.setKey(key);
-        int attempts = 0;
-        while (attempts < MAX_ATTEMPTS) {
-            try {
-                taskExecutor.execute(task);
-                return;
-            } catch (TaskRejectedException e) {
-                log.error("Exception is: " + e, e);
-                try {
-                    Thread.sleep(SLEEP_TIME);
-                } catch (Exception exe) { }
-                attempts++;
+        try {
+            synchronized(userContext) {
+                Record theRecord = getEntityLoaderManager().addRecord(entity, record);
+                if (log.isTraceEnabled()) {
+                    log.trace("Loaded the record: " + theRecord);
+                }
+                if (key != null) {
+    //              generateKnownLinks(key, record);
+                }
             }
+        } catch (ApplicationException e) {
+            throw new RuntimeException(e);
         }
-        log.warn("Unable to process entity record load after " + attempts
-                + " attempts. Need to tune the multi-threading.");
     }
 
     @Override
     public void shutdown() {
-        taskExecutor.shutdown();
-    }
-
-    public void setTaskExecutor(ThreadPoolTaskExecutor taskExecutor) {
-        this.taskExecutor = taskExecutor;
-    }
-
-    public ThreadPoolTaskExecutor getTaskExecutor() {
-        return taskExecutor;
+        log.info("Shutting down the concurrent file loader.");
     }
 
     private class RecordParseTask implements Runnable
     {
 
+        private static final String IGNORE_ATTRIBUTE_VALUE = "<ignore>";
         private String lineRecord;
         private int lineIndex;
         private Entity entityModel;
         private Person person;
         private Record record;
-
-        public RecordParseTask(Entity entity, String lineRecord, int lineIndex) {
+        private UserContext userContext;
+        
+        public RecordParseTask(UserContext userContext, Entity entity, String lineRecord, int lineIndex) {
             this.entityModel = entity;
             this.lineRecord = lineRecord;
             this.lineIndex = lineIndex;
+            this.userContext = userContext;
         }
 
         public void run() {
             log.info("Processing record: " + lineRecord);
             boolean skipHeaderLine = false;
+            Context.setUserContext(userContext);
+            
             if (getParameter(SKIP_HEADER_LINE) != null) {
                 skipHeaderLine = (Boolean) getParameter(SKIP_HEADER_LINE);
             }
 
             if ((!skipHeaderLine && lineIndex == 0) || (skipHeaderLine && lineIndex == 1)) {
                 attributeFields = loadFieldValues(lineRecord);
+                attributeFields = fixAttributeFields(attributeFields);
                 return;
             }
 
@@ -163,12 +150,26 @@ public class ConcurrentFileLoader extends AbstractFileLoader
             }
         }
 
+        private String[] fixAttributeFields(String[] fields) {
+            for (int i=0; i < fields.length; i++) {
+                log.warn("Fields[" + i + "]=" + fields[i]);
+                if (fields[i] == null || fields[i].trim().length() == 0) {
+                    fields[i] = IGNORE_ATTRIBUTE_VALUE;
+                }
+            }
+            return fields;
+        }
+
         protected String[] loadFieldValues(String line) {
             String[] fields = new String[MAX_FIELD_COUNT];
             int length = line.length();
             int begin = 0;
             int end = 0;
             int fieldIndex = 0;
+            // If the line ends with the delimiter then the splitter misses the last field.
+            if (line.endsWith(",")) {
+                line = line + " ";
+            }
             while (end < length) {
                 while (end < length - 1 && line.charAt(end) != ',') {
                     end++;
@@ -210,6 +211,12 @@ public class ConcurrentFileLoader extends AbstractFileLoader
             for (int i = 0; i < fields.length; i++) {
                 if (fields[i] != null) {
                     String attributeName = attributeFields[i];
+                    if (attributeName.equals(IGNORE_ATTRIBUTE_VALUE)) {
+                        if (log.isTraceEnabled()) {
+                            log.trace("Skipping column " + i + " since metadata specified that it should be ignore.");
+                        }
+                        continue;
+                    }
                     String field = fields[i];
 
                     if (attributeName.equals("identifier")) {
@@ -326,32 +333,24 @@ public class ConcurrentFileLoader extends AbstractFileLoader
          * @return
          */
         private Identifier extractIdentifier(String identifier, String delimeter) {
-            StringTokenizer idTokenizer = new StringTokenizer(identifier, delimeter);
-
+            if (identifier == null || identifier.trim().length() == 0) {
+                return null;
+            }
+            String[] idComponents = identifier.split(delimeter);
+            // We handle two cases here.
+            // 1. if there is one component then we set the identifier domain name to 'NID';
+            // 2. if there are two components or more components then we assume the second component is the identifier domain name
+            //
             Identifier id = new Identifier();
             IdentifierDomain idDomain = new IdentifierDomain();
-            int count = 0;
-            while (idTokenizer.hasMoreTokens()) {
-                String field = idTokenizer.nextToken();
-                switch (count) {
-                case 0:
-                    id.setIdentifier(field);
-                    break;
-                case 1:
-                    idDomain.setNamespaceIdentifier(field);
-                    break;
-                case 2:
-                    idDomain.setUniversalIdentifier(field);
-                    break;
-                case 3:
-                    idDomain.setUniversalIdentifierTypeCode(field);
-                    break;
-                default:
-                    break;
-                }
-                count++;
-            }
             id.setIdentifierDomain(idDomain);
+            if (idComponents.length == 1) {
+                id.setIdentifier(idComponents[0]);
+                idDomain.setIdentifierDomainName("NID");
+            } else {
+                id.setIdentifier(idComponents[0]);
+                idDomain.setIdentifierDomainName(idComponents[0]);                
+            }
             return id;
         }
 

@@ -30,16 +30,19 @@ import org.openempi.webapp.client.AdminService;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.server.util.ModelTransformer;
 import org.openhealthtools.openpixpdq.common.PixPdqConfigurationLoader;
-import org.openhie.openempi.blocking.BlockingLifecycleObserver;
-import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.entity.RecordManagerService;
-
+import org.openhie.openempi.jobqueue.JobEntryFactory;
+import org.openhie.openempi.jobqueue.JobParameterConstants;
+import org.openhie.openempi.jobqueue.JobTypeEnum;
+import org.openhie.openempi.model.JobEntry;
+import org.openhie.openempi.notification.ObservationEventType;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 public class AdminServiceImpl extends AbstractRemoteServiceServlet implements AdminService
 {
+    private static final long serialVersionUID = 2707492638994310226L;
+    
 	private static boolean initialized = false;
 	private PixPdqConfigurationLoader loader;
 
@@ -90,18 +93,21 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		log.debug("Assign global identifiers for person entries without one.");
 		
         authenticateCaller();
-        String message = null;
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.ASSIGN_GLOBAL_IDENTIFIERS,
+                "Job to assign global identifiers to all records for entity " + entity.getName()  + 
+                " on behalf of user " + Context.getUserContext().getUser().getUsername());
+        jobEntry.addJobParameter(JobParameterConstants.ENTITYNAME_PARAM, entity.getName());
+        String msg = "Job to assign global identifiers to all records has been created.";
         try {
-            RecordManagerService service = Context.getRecordManagerService();
-
-            org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
-            service.assignGlobalIdentifier(entity);
-
-        } catch (Exception e) {
-            log.error("Failed while trying to assign global identifiers to entries in the repository: " + e, e);
-            message = e.getMessage();
+            jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+            Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+        } catch (Throwable t) {
+            log.error("Failed while trying to assign global identifiers to entries in the repository: " + t, t);
+            msg = t.getMessage();
         }
-        return message;
+        return msg;
 	}
 
 	private File getConfigurationFile() throws IOException {
@@ -142,69 +148,88 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		log.debug("Initialize Repository");
 
 		authenticateCaller();
-		String message = null;
-		try {
-			RecordManagerService service = Context.getRecordManagerService();
-
-			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
-			service.initializeRepository(entity);
-
-		} catch (Exception e) {
-			log.error("Failed while trying to initialize repository: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.MATCHING_INITIALIZATION,
+                "Job to initalize the matching service for entity " + entity.getName()  + 
+                " on behalf of user " + Context.getUserContext().getUser().getUsername());
+        jobEntry.addJobParameter(JobParameterConstants.ENTITYNAME_PARAM, entity.getName());
+        jobEntry.addJobParameter(JobParameterConstants.MATCHINGTASK_PARAM, JobParameterConstants.MATCHINGTASK_INITIALIZATION);
+        String msg = "Job to initialize the matching service has been created.";
+        try {
+            jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+            Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+        } catch (Throwable t) {
+            log.error("Failed while trying to initialize the matching service: " + t, t);
+            msg = t.getMessage();
+        }
+        return msg;
 	}
 
 	public String linkAllRecordPairs(EntityWeb entityWeb) {
 		log.debug("Linking all record pairs in the repository");
 
 		authenticateCaller();
-		String message = null;
-		try {
-			RecordManagerService service = Context.getRecordManagerService();
-
-			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
-			service.linkAllRecordPairs(entity);
-		} catch (Exception e) {
-			log.error("Failed while trying to initialize repository: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.MATCH_REPOSITORY_DATA,
+                "Job to link all record pairs using the matching service for entity " + entity.getName()  + 
+                " on behalf of user " + Context.getUserContext().getUser().getUsername());
+        jobEntry.addJobParameter(JobParameterConstants.ENTITYNAME_PARAM, entity.getName());
+        jobEntry.addJobParameter(JobParameterConstants.MATCHINGTASK_PARAM, JobParameterConstants.MATCHINGTASK_LINKAGE);
+        String msg = "Job to link all record pairs using the matching service has been created.";
+        try {
+            jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+            Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+        } catch (Throwable t) {
+            log.error("Failed while trying to link all record pairs using the matching service: " + t, t);
+            msg = t.getMessage();
+        }
+		return msg;
 	}
 
 	public String initializeCustomConfiguration(EntityWeb entityWeb) {
 		log.debug("Initialize Custom Configuration");
 
 		authenticateCaller();
-		String message = null;
-		try {
-			RecordManagerService entityManagerService = Context.getRecordManagerService();
-			org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb, org.openhie.openempi.model.Entity.class);
-			entityManagerService.generateCustomFields(entity);
-		} catch (Exception e) {
-			log.error("Failed while trying to initialize custom configuration: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.GENERATE_CUSTOM_FIELDS,
+                "Job to generate custom fields for all records for entity " + entity.getName()
+                        + " on behalf of user " + Context.getUserContext().getUser().getUsername());
+        jobEntry.addJobParameter(JobParameterConstants.ENTITYNAME_PARAM, entity.getName());
+        String msg = "Job to generate custom fields for all records has been created.";
+        try {
+            jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+            Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+        } catch (Throwable t) {
+            log.error("Failed while trying to generate custom fields: " + t, t);            
+            msg = t.getMessage();
+        }
+		return msg;
 	}
 
-	public String rebuildBlockingIndex(EntityWeb entity) {
+	public String rebuildBlockingIndex(EntityWeb entityWeb) {
 		log.debug("Rebuild Blocking Index");
 
 		authenticateCaller();
-		String message = null;
-		try {
-			BlockingService blockingService = Context.getBlockingService(entity.getName());
-			BlockingLifecycleObserver blockingLifecycle = (BlockingLifecycleObserver) blockingService;
-			blockingLifecycle.rebuildIndex();
-		} catch (Exception e) {
-			log.error("Failed while trying to initialize repository: " + e, e);
-			message = e.getMessage();
-		}
-		return message;
+		org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.BLOCKING_INITIALIZATION,
+                "Job to initalize the indexes for blocking service for entity " + entity.getName()  + 
+                " on behalf of user " + Context.getUserContext().getUser().getUsername());
+        jobEntry.addJobParameter(JobParameterConstants.ENTITYNAME_PARAM, entity.getName());
+        String msg = "Job to rebuild the blocking service indexes has been created.";
+        try {
+            jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+            Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+        } catch (Throwable t) {
+            log.error("Failed while trying to rebuild the indexes for the blocking service: " + t, t);            
+            msg = t.getMessage();
+        }
+        return msg;
 	}
-
+    
 	public static boolean isInitialized() {
 		return initialized;
 	}

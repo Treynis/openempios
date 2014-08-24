@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
+import org.openhie.openempi.jobqueue.JobQueueService;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.JobEntry;
 import org.openhie.openempi.model.JobEntryEventLog;

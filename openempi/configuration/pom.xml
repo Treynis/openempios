@@ -7,17 +7,38 @@
 
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
-	<artifactId>openempi-configuration</artifactId>
+	<artifactId>openempi-entity-configuration</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - Configuration</name>
+	<name>OpenEMPI Entity - Configuration</name>
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.jvnet.jaxb2.maven2</groupId>
+				<artifactId>maven-jaxb2-plugin</artifactId>
+				<version>0.8.3</version>
+				<configuration>
+					<generateDirectory>src/main/java</generateDirectory>
+					<generatePackage>org.openhie.openempi.configuration.xml.model</generatePackage>
+					<schemaDirectory>src/main/schemas</schemaDirectory>
+					<schemaIncludes>
+						<include>file-loader-map.xsd</include>
+						<include>entity-model.xsd</include>
+					</schemaIncludes>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>xmlbeans-maven-plugin</artifactId>
@@ -55,27 +76,6 @@
 				</configuration>
 			</plugin>
 			 -->
-			<plugin>
-				<groupId>org.jvnet.jaxb2.maven2</groupId>
-				<artifactId>maven-jaxb2-plugin</artifactId>
-				<version>0.8.1</version>
-				<configuration>
-					<generateDirectory>src/main/java</generateDirectory>
-					<generatePackage>org.openhie.openempi.configuration.xml.model</generatePackage>
-					<schemaDirectory>src/main/schemas</schemaDirectory>
-					<schemaIncludes>
-						<include>file-loader-map.xsd</include>
-						<include>entity-model.xsd</include>
-					</schemaIncludes>
-				</configuration>
-				<executions>
-					<execution>
-						<goals>
-							<goal>generate</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
 		<pluginManagement>
 			<plugins>

@@ -28,10 +28,12 @@ public interface ConfigurationRegistry
 	public final static String BLOCKING_CONFIGURATION = "blockingConfiguration";
 	public final static String MATCH_CONFIGURATION = "matchConfiguration";
 	public final static String FILE_LOADER_CONFIGURATION = "fileLoaderConfiguration";
-	public final static String SINGLE_BEST_RECORD_CONFIGURATION = "singleBestRecordConfiguration";
+    public final static String SHALLOW_MATCH_CONFIGURATION = "shallowMatchConfiguration";
+    public final static String SINGLE_BEST_RECORD_CONFIGURATION = "singleBestRecordConfiguration";
 	
 	public final static String BLOCKING_ALGORITHM_NAME_KEY = "blockingAlgorithmName";
 	public final static String MATCHING_ALGORITHM_NAME_KEY = "matchingAlgorithmName";
+    public final static String SHALLOW_MATCHING_ALGORITHM_NAME_KEY = "shallowMatchingAlgorithmName";
 	public static final String ENTITY_NAME = "entityName";
 	
 

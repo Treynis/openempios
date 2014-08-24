@@ -178,12 +178,19 @@ public class EntityDaoOrientdb implements EntityDao
                 properties.put(property, value);
             }
         }
-        Vertex instance = db.addVertex(getClassName(entity.getName()), properties);
-        for (Identifier identifier : record.getIdentifiers()) {
-            Vertex vertex = saveIdentifier(db, instance, record, identifier);
-            instance.addEdge(Constants.IDENTIFIER_EDGE_TYPE, vertex);
+        if (record.isDirty()) {
+            properties.put(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
+        } else {
+            properties.put(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
         }
-        db.commit();
+        OrientVertex instance = (OrientVertex) db.addVertex(getClassName(entity.getName()), properties);
+        for (Identifier identifier : record.getIdentifiers()) {
+            OrientVertex vertex = (OrientVertex) saveIdentifier(db, instance, record, identifier);
+            OrientEdge edge = db.addEdge(null, instance, vertex, Constants.IDENTIFIER_EDGE_TYPE);
+            log.info("Created vertex for identifier " + vertex + " and edge " + edge);
+//            instance.addEdge(getClassName(Constants.IDENTIFIER_EDGE_TYPE), vertex);
+        }
+        db.getRawGraph().commit(true);
         return instance;
     }
     
@@ -217,6 +224,9 @@ public class EntityDaoOrientdb implements EntityDao
     
     private Vertex saveIdentifier(OrientGraph db, Vertex owner, Record record, Identifier identifier) {
         Map<String,Object> properties = new HashMap<String,Object>();
+        if (identifier.getRecord() == null) {
+            identifier.setRecord(record);
+        }
         properties.put(Constants.IDENTIFIER_PROPERTY, identifier.getIdentifier());
         properties.put(Constants.ENTITY_PROPERTY, owner);
         properties.put(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, identifier.getIdentifierDomainId());
@@ -317,6 +327,12 @@ public class EntityDaoOrientdb implements EntityDao
                 ODocument odoc = (ODocument) obj;
                 updateIdentifiers(db, odoc, record.getIdentifiers(), now);
                 updateDocumentWithRecord(odoc, record);
+                boolean dirty = record.isDirty();
+                if (dirty == false) {
+                    odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
+                } else {
+                    odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
+                }                
                 odoc.field(Constants.DATE_CHANGED_PROPERTY, now);
                 odoc.field(Constants.USER_CHANGED_BY_PROPERTY, changedBy.getId());
                 odoc.save();
@@ -350,6 +366,12 @@ public class EntityDaoOrientdb implements EntityDao
             ODocument odoc = (ODocument) obj;
             updateIdentifiers(db, obj, record.getIdentifiers(), now);
             updateDocumentWithRecord(odoc, record);
+            boolean dirty = record.isDirty();
+            if (dirty == false) {
+                odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
+            } else {
+                odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
+            }
             odoc.field(Constants.DATE_CHANGED_PROPERTY, now);
             odoc.field(Constants.USER_CHANGED_BY_PROPERTY, changedBy.getId());
             odoc.save();
@@ -377,7 +399,8 @@ public class EntityDaoOrientdb implements EntityDao
                 for (String property : record.getPropertyNames()) {
                     props.put(property, record.get(property));
                 }
-                db.addVertex(className, props);
+                OrientVertex vertex = (OrientVertex) db.addVertex(className, props);
+                vertex.getBaseClassName();
             } else {
                 ORID orid = extractORID(entityStore, record);
                 Object obj = db.getRawGraph().load(orid);
@@ -444,7 +467,7 @@ public class EntityDaoOrientdb implements EntityDao
         try {
             db = connect(entityStore);
             Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OCommandSQL(query)).execute();
-            if (result == null) {
+            if (result == null || !result.iterator().hasNext()) {
                 return null;
             }
             log.debug("Result is " + result);
@@ -455,6 +478,31 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return null;
+        } finally {
+            if (db != null) {
+                db.getRawGraph().close();
+            }
+        }
+    }
+
+    public Set<Record> loadDirtyRecords(Entity entity, int maxResults) {
+        String query = QueryGenerator.generateDirtyRecordQueryPaged(entity, maxResults);
+        OrientGraph db = null;
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        Set<Record> recordSet = new HashSet<Record>();
+        try {
+            db = connect(entityStore);
+            List<ODocument> result = db.getRawGraph().query(new OSQLSynchQuery<ODocument>(query));
+            if (result == null || result.size() == 0) {
+                return recordSet;
+            }
+            List<Record> records = OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, result);
+            recordSet.addAll(records);
+            return recordSet;
+        } catch (Exception e) {
+            log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
+                    + " due to " + e, e);
+            return recordSet;
         } finally {
             if (db != null) {
                 db.getRawGraph().close();
@@ -537,6 +585,7 @@ public class EntityDaoOrientdb implements EntityDao
         }
     }
 
+    @SuppressWarnings("unchecked")
     public List<Record> findRecordsById(Entity entity, Integer clusterId, List<Integer> recordIds) {
         String query = QueryGenerator.generateQueryFromRecordIds(entity, clusterId, recordIds);
         OrientGraph db = null;
@@ -544,11 +593,15 @@ public class EntityDaoOrientdb implements EntityDao
         try {
             db = connect(entityStore);
 
-            List<ODocument> result = db.getRawGraph().query(new OSQLSynchQuery<ODocument>(query));
-            if (result == null || result.size() == 0) {
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute();
+            if (result == null) {
                 return new ArrayList<Record>();
             }
-            return OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, result);
+            List<Vertex> records = new ArrayList<Vertex>();
+            for (Vertex v : result) {
+                records.add(v);
+            }
+            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, records);
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
@@ -583,6 +636,7 @@ public class EntityDaoOrientdb implements EntityDao
         }
     }
 
+    @SuppressWarnings("unchecked")
     public List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier) {
         Map<String, Object> params = new HashMap<String, Object>();
         String query = QueryGenerator.generateRecordQueryByIdentifier(entity, identifier, params);
@@ -590,13 +644,12 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
-            List<ODocument> result = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query)).execute(params);
-            if (result == null || result.size() == 0) {
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute(params);
+            if (result == null) {
                 return new ArrayList<Record>();
             }
-            Set<ODocument> entities = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
-
-            return  new ArrayList<Record>(OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, entities));
+            Set<ODocument> records = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
+            return  new ArrayList<Record>(OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, records));
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
@@ -608,6 +661,7 @@ public class EntityDaoOrientdb implements EntityDao
         }
     }
 
+    @SuppressWarnings("unchecked")
     public List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier, int firstResult, int maxResults) {
         Map<String, Object> params = new HashMap<String, Object>();
         String query = QueryGenerator.generateRecordQueryByIdentifier(entity, identifier, params, firstResult, maxResults);
@@ -615,13 +669,12 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
-            List<ODocument> result = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query)).execute(params);
-            if (result == null || result.size() == 0) {
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute(params);
+            if (result == null) {
                 return new ArrayList<Record>();
             }
-            Set<ODocument> entities = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
-
-            return  new ArrayList<Record>(OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, entities));
+            Set<ODocument> records = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
+            return  new ArrayList<Record>(OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, records));
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
@@ -642,6 +695,7 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
+            
             List<ODocument> records = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query)).execute(params);
             if (records == null || records.size() == 0) {
                 return new ArrayList<Record>();
@@ -701,6 +755,7 @@ public class EntityDaoOrientdb implements EntityDao
         }
     }
 
+    @SuppressWarnings("unchecked")
     public Long getRecordCount(Entity entity, Identifier identifier) {
         Map<String, Object> params = new HashMap<String, Object>();
         String query = QueryGenerator.generateCountQueryFromRecord(entity, identifier, params);
@@ -708,11 +763,12 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
-            List<ODocument> list = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query)).execute(params);
-
-            Set<ODocument> entities = OrientdbConverter.extractEntitiesFromIdentifiers(entity, list);
-
-            return new Long(entities.size());
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute(params);
+            if (result == null) {
+                return 0L;
+            }
+            Set<ODocument> records = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
+            return new Long(records.size());
 
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()

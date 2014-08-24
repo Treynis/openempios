@@ -30,10 +30,10 @@ import org.openempi.webapp.client.JobQueueDataService;
 import org.openempi.webapp.client.model.JobEntryEventLogWeb;
 import org.openempi.webapp.client.model.JobEntryWeb;
 import org.openempi.webapp.server.util.ModelTransformer;
+import org.openhie.openempi.jobqueue.JobQueueService;
 import org.openhie.openempi.model.JobEntry;
 import org.openhie.openempi.model.JobEntryEventLog;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.service.JobQueueService;
 
 public class JobQueueDataServiceImpl extends AbstractRemoteServiceServlet implements JobQueueDataService
 {
@@ -42,7 +42,7 @@ public class JobQueueDataServiceImpl extends AbstractRemoteServiceServlet implem
 	}
 
 
-    public List<JobEntryWeb> getJobEntries() {
+    public List<JobEntryWeb> getJobEntries() throws Exception  {
         log.debug("Received request to retrieve the list of Job Entry.");
 
         authenticateCaller();
@@ -64,7 +64,7 @@ public class JobQueueDataServiceImpl extends AbstractRemoteServiceServlet implem
         }
     }
 
-    public List<JobEntryEventLogWeb> getJobEntryEventLogs(JobEntryWeb jobEntry) {
+    public List<JobEntryEventLogWeb> getJobEntryEventLogs(JobEntryWeb jobEntry) throws Exception  {
         log.debug("Received request to retrieve the list of Job Entry Event Logs.");
 
         authenticateCaller();
@@ -86,7 +86,7 @@ public class JobQueueDataServiceImpl extends AbstractRemoteServiceServlet implem
         }
     }
 
-    public JobEntryWeb updateJobEntry(JobEntryWeb jobEntryWeb) {
+    public JobEntryWeb updateJobEntry(JobEntryWeb jobEntryWeb) throws Exception {
         log.debug("Received request to update a job entry to the repository");
 
         authenticateCaller();

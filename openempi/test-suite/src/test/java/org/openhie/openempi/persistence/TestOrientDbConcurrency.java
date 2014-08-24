@@ -18,6 +18,7 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
+import com.tinkerpop.blueprints.impls.orient.OrientVertexType;
 
 public class TestOrientDbConcurrency extends TestCase
 {
@@ -33,7 +34,14 @@ public class TestOrientDbConcurrency extends TestCase
 
         final CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
         final AtomicBoolean shutdownFlag = new AtomicBoolean(false);
+        OrientVertex vertex = graph.addVertex("class:person");
+        vertex.setProperty("firstName", "John");
+        vertex.setProperty("lastName", "Orientdb");
+        System.out.println(vertex.getRecord().getIdentity());
+        graph.commit();
+        System.out.println(vertex.getRecord().getIdentity());
 
+        
         final ExecutorService executorService = Executors.newCachedThreadPool();
 
         List<Future> futures = new ArrayList<Future>();
@@ -47,9 +55,9 @@ public class TestOrientDbConcurrency extends TestCase
                     OrientGraph graph = new OrientGraph(DB_URL);
     
                     int counter = 0;
-                    graph.getRawGraph().begin();
+//                    graph.getRawGraph().begin();
                     while (!shutdownFlag.get()) {
-                        OrientVertex vertex = graph.addVertex("class:persons");
+                        OrientVertex vertex = graph.addVertex("class:person");
                         vertex.setProperty("firstName", "John"+counter);
                         vertex.setProperty("lastName", "Orientdb" + counter);
                         Set<OrientVertex> addresses = new HashSet<OrientVertex>();
@@ -116,7 +124,7 @@ public class TestOrientDbConcurrency extends TestCase
         public Void call() {
             try {
                 OrientGraph graph = new OrientGraph(DB_URL);
-                graph.getRawGraph().begin();
+//                graph.getRawGraph().begin();
                 List<ODocument> docs = graph.getRawGraph().command(new OCommandSQL("select rids from Blockinground-0 where blockingKeyValue = " + blockingKeyValue)).execute();
                 if (docs.size() == 0) {
                     Set<String> rids = new HashSet<String>();

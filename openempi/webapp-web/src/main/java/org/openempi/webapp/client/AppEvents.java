@@ -256,6 +256,14 @@ public class AppEvents
 
     public static final EventType EntityBasicDeleteFinished = new EventType();
 
+    public static final EventType EntityLinkedPair = new EventType();
+
+    public static final EventType EntityLinkPairReceived = new EventType();
+
+    public static final EventType EntityBasicLinkedPair = new EventType();
+
+    public static final EventType EntityBasicLinkPairReceived = new EventType();
+
 	public static final EventType EntityFixedSearchView = new EventType();
 
 	public static final EventType EntitySearchView = new EventType();
@@ -315,9 +323,9 @@ public class AppEvents
 	public static final EventType IdentifierDomainTypeCodesReceived = new EventType();
 
     public static final EventType InformationPanelView = new EventType();
-  
+
     public static final EventType InformationMessage = new EventType();
-    
+
 	public static final EventType Init = new EventType();
 
 	public static final EventType InitMenu = new EventType();
@@ -463,6 +471,8 @@ public class AppEvents
 	public static final EventType ProcessLink = new EventType();
 
 	public static final EventType ProcessUnlink = new EventType();
+
+	public static final EventType ProcessBasicUnlink = new EventType();
 
 	public static final EventType ProcessPairLinkedView = new EventType();
 

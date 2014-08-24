@@ -38,6 +38,22 @@
             <period>1880</period>
         </scheduled-task>
     </scheduled-tasks>-->
+    <scheduled-tasks>
+<!--
+        <scheduled-task entity-name="person" schedule-type="schedule-at-fixed-rate" time-unit="seconds">
+            <task-name>dirtyRecordMatcher</task-name>
+            <task-implementation>dirtyRecordMatcher</task-implementation>
+            <initial-delay>3600</initial-delay>
+            <period>3600</period>
+        </scheduled-task>
+-->
+        <scheduled-task schedule-type="schedule-at-fixed-rate" time-unit="seconds">
+            <task-name>jobQueueProcessor</task-name>
+            <task-implementation>jobQueueProcessor</task-implementation>
+            <initial-delay>30</initial-delay>
+            <period>300</period>
+        </scheduled-task>
+    </scheduled-tasks>
     <bb:basic-blocking entity-name="person">
         <bb:blocking-rounds>
             <bb:blocking-round>

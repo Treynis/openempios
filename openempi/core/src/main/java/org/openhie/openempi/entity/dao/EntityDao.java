@@ -63,7 +63,7 @@ public interface EntityDao
 
     public Set<Record> saveRecords(Entity entity, Collection<Record> record);
 
-    public List<Record> findRecordsByAttributes(Entity entityDef, Record record);
+    public List<Record> findRecordsByAttributes(Entity entity, Record record);
 
     public Long getRecordCount(Entity entity);
 
@@ -73,6 +73,8 @@ public interface EntityDao
 
     public Long getRecordCount(Entity entity, Identifier identifier);
 
+    public Set<Record> loadDirtyRecords(Entity entity, int maxResults);
+    
     public List<Record> findRecordsByAttributes(Entity entity, Record record, int firstResult, int maxResults);
 
     public List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier);

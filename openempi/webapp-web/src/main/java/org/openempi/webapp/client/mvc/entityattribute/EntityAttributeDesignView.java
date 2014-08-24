@@ -120,6 +120,7 @@ public class EntityAttributeDesignView extends View
 		private TextField<String> entityDisplayNameEdit = new TextField<String>();
 		private SpinnerField versionSpin = new SpinnerField();
 		private TextArea entityDescriptionEdit = new TextArea();
+		private CheckBox synchronousCheckBox = new CheckBox();
 
 		private Grid<EntityAttributeWeb> attributeGrid;
 		private ListStore<EntityAttributeWeb> attributeStore = new GroupingStore<EntityAttributeWeb>();
@@ -461,7 +462,16 @@ public class EntityAttributeDesignView extends View
 		ColumnConfig entityDisplayName = new ColumnConfig("displayName", "Display Name", 180);
 		ColumnConfig entityVersion = new ColumnConfig("versionId", "version", 120);
 		ColumnConfig entityDescription = new ColumnConfig("description", "Description", 260);
-		//ColumnConfig entityDateCreated = new ColumnConfig("dateCreated", "Date Created", 180);
+	    CheckBoxGroup checkSynchronousGroup = new CheckBoxGroup();
+	    checkSynchronousGroup.setFieldLabel("Synchronous");
+	    CheckBox synchCheckBox = new CheckBox();
+	    checkSynchronousGroup.add(synchCheckBox);
+	    
+	    CheckColumnConfig synchronous = new CheckColumnConfig("synchronousMatching", "Synchronous", 100);
+	    CellEditor checkBoxSynchronousEditor = new CellEditor(synchCheckBox);
+	    synchronous.setEditor(checkBoxSynchronousEditor);
+
+	    //ColumnConfig entityDateCreated = new ColumnConfig("dateCreated", "Date Created", 180);
 		//ColumnConfig entityCreatedBy = new ColumnConfig("created By", "Created By", 160);
 		List<ColumnConfig> config = new ArrayList<ColumnConfig>();
 		config.add(sm.getColumn());
@@ -469,8 +479,7 @@ public class EntityAttributeDesignView extends View
 		config.add(entityDisplayName);
 		config.add(entityVersion);
 		config.add(entityDescription);
-		//config.add(entityDateCreated);
-		//config.add(entityCreatedBy);
+		config.add(synchronous);
 
 		final ColumnModel cm = new ColumnModel(config);
 		grid = new Grid<EntityWeb>(store, cm);
@@ -546,6 +555,7 @@ public class EntityAttributeDesignView extends View
 		    	  versionSpin.setMaxValue(editEntity.getVersionId() + 1);
 	      		  versionSpin.setValue(editEntity.getVersionId());
 	      		  entityDescriptionEdit.setValue(editEntity.getDescription());
+	      		  synchronousCheckBox.setValue(editEntity.getSynchronousMatching());
 
 	      		  groupStore.removeAll();
 	      		  editedGroups.removeAll();
@@ -935,10 +945,17 @@ public class EntityAttributeDesignView extends View
 		entityDescriptionEdit.setFieldLabel("Description");
 		entityDescriptionEdit.setHeight(60);
 
+		CheckBoxGroup checkSynchronousGroup = new CheckBoxGroup();
+		checkSynchronousGroup.setFieldLabel("Synchronous");
+        synchronousCheckBox.setHeight(20);
+//        synchronousCheckBox.setFieldLabel("Synchronous");
+		checkSynchronousGroup.add(synchronousCheckBox);
+		
 		cp.add(entityNameEdit);
 		cp.add(entityDisplayNameEdit);
 		cp.add(spinPanel);
 		cp.add(entityDescriptionEdit);
+        cp.add(checkSynchronousGroup);
 
 		LayoutContainer formContainer = new LayoutContainer();
 			ColumnLayout columnLayout = new ColumnLayout();
@@ -974,6 +991,7 @@ public class EntityAttributeDesignView extends View
 			entity.setVersionId(BASE_VERSION);
 		}
 		entity.setDescription(entityDescriptionEdit.getValue());
+		entity.setSynchronousMatching(synchronousCheckBox.getValue());
 
 		// Groups
 		Set<EntityAttributeGroupWeb> egs = new HashSet<EntityAttributeGroupWeb>();
@@ -1327,7 +1345,7 @@ public class EntityAttributeDesignView extends View
         pSearchable.setEditor(checkBoxSearchableEditor);
         CellEditor checkBoxpCaseInsensitiveEditor = new CellEditor(new CheckBox());
         pCaseInsensitive.setEditor(checkBoxpCaseInsensitiveEditor);
-
+//TODO:
 	    // disable column sorting for Move Up and Move Down
 	    pGroup.setSortable(false);
 	    pName.setSortable(false);

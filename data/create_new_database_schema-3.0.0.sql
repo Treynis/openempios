@@ -288,6 +288,8 @@ CREATE TABLE link_source (
 insert into link_source(link_source_id, source_name, source_description) values (1, 'Manual', 'Manually Matched');
 insert into link_source(link_source_id, source_name, source_description) values (2, 'Exact', 'Exact Matching Algorithm');
 insert into link_source(link_source_id, source_name, source_description) values (3, 'Probabilistic', 'Probabilistic Matching Algorithm');
+insert into link_source(link_source_id, source_name, source_description) values (4, 'Gold', 'Gold Standard');
+insert into link_source(link_source_id, source_name, source_description) values (5, 'Shallow', 'Shallow Matching Algorithm');
 
 ALTER TABLE ONLY link_source
     ADD CONSTRAINT link_source_pkey PRIMARY KEY (link_source_id);
@@ -506,6 +508,7 @@ CREATE TABLE entity
   "name" character varying(64) NOT NULL,
   description character varying(256),
   display_name character varying(64) NOT NULL,
+  synchronous_matching boolean NOT NULL DEFAULT false,
   date_created timestamp without time zone NOT NULL,
   created_by_id integer NOT NULL,
   date_changed timestamp without time zone,
@@ -974,10 +977,12 @@ INSERT INTO job_type
 (job_type_cd, job_type_name, job_type_description, job_type_handler) VALUES
 ( 1, 'File Import', 'Job imports a file into the repository', 'fileImportJobHandler'),
 ( 2, 'Blocking Initialization', 'Job initializes the blocking algorithm by re-indexing all data', 'blockingInitializationJobHandler'),
-( 3, 'Matching Initialization', 'Job initializes the matching algorithm by configuring the underlying model', 'matchingInitializationHandler'),
-( 4, 'Match Repository Data', 'Job runs the currently configured matching algorithm against all data in the repository.', 'matchingHandler'),
-( 5, 'Entity Import', 'Job imports an entity definition into the system', 'entityImportHandler'),
-( 6, 'Data Profiling', 'Job runs the data profiler against all the data in the repository', 'dataProfiling'); 
+( 3, 'Matching Initialization', 'Job initializes the matching algorithm by configuring the underlying model', 'matchingInitializationJobHandler'),
+( 4, 'Match Repository Data', 'Job runs the currently configured matching algorithm against all data in the repository.', 'matchingAllPairsJobHandler'),
+( 5, 'Entity Import', 'Job imports an entity definition into the system', 'entityImportEntityJobHandler'),
+( 6, 'Data Profiling', 'Job runs the data profiler against all the data in the repository', 'dataProfilingJobHandler'),
+( 7, 'Generate Custom Fields', 'Job generates custom field data for all the records in the repository', 'customFieldGenerationJobHandler'),
+( 8, 'Assign Global Identifiers', 'Job assigns global identifiers to all records in the repository that do not have one already', 'globalIdGenerationJobHandler');
 
 -- Table: job_status
 DROP TABLE IF EXISTS job_status;
@@ -1003,15 +1008,16 @@ CREATE TABLE job_entry
 (
    job_entry_id integer NOT NULL, 
    job_type_cd integer NOT NULL, 
-   job_status_cd integer NOT NULL, 
+   job_status_cd integer NOT NULL,
    job_description varchar(255),
+   job_parameters varchar(1024),
    entity_version_id integer NOT NULL,
    date_created timestamp with time zone NOT NULL, 
-   date_started timestamp with time zone NOT NULL, 
+   date_started timestamp with time zone, 
    date_completed timestamp without time zone, 
    items_processed integer DEFAULT 0, 
    items_successful integer DEFAULT 0, 
-   items_errored integer DEFAULT 0, 
+   items_errored integer DEFAULT 0,
    CONSTRAINT job_entry_pk PRIMARY KEY (job_entry_id), 
    CONSTRAINT fk_job_entry_job_type_code FOREIGN KEY (job_type_cd) REFERENCES job_type (job_type_cd) ON UPDATE NO ACTION ON DELETE NO ACTION, 
    CONSTRAINT fk_job_entry_entity_version_id FOREIGN KEY (entity_version_id) REFERENCES entity (entity_version_id) ON UPDATE NO ACTION ON DELETE NO ACTION, 

@@ -54,6 +54,8 @@ public interface EntityInstanceDataService extends RemoteService
 
     RecordLinksListWeb loadRecordLinksPaged(RecordSearchCriteriaWeb searchCriteria) throws Exception;
 
+    RecordLinkWeb loadRecordLinks(EntityWeb entityModel, Long leftRecordId, Long rightRecordId, String state) throws Exception;
+
     List<RecordLinkWeb> loadRecordLinks(EntityWeb entityModel, String state, int firstResult, int maxResults)
             throws Exception;
 

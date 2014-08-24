@@ -3,30 +3,25 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
-	<artifactId>openempi-restful-webservices</artifactId>
+	<artifactId>openempi-entity-restful-webservices</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - RESTful Web Services</name>
+	<name>OpenEMPI Entity - RESTful Web Services</name>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-configuration</artifactId>
+			<artifactId>openempi-entity-configuration</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
-			<version>${release.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-basic-blocking</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>

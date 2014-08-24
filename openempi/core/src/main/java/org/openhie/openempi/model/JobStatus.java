@@ -38,6 +38,15 @@ public class JobStatus extends BaseObject implements Serializable
 {
     private static final long serialVersionUID = 6170253797278224912L;
 
+    public static final int JOB_STATUS_QUEUED_CODE = 1;
+    public static final int JOB_STATUS_INPROCESSING_CODE = 2;
+    public static final int JOB_STATUS_COMPLETED_CODE = 3;
+    
+    public static final JobStatus JOB_STATUS_QUEUED = new JobStatus(JOB_STATUS_QUEUED_CODE);
+    public static final JobStatus JOB_STATUS_INPROCESSING = new JobStatus(JOB_STATUS_INPROCESSING_CODE);
+    public static final JobStatus JOB_STATUS_COMPLETED = new JobStatus(JOB_STATUS_COMPLETED_CODE);
+    
+
     private Integer jobStatusCd;
     private String jobStatusName;
     private String jobStatusDescription;
@@ -45,6 +54,10 @@ public class JobStatus extends BaseObject implements Serializable
     public JobStatus() {
     }
 
+    public JobStatus(int jobStatusCode) {
+        this.jobStatusCd = jobStatusCode;
+    }
+    
     @Id
     @Column(name = "job_status_cd", unique = true, nullable = false)
     public Integer getJobStatusCd() {

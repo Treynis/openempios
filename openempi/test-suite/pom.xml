@@ -7,82 +7,92 @@
 
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
-	<artifactId>openempi-test-suite</artifactId>
+	<artifactId>openempi-entity-test-suite</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - Test Suite</name>
+	<name>OpenEMPI Entity - Test Suite</name>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-configuration</artifactId>
+			<artifactId>openempi-entity-configuration</artifactId>
 			<version>${release.version}</version>
 			<scope>test</scope>
 		</dependency>	
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-basic-blocking</artifactId>
+			<artifactId>openempi-entity-record-cache</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-basic-blocking-hp</artifactId>
+			<artifactId>openempi-entity-basic-blocking</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-basic-blocking-hp</artifactId>
 			<version>${release.version}</version>
 		</dependency>		
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-exact-matching</artifactId>
+			<artifactId>openempi-entity-exact-matching</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-probabilistic-matching</artifactId>
+			<artifactId>openempi-entity-probabilistic-matching</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-single-best-record</artifactId>
+			<artifactId>openempi-entity-shallow-matching</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-openpixpdq-adapter</artifactId>
+			<artifactId>openempi-entity-single-best-record</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-file-loader-hp</artifactId>
+			<artifactId>openempi-entity-openpixpdq-adapter</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-file-loader-map</artifactId>
+			<artifactId>openempi-entity-file-loader-hp</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-webapp-server</artifactId>
+			<artifactId>openempi-entity-file-loader-map</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-restful-webservices</artifactId>
+			<artifactId>openempi-entity-webapp-server</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-restful-webservices</artifactId>
 			<version>${release.version}</version>
 		</dependency>		
 		<dependency>

@@ -33,15 +33,23 @@ import org.openempi.webapp.client.model.FileLoaderConfigurationWeb;
 import org.openempi.webapp.client.model.ParameterTypeWeb;
 import org.openempi.webapp.server.util.ModelTransformer;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.jobqueue.JobEntryFactory;
+import org.openhie.openempi.jobqueue.JobParameterConstants;
+import org.openhie.openempi.jobqueue.JobTypeEnum;
 import org.openhie.openempi.loader.FileLoader;
 import org.openhie.openempi.loader.FileLoaderFactory;
 import org.openhie.openempi.loader.FileLoaderManager;
+import org.openhie.openempi.loader.FileLoaderResults;
+import org.openhie.openempi.model.JobEntry;
 import org.openhie.openempi.model.ParameterType;
 import org.openhie.openempi.model.User;
+import org.openhie.openempi.notification.ObservationEventType;
 import org.openhie.openempi.service.UserManager;
 
 public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implements UserFileDataService
 {
+    private static final long serialVersionUID = -1633270535015082684L;
+
     private final static String NOMINAL_FILE_LOADER = "nominalSetDataLoader";
     private final static String CONCURRENT_FILE_LOADER = "concurrentDataLoader";
     private final static String FLEXIBLE_FILE_LOADER = "flexibleDataLoader";
@@ -128,26 +136,51 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
             throw new Exception(msg);
         }
 
+//        try {
+//            String number = importFileEntry(userFile);
+//            int dashIndex = number.indexOf("-");
+//            String rowsProcessedStr = number.substring(0, dashIndex);
+//            String rowsImportedStr = number.substring(dashIndex + 1, number.length());
+//
+//            UserManager userService = Context.getUserManager();
+//            org.openhie.openempi.model.UserFile userFileFound = userService.getUserFile(userFile.getUserFileId());
+//            userFileFound.setImported("Y");
+//            userFileFound.setRowsImported(Integer.parseInt(rowsImportedStr));
+//            userFileFound.setRowsProcessed(Integer.parseInt(rowsProcessedStr));
+//            userService.saveUserFile(userFileFound);
+//            msg = "File successfully imported";
+//        } catch (Throwable t) {
+//            msg = t.getMessage();
+//            throw new Exception(msg);
+//        }
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(userFile.getEntity(),
+                org.openhie.openempi.model.Entity.class);
+        JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.FILE_IMPORT, "Job to import file " + 
+                userFile.getName() + " on behalf of user " + Context.getUserContext().getUser().getUsername());
+        addParameters(userFile, jobEntry);
         try {
-            String number = importFileEntry(userFile);
-            int dashIndex = number.indexOf("-");
-            String rowsProcessedStr = number.substring(0, dashIndex);
-            String rowsImportedStr = number.substring(dashIndex + 1, number.length());
-
-            UserManager userService = Context.getUserManager();
-            org.openhie.openempi.model.UserFile userFileFound = userService.getUserFile(userFile.getUserFileId());
-            userFileFound.setImported("Y");
-            userFileFound.setRowsImported(Integer.parseInt(rowsImportedStr));
-            userFileFound.setRowsProcessed(Integer.parseInt(rowsProcessedStr));
-            userService.saveUserFile(userFileFound);
-            msg = "File successfully imported";
+            jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+            Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+            return "File import job has been created.";
         } catch (Throwable t) {
             msg = t.getMessage();
             throw new Exception(msg);
         }
-        return msg;
     }
 
+    private void addParameters(UserFileWeb userFile, JobEntry jobEntry) {
+        java.util.HashMap<String, Object> fileLoaderMap = userFile.getFileLoaderMap();
+        fileLoaderMap.put(JobParameterConstants.FILENAME_PARAM, userFile.getFilename());
+        fileLoaderMap.put(JobParameterConstants.FILELOADER_PARAM, userFile.getFileLoaderName());
+        fileLoaderMap.put(JobParameterConstants.USERFILEID_PARAM, userFile.getUserFileId());
+        for (String key : fileLoaderMap.keySet()) {
+            String value = fileLoaderMap.get(key).toString();
+            log.debug("Adding job entry parameter: <" + key + "," + value + ">");
+            jobEntry.addJobParameter(key, value);
+        }
+    }
+
+    /*
     private String importFileEntry(UserFileWeb userFile) throws Exception {
 
         authenticateCaller();
@@ -159,23 +192,22 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
             // set map values for importOnly and skipHeaderLine
             java.util.HashMap<String, Object> map = new java.util.HashMap<String, Object>();
             map.put("context", Context.getApplicationContext());
-            /*
-             * // map.put("isImport", true);
-             *
-             * if( userFile.getImportOnly() ) { fileLoaderManager.setUp(map); } else { fileLoaderManager.setUp(); }
-             *
-             * fileLoaderManager.setSkipHeaderLine(userFile.getSkipHeaderLine()); return
-             * fileLoaderManager.loadFile(userFile.getFilename(), getFileLoaderAlias());
-             */
+
+//             * // map.put("isImport", true);
+//             *
+//             * if( userFile.getImportOnly() ) { fileLoaderManager.setUp(map); } else { fileLoaderManager.setUp(); }
+//             *
+//             * fileLoaderManager.setSkipHeaderLine(userFile.getSkipHeaderLine()); return
+//             * fileLoaderManager.loadFile(userFile.getFilename(), getFileLoaderAlias());
 
             // file loader configuration
-            fileLoaderManager.setSkipHeaderLine(false);
-            for (String key : fileLoaderMap.keySet()) {
-                if (key.equals("skipHeaderLine")) {
-                    fileLoaderManager.setSkipHeaderLine((Boolean) fileLoaderMap.get(key));
-                }
-                map.put(key, fileLoaderMap.get(key));
-            }
+//            fileLoaderManager.setSkipHeaderLine(false);
+//            for (String key : fileLoaderMap.keySet()) {
+//                if (key.equals("skipHeaderLine")) {
+//                    fileLoaderManager.setSkipHeaderLine((Boolean) fileLoaderMap.get(key));
+//                }
+//                map.put(key, fileLoaderMap.get(key));
+//            }
 
             org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(userFile.getEntity(),
                     org.openhie.openempi.model.Entity.class);
@@ -187,14 +219,15 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
                 fileLoaderManager.setUp();
             }
 
-            return fileLoaderManager.loadFile(entity, userFile.getFilename(), userFile.getFileLoaderName());
-
+            FileLoaderResults results = fileLoaderManager.loadFile(entity, userFile.getFilename(), userFile.getFileLoaderName());
+            return "";
         } catch (Exception e) {
             log.error("Failed to parse and upload the file " + userFile.getFilename() + " due to " + e.getMessage());
             msg = "Failed to import the file " + userFile.getFilename() + " due to file format or file does not exist";
             throw new Exception(msg);
         }
     }
+*/
 
     @Override
     public String dataProfileUserFile(UserFileWeb userFile) throws Exception {
