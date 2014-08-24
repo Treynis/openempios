@@ -20,6 +20,8 @@
  */
 package org.openhie.openempi.context;
 
+import java.io.Serializable;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openhie.openempi.AuthenticationException;
@@ -31,9 +33,11 @@ import org.openhie.openempi.service.UserManager;
  *
  * @author Odysseas Pentakalos
  */
-public class UserContext
+public class UserContext implements Serializable
 {
-	private static final Log log = LogFactory.getLog(UserContext.class);
+    private static final long serialVersionUID = -2671499717171556489L;
+
+    private static final Log log = LogFactory.getLog(UserContext.class);
 	
 	private UserManager userManager;
 	

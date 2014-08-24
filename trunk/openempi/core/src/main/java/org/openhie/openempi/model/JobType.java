@@ -46,6 +46,10 @@ public class JobType extends BaseObject implements Serializable
     public JobType() {
     }
 
+    public JobType(Integer jobTypeCode) {
+        this.jobTypeCd = jobTypeCode;
+    }
+    
     @Id
     @Column(name = "job_type_cd", unique = true, nullable = false)
     public Integer getJobTypeCd() {

@@ -182,4 +182,7 @@ public final class Constants
 	
 	public final static String PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_FILE = "log-to-file";
 	public final static String PROBABILISTIC_MATCHING_LOGGING_DESTINATION_TO_DB = "log-to-db";
+	
+    public final static String FALSE_VALUE = "false";
+	public final static String TRUE_VALUE = "true";
 }

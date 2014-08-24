@@ -43,12 +43,19 @@ public class IntentMassiveInsertImpl implements DataAccessIntent
         if (db == null) {
             return;
         }
-        db.getRawGraph().declareIntent(new OIntentMassiveInsert());
-        this.entity = entity;
-        log.warn("Removing all indexes.");
-        dao.getSchemaManager(entity).removeIndexes(entity, db);
-        Context.registerDataAccessIntent(this);
-        db.getRawGraph().close();
+        try {
+            db.getRawGraph().declareIntent(new OIntentMassiveInsert());
+            this.entity = entity;
+            log.warn("Removing all indexes.");
+            dao.getSchemaManager(entity).removeIndexes(entity, db);
+            Context.registerDataAccessIntent(this);
+        } catch (Exception e) {
+            log.error("Failed to begin the Data Access Intent: " + e, e);
+        } finally {
+            if (db != null) {
+                db.getRawGraph().close();
+            }
+        }
     }
 
     public void end() {
@@ -56,11 +63,18 @@ public class IntentMassiveInsertImpl implements DataAccessIntent
         if (db == null) {
             return;
         }
-        db.getRawGraph().declareIntent(null);
-        log.warn("Recreating all indexes.");
-        Context.registerDataAccessIntent(null);
-        dao.getSchemaManager(entity).createIndexes(entity, db);
-        db.getRawGraph().close();
+        try {
+            db.getRawGraph().declareIntent(null);
+            log.warn("Recreating all indexes.");
+            Context.registerDataAccessIntent(null);
+            dao.getSchemaManager(entity).createIndexes(entity, db);
+        } catch (Exception e) {
+            log.error("Failed to begin the Data Access Intent: " + e, e);
+        } finally {
+            if (db != null) {
+                db.getRawGraph().close();
+            }
+        }
     }
 
     private OrientBaseGraph getConnection(Entity entity) {

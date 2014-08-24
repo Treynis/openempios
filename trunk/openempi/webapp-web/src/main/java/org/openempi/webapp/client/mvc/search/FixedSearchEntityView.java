@@ -22,6 +22,7 @@ package org.openempi.webapp.client.mvc.search;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,12 +35,13 @@ import org.openempi.webapp.client.model.EntityAttributeValidationWeb;
 import org.openempi.webapp.client.model.EntityAttributeWeb;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.model.ModelPropertyWeb;
+import org.openempi.webapp.client.model.RecordLinkWeb;
 import org.openempi.webapp.client.model.RecordListWeb;
 import org.openempi.webapp.client.model.RecordSearchCriteriaWeb;
 import org.openempi.webapp.client.model.RecordWeb;
-import org.openempi.webapp.client.mvc.BaseEntityView;
 import org.openempi.webapp.client.mvc.Controller;
 import org.openempi.webapp.client.ui.util.AttributeDatatype;
+import org.openempi.webapp.client.ui.util.Utility;
 
 import com.extjs.gxt.ui.client.Registry;
 import com.extjs.gxt.ui.client.Style.HorizontalAlignment;
@@ -47,6 +49,7 @@ import com.extjs.gxt.ui.client.Style.LayoutRegion;
 import com.extjs.gxt.ui.client.Style.Scroll;
 import com.extjs.gxt.ui.client.Style.SelectionMode;
 import com.extjs.gxt.ui.client.Style.VerticalAlignment;
+import com.extjs.gxt.ui.client.data.BaseModelData;
 import com.extjs.gxt.ui.client.data.BasePagingLoadConfig;
 import com.extjs.gxt.ui.client.data.BasePagingLoadResult;
 import com.extjs.gxt.ui.client.data.BasePagingLoader;
@@ -100,7 +103,7 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 
-public class FixedSearchEntityView extends BaseEntityView
+public class FixedSearchEntityView extends BaseSearchEntityView
 {
     public static final Integer PAGE_SIZE = new Integer(10);
 
@@ -291,7 +294,57 @@ public class FixedSearchEntityView extends BaseEntityView
 
             pagingLoader.load(config);
 
+        } else if (event.getType() == AppEvents.EntityBasicLinkPairReceived) {
+            unlinkedPair = (RecordLinkWeb) event.getData();
+            // Info.display("Information", "Link Pair: "+ linkedPair.getLeftRecord().getRecordId() +", "+linkedPair.getRightRecord().getRecordId());
+
+            buildRecordLinkPairDialog(Constants.BASIC_SEARCH, currentEntity);
+            linkPairDialog.setHeading("Unlink Record Pair");
+            Button ok = linkPairDialog.getButtonById("ok");
+            ok.setIcon(IconHelper.create("images/link_break.png"));
+            ok.setText("Confirm Unlink");
+            linkPairDialog.show();
+
+
+            leftIdentifierStore.removeAll();
+            rightIdentifierStore.removeAll();
+            linkPairStore.removeAll();
+
+            displayLeftEntityIdentifier(unlinkedPair.getLeftRecord());
+            displayRightEntityIdentifier(unlinkedPair.getRightRecord());
+
+            for (String key : recordFieldMap.keySet()) {
+                BaseModelData  model = new BaseModelData();
+                // model.set("attribute", key);
+                model.set("attribute", recordFieldMap.get(key));
+
+                EntityAttributeWeb attribute = currentEntity.findEntityAttributeByName(key);
+                AttributeDatatype type = AttributeDatatype.getById(attribute.getDatatype().getDataTypeCd());
+
+                if (type == AttributeDatatype.DATE) {
+                    String date = Utility.DateToString((Date) unlinkedPair.getLeftRecord().get(key));
+                    model.set("leftRecord",  date);
+                    date = Utility.DateToString((Date) unlinkedPair.getRightRecord().get(key));
+                    model.set("rightRecord",  date);
+                } else {
+                    model.set("leftRecord", unlinkedPair.getLeftRecord().get(key));
+                    model.set("rightRecord", unlinkedPair.getRightRecord().get(key));
+                }
+                linkPairStore.add(model);
+           }
+        } else if (event.getType() == AppEvents.ProcessPairUnlinkedView) {
+            storeLinkList.remove(selectedUnlinkedRecord);
+
+            if (linkPairDialog != null && linkPairDialog.isVisible()) {
+                linkPairDialog.close();
+            }
+
+            Info.display("Confirm :", " Successfully unlinked");
         } else if (event.getType() == AppEvents.Error) {
+
+            if (linkPairDialog != null && linkPairDialog.isVisible()) {
+                linkPairDialog.close();
+            }
             String message = event.getData();
             MessageBox.alert("Information", "Failure: " + message, listenFailureMsg);
         }
@@ -749,6 +802,9 @@ public class FixedSearchEntityView extends BaseEntityView
         }
 
         attributeFieldMap = new HashMap<String, Field<?>>();
+        if (entity.getAttributes() != null) {
+            SetRecordFieldMap(entity);
+        }
 
         topContainer.add(topFormPanel);
 
@@ -786,7 +842,7 @@ public class FixedSearchEntityView extends BaseEntityView
         recordLinksDialog = new Dialog();
         recordLinksDialog.setBodyBorder(false);
         recordLinksDialog.setWidth(810);
-        recordLinksDialog.setHeight(230);
+        recordLinksDialog.setHeight(250);
         recordLinksDialog.setButtons(Dialog.OK);
         recordLinksDialog.setModal(true);
         recordLinksDialog.getButtonById(Dialog.OK).addSelectionListener(new SelectionListener<ButtonEvent>()
@@ -803,7 +859,29 @@ public class FixedSearchEntityView extends BaseEntityView
         cp.setFrame(true);
         cp.setIcon(IconHelper.create("images/link.png"));
         cp.setLayout(new FillLayout());
-        cp.setSize(800, 160);
+        cp.setSize(800, 180);
+
+        ToolBar toolBar = new ToolBar();
+        toolBar.add(new Button(" Unlink ", IconHelper.create("images/link_break.png"),
+                new SelectionListener<ButtonEvent>()
+                {
+                    @Override
+                    public void componentSelected(ButtonEvent ce) {
+                        selectedUnlinkedRecord = gridLinkList.getSelectionModel().getSelectedItem();
+                        if (selectedUnlinkedRecord == null) {
+                            Info.display("Information",
+                                    "You must first select a field to be unlinked before pressing the \"Unlink\" button.");
+                            return;
+                        }
+
+                        AppEvent event = new AppEvent(AppEvents.EntityBasicLinkedPair, selectedUnlinkedRecord);
+                        event.setData("entityModel", currentEntity);
+                        event.setData("linkedRecord", selectedRecord);
+                        controller.handleEvent(event);
+                    }
+                }));
+        cp.setTopComponent(toolBar);
+
 
         // Grid
         gridLinkList = setupGridLinkList(currentEntity, sortedEntityAttributes);

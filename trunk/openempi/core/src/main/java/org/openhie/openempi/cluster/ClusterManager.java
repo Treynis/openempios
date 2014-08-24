@@ -28,10 +28,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.log4j.Logger;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.context.UserContext;
 import org.openhie.openempi.service.RecordResourceService;
 import org.openhie.openempi.service.SecurityResourceService;
 
@@ -41,14 +43,17 @@ import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IExecutorService;
 import com.hazelcast.core.IMap;
+import com.hazelcast.core.IQueue;
 import com.hazelcast.core.Member;
 import com.hazelcast.core.MembershipEvent;
 import com.hazelcast.core.MembershipListener;
 
 public class ClusterManager implements MembershipListener
 {
+    private static final String TASK_EXECUTOR = "taskExecutor";
     private Logger log = Logger.getLogger(getClass());
     private IMap<String,Object> configurationRegistry;
+    private IQueue<Long> recordIdQueue;
     private HazelcastInstance cluster;
     private IExecutorService clusterExecutor;
     private List<Member> memberList = new ArrayList<Member>();    
@@ -61,7 +66,8 @@ public class ClusterManager implements MembershipListener
         cluster.getCluster().addMembershipListener(this);
         memberList.add(cluster.getCluster().getLocalMember());
         configurationRegistry = cluster.getMap(Constants.CONFIGURATION_REGISTRY_KEY);
-        clusterExecutor = cluster.getExecutorService("taskExecutor");
+        recordIdQueue = cluster.getQueue(Constants.RECORD_ID_QUEUE_KEY);
+        clusterExecutor = cluster.getExecutorService(TASK_EXECUTOR);
         cacheServiceMethods();
     }
 
@@ -141,7 +147,9 @@ public class ClusterManager implements MembershipListener
     public void processRequest(CommandRequest request) {
         Object service = getService(request);
         Method method = lookupServiceMethod(request.getServiceName(), request.getRequestName());
-        
+        UserContext context = request.getUserContext();
+        log.info("Restored the user context: " + context);
+        Context.setUserContext(context);
         try {
             if (request.isHasResponse()) {
                 Object obj = method.invoke(service, request.getParams());
@@ -164,6 +172,10 @@ public class ClusterManager implements MembershipListener
         }
     }
 
+    public BlockingQueue<Long> getRecordIdQueue() {
+        return recordIdQueue;
+    }
+
     private Object getService(CommandRequest request) {
         Object service = serviceCache.get(request.getServiceName());
         if (service == null) {
@@ -172,7 +184,7 @@ public class ClusterManager implements MembershipListener
         }
         return service;
     }
-
+    
     private void cacheServiceMethods() {
         serviceMethodCache = new HashMap<ServiceName,Map<String,Method>>();
         cacheServiceMethods(ServiceName.SECURITY_RESOURCE_SERVICE, SecurityResourceService.class, serviceMethodCache);

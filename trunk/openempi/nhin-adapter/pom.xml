@@ -4,31 +4,31 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>		
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
-	<artifactId>openempi-nhin-adapter</artifactId>
+	<artifactId>openempi-entity-nhin-adapter</artifactId>
 	<packaging>war</packaging>
-	<name>OpenEMPI - NHIN Adapter</name>
+	<name>OpenEMPI Entity - NHIN Adapter</name>
 	
 	<dependencies>	
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-configuration</artifactId>
+			<artifactId>openempi-entity-configuration</artifactId>
 			<version>${release.version}</version>
 		</dependency>	
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 			<type>jar</type>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>

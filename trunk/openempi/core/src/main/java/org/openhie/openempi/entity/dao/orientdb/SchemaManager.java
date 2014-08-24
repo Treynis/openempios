@@ -36,6 +36,8 @@ public interface SchemaManager
             Constants.DATE_REVIEWED_PROPERTY, OType.LONG, false);
     static final InternalAttribute DATE_VOIDED_PROPERTY = new InternalAttribute(Constants.DATE_VOIDED_PROPERTY,
             OType.DATETIME, false);
+    static final InternalAttribute DIRTY_RECORD_PROPERTY = new InternalAttribute(Constants.DIRTY_RECORD_PROPERTY,
+            OType.BOOLEAN, true);
     static final InternalAttribute ENTITY_PROPERTY = new InternalAttribute(Constants.ENTITY_PROPERTY,
             OType.LINK, false);
     static final InternalAttribute ENTITY_VERSION_ID_PROPERTY = new InternalAttribute(
@@ -64,7 +66,7 @@ public interface SchemaManager
             Constants.USER_VOIDED_BY_PROPERTY, OType.LONG, false);
 
     static final InternalAttribute[] INTERNAL_ATTRIBUTES = { DATE_CHANGED_PROPERTY, DATE_CREATED_PROPERTY,
-            DATE_VOIDED_PROPERTY, ENTITY_VERSION_ID_PROPERTY, // IDENTIFIER_SET_PROPERTY,
+            DATE_VOIDED_PROPERTY, DIRTY_RECORD_PROPERTY, ENTITY_VERSION_ID_PROPERTY, // IDENTIFIER_SET_PROPERTY,
             USER_CHANGED_BY_PROPERTY, USER_CREATED_BY_PROPERTY, USER_VOIDED_BY_PROPERTY, 
             };
 

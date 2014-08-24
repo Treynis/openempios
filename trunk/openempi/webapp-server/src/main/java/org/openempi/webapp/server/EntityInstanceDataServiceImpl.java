@@ -328,6 +328,35 @@ public class EntityInstanceDataServiceImpl extends AbstractRemoteServiceServlet 
         return null;
     }
 
+    public RecordLinkWeb loadRecordLinks(EntityWeb entityModel, Long leftRecordId, Long rightRecordId, String state) throws Exception {
+        log.debug("Received request to retrieve a list of entity record links.");
+
+        authenticateCaller();
+        try {
+            RecordQueryService entityInstanceService = Context.getRecordQueryService();
+            EntityDefinitionManagerService entityDefService = Context.getEntityDefinitionManagerService();
+            Entity entityDef = entityDefService.loadEntity(entityModel.getEntityVersionId());
+
+            List<RecordLink> records = entityInstanceService.loadRecordLinks(entityDef, rightRecordId, RecordLinkState.fromString(state));
+
+            for (RecordLink record : records) {
+
+                // loadRecordLinks with left and right Records
+                RecordLink recordlLink = entityInstanceService.loadRecordLink(entityDef, record.getRecordLinkId());
+                if (recordlLink.getLeftRecord().getRecordId() == leftRecordId ||
+                    recordlLink.getRightRecord().getRecordId() == leftRecordId) {
+
+                    RecordLinkWeb recordlLinkWeb = ModelTransformer.mapToRecordLink(recordlLink, RecordLinkWeb.class, true);
+                    return recordlLinkWeb;
+                }
+            }
+            return null;
+        } catch (Throwable t) {
+            log.error("Failed to execute: " + t.getMessage(), t);
+            throw new RuntimeException(t);
+        }
+    }
+
     public List<RecordLinkWeb> loadRecordLinks(EntityWeb entityModel, String state, int firstResult, int maxResults)
             throws Exception {
         log.debug("Received request to retrieve a list of entity record links.");

@@ -34,16 +34,14 @@ import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.blocking.RecordPairIterator;
 import org.openhie.openempi.blocking.RecordPairSource;
 import org.openhie.openempi.configuration.GlobalIdentifier;
-import org.openhie.openempi.configuration.UpdateNotificationRegistrationEntry;
 import org.openhie.openempi.context.Context;
-import org.openhie.openempi.dao.IdentifierDomainDao;
 import org.openhie.openempi.dao.UniversalDao;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
 import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.entity.RecordCacheManager;
 import org.openhie.openempi.entity.RecordManagerService;
-import org.openhie.openempi.entity.dao.EntityDao;
 import org.openhie.openempi.matching.MatchingService;
+import org.openhie.openempi.matching.ShallowMatchingService;
 import org.openhie.openempi.model.AuditEventType;
 import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
@@ -59,10 +57,7 @@ import org.openhie.openempi.notification.EventType;
 import org.openhie.openempi.notification.NotificationEvent;
 import org.openhie.openempi.notification.NotificationEventFactory;
 import org.openhie.openempi.notification.ObservationEventType;
-import org.openhie.openempi.service.impl.UpdateEventNotificationGenerator;
 import org.openhie.openempi.util.ConvertUtil;
-
-import com.eaio.uuid.UUID;
 
 public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements RecordManagerService, PersistenceLifecycleObserver
 {
@@ -71,21 +66,15 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 	private static boolean initialized = false;
 
 	private EntityDefinitionManagerService entityDefinitionService;
-	private UpdateEventNotificationGenerator notificationGenerator;
 	private RecordCacheManager entityCacheManager;
-	private IdentifierDomainDao identifierDomainDao;
-	private EntityDao entityDao;
 	private UniversalDao universalDao;
-	   
-    private  List<UpdateNotificationRegistrationEntry> updateNotificationEntries =
-            new java.util.ArrayList<UpdateNotificationRegistrationEntry>();
     
 	public RecordManagerServiceImpl() {
 	}
 
     public Record loadRecord(Entity entity, Long id) {
         try {
-            Record recordFound = entityDao.loadRecord(entity, id);
+            Record recordFound = getEntityDao().loadRecord(entity, id);
             return recordFound;
         } catch (Exception e) {
             log.error("Failed while trying to load record by id: " + " due to " + e, e);
@@ -111,7 +100,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         
 		// Identifier domain already exists, setIdentifierDomainId to identifier, otherwise save a new IdentifierDomain
 		for (Identifier identifier : record.getIdentifiers()) {
-			identifierDomainDao.saveIdentifierDomain(identifier.getIdentifierDomain());
+			getIdentifierDomainDao().saveIdentifierDomain(identifier.getIdentifierDomain());
 		}
 
         validateRecord(entity, record);
@@ -121,16 +110,41 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		// fields that have been requested through configuration
 		populateCustomFields(entity, record);
 
+		Set<RecordPair> shallowMatchedPairs = null;
 		try {
-			record = entityDao.saveRecord(entity, record);
+		    if (entity.getSynchronousMatching()) {
+		        record.setDirty(false);
+		        record = getEntityDao().saveRecord(entity, record);
+		    } else {
+                RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
+		        ShallowMatchingService matching = Context.getShallowMatchingService(entity.getName());
+		        if (matching == null) {
+		            record.setDirty(true);
+		        } else {
+		            shallowMatchedPairs = matching.match(record);
+		            if (shallowMatchedPairs.size() == 0) {
+		                record.setDirty(true);
+		            } else {
+		                record.setDirty(false);
+		            }
+		        }
+                record = getEntityDao().saveRecord(entity, record);
+                persistRecordPairs(record, shallowMatchedPairs, state);
+                getUpdateEventNotificationGenerator().generateEvents(state);
+		    }
 
 			// Audit the event that a new record entry was created.
 			Context.getAuditEventService().saveAuditEventEntry(AuditEventType.ADD_RECORD_EVENT_TYPE, "Added a new record", entity.getName(), record);
 
-			// Now we need to check for matches and if any are found, establish links among the aliases
-			RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
-			findAndProcessAddRecordLinks(entity, record, state);
-            getUpdateEventNotificationGenerator().generateEvents(state);
+            if (entity.getSynchronousMatching()) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Evaluating the match status of record in synchronous mode.");
+                }
+                // Now we need to check for matches and if any are found, establish links among the aliases
+                RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
+                findAndProcessAddRecordLinks(entity, record, state);
+                getUpdateEventNotificationGenerator().generateEvents(state);
+            }
 
 			// Generate a notification event to inform interested listeners that this event has occurred.
 			NotificationEvent event = NotificationEventFactory.createNotificationEvent(EventType.ADD_EVENT_TYPE, record);
@@ -165,7 +179,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         // Identifier domain already exists, setIdentifierDomainId to identifier, otherwise save a new IdentifierDomain
         for (Record record : records) {
             for (Identifier identifier : record.getIdentifiers()) {
-                identifierDomainDao.saveIdentifierDomain(identifier.getIdentifierDomain());
+                getIdentifierDomainDao().saveIdentifierDomain(identifier.getIdentifierDomain());
             }
             validateRecord(entity, record);
             validateNoNewGlobalIdentifier(record, null);
@@ -175,18 +189,49 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
             populateCustomFields(entity, record);
         }
 
-
         try {
-            Set<Record> savedRecords = entityDao.saveRecords(entity, records);
+            Set<Record> savedRecords = null;
+            if (entity.getSynchronousMatching()) {
+                for (Record record : records) {
+                    record.setDirty(false);
+                }
+                savedRecords = getEntityDao().saveRecords(entity, records);
+            } else {
+                ShallowMatchingService matching = Context.getShallowMatchingService(entity.getName());
+                if (matching == null) {
+                    for (Record record : records) {
+                        record.setDirty(true);
+                    }
+                } else {
+                    for (Record record : records) {
+                        RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);                        
+                        Set<RecordPair> pairs = matching.match(record);
+                        if (pairs.size() == 0) {
+                            record.setDirty(true);
+                        } else {
+                            record.setDirty(false);
+                        }
+                        persistRecordPairs(record, pairs, state);
+                        getUpdateEventNotificationGenerator().generateEvents(state);
+                    }
+                }
+                savedRecords = getEntityDao().saveRecords(entity, records);
+            }
 
             // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
             Context.notifyObserver(ObservationEventType.RECORDS_ADD_EVENT, records);
+            
             for (Record record : savedRecords) {
+                if (entity.getSynchronousMatching()) {
+                    if (log.isTraceEnabled()) {
+                        log.trace("Evaluating the match status of record in synchronous mode.");
+                    }
 
-                // Now we need to check for matches and if any are found, establish links among the aliases
-                RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
-                findAndProcessAddRecordLinks(entity, record, state);
-                getUpdateEventNotificationGenerator().generateEvents(state);
+                    // Now we need to check for matches and if any are found, establish links among the aliases
+                    RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.ADD_SOURCE);
+                    findAndProcessAddRecordLinks(entity, record, state);
+                    getUpdateEventNotificationGenerator().generateEvents(state);
+                }
 
                 // Generate a notification event to inform interested listeners that this event has occurred.
                 NotificationEvent event = NotificationEventFactory.createNotificationEvent(EventType.ADD_EVENT_TYPE, record);
@@ -217,7 +262,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
         // Identifier domain already exists, setIdentifierDomainId to identifier, otherwise save a new IdentifierDomain
         for (Identifier identifier : record.getIdentifiers()) {
-            identifierDomainDao.saveIdentifierDomain(identifier.getIdentifierDomain());
+            getIdentifierDomainDao().saveIdentifierDomain(identifier.getIdentifierDomain());
         }
 
 		validateRecord(entity, record);
@@ -227,7 +272,8 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         // fields that have been requested through configuration
         populateCustomFields(entity, record);
 		try {
-			record = entityDao.saveRecord(entity, record);
+		    record.setDirty(true);
+			record = getEntityDao().saveRecord(entity, record);
 
 			// Audit the event that record entry was imported.
 			Context.getAuditEventService().saveAuditEventEntry(AuditEventType.IMPORT_RECORD_EVENT_TYPE, "Imported record", entity.getName(), record);
@@ -265,16 +311,19 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         // Identifier domain already exists, setIdentifierDomainId to identifier, otherwise save a new IdentifierDomain
         for (Record record : records) {
             for (Identifier identifier : record.getIdentifiers()) {
-                identifierDomainDao.saveIdentifierDomain(identifier.getIdentifierDomain());
+                getIdentifierDomainDao().saveIdentifierDomain(identifier.getIdentifierDomain());
             }
             validateRecord(entity, record);
             // Before we save the entry we need to generate any custom
             // fields that have been requested through configuration
             populateCustomFields(entity, record);
+            
+            // Imported records are always marked dirty
+            record.setDirty(true);
         }
 
         try {
-            Set<Record> savedRecords = entityDao.saveRecords(entity, records);
+            Set<Record> savedRecords = getEntityDao().saveRecords(entity, records);
 
             // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
             Context.notifyObserver(ObservationEventType.RECORDS_ADD_EVENT, savedRecords);
@@ -292,7 +341,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
     public RecordLink loadRecordLink(Entity entity, String id) {
         try {
-            RecordLink recordFound = entityDao.loadRecordLink(entity, id);
+            RecordLink recordFound = getEntityDao().loadRecordLink(entity, id);
             return recordFound;
         } catch (Exception e) {
             log.error("Failed while trying to load record link by id: " + " due to " + e, e);
@@ -318,7 +367,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 		validateRecordLink(entityDef, link);
 		try {
-			link = entityDao.saveRecordLink(link);
+			link = getEntityDao().saveRecordLink(link);
 			return link;
 		} catch (Exception e) {
 			throw new ApplicationException(e.getMessage());
@@ -342,7 +391,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			throw new ApplicationException("Failed to store a record link of unknown type.");
 		}
 
-		RecordLink loadedLink = entityDao.loadRecordLink(entityDef, link.getRecordLinkId());
+		RecordLink loadedLink = getEntityDao().loadRecordLink(entityDef, link.getRecordLinkId());
 		if (loadedLink == null) {
 			log.debug("Attempted to update an unknown record link: " + link);
 			throw new ApplicationException("Failed to update an unknown record link.");
@@ -357,7 +406,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		loadedLink.setDateReviewed(new Date());
 		loadedLink.setUserReviewedBy(Context.getUserContext().getUser());
 		try {
-			link = entityDao.saveRecordLink(link);
+			link = getEntityDao().saveRecordLink(link);
 
 			if( link.getState() == RecordLinkState.MATCH ) {
 
@@ -395,7 +444,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
         validateRecordLink(entityDef, link);
         try {
-            entityDao.removeRecordLink(link);
+            getEntityDao().removeRecordLink(link);
         } catch (Exception e) {
             throw new ApplicationException(e.getMessage());
         }
@@ -424,23 +473,49 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 		validateRecord(entity, record);
 		try {
-			Record recordFound = entityDao.loadRecord(entity, record.getRecordId());
+			Record recordFound = getEntityDao().loadRecord(entity, record.getRecordId());
 			if (recordFound == null) {
 				log.debug("Attempted to update a record that is is not known to the system.");
 				throw new ApplicationException("Failed to update a record that is not known to the system.");
 			}
 			Record recordOriginal = (Record) ConvertUtil.cloneBean(recordFound);
+			recordOriginal.setEntity(entity);
 
 			// Before we save the entry we need to generate any custom
 			// fields that have been requested through configuration
 			populateCustomFields(entity, record);
-
-            RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.UPDATE_SOURCE);
-			record = entityDao.updateRecord(entity, record);
-	
-			findAndUpdateRecordLinks(entity, record, state);
-			getUpdateEventNotificationGenerator().generateEvents(state);
-
+			
+			Set<RecordPair> shallowMatchedPairs = null;
+            if (entity.getSynchronousMatching()) {
+                record.setDirty(false);
+                record = getEntityDao().updateRecord(entity, record);
+            } else {
+                RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.UPDATE_SOURCE);
+                ShallowMatchingService matching = Context.getShallowMatchingService(entity.getName());
+                if (matching == null) {
+                    record.setDirty(true);
+                } else {
+                    shallowMatchedPairs = matching.match(record);
+                    if (shallowMatchedPairs.size() == 0) {
+                        record.setDirty(true);
+                    } else {
+                        record.setDirty(false);
+                    }
+                }
+                record = getEntityDao().updateRecord(entity, record);
+                persistRecordPairs(record, shallowMatchedPairs, state);
+                getUpdateEventNotificationGenerator().generateEvents(state);
+            }
+            
+			if (entity.getSynchronousMatching()) {
+			    if (log.isTraceEnabled()) {
+			        log.trace("Evaluating the match status of record in synchronous mode.");
+			    }
+	            RecordState state = new RecordState(record.getRecordId(), IdentifierUpdateEvent.UPDATE_SOURCE);
+    			findAndUpdateRecordLinks(entity, record, state);
+    			getUpdateEventNotificationGenerator().generateEvents(state);
+			}
+			
 			// Audit the event that an existing record entry was updated.
 			Context.getAuditEventService().saveAuditEventEntry(AuditEventType.UPDATE_RECORD_EVENT_TYPE, "Updated an existing person record", entity.getName(), record);
 
@@ -457,7 +532,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		}
 	}
 
-	public Record deleteRecord(Entity entity, Record record) throws ApplicationException {
+    public Record deleteRecord(Entity entity, Record record) throws ApplicationException {
 		if (record == null || record.getRecordId() == null) {
 			return null;
 		}
@@ -475,7 +550,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 		validateRecord(entity, record);
 		try {
-			entityDao.deleteRecord(entity, record);
+			getEntityDao().deleteRecord(entity, record);
 
 			// Audit the event that a record entry was deleted.
 			Context.getAuditEventService().saveAuditEventEntry(AuditEventType.DELETE_RECORD_EVENT_TYPE, "Deleted a record", entity.getName(), record);
@@ -498,11 +573,11 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			return null;
 		}
 
-		List<Record> records = entityDao.findRecordsByIdentifier(entity, identifier);
+		List<Record> records = getEntityDao().findRecordsByIdentifier(entity, identifier);
 
 		for (Record record : records) {
 			 validateRecord(entity, record);
-			 entityDao.deleteRecord(entity, record);
+			 getEntityDao().deleteRecord(entity, record);
 
 			 // Audit the event that a record entry was deleted.
 			 Context.getAuditEventService().saveAuditEventEntry(AuditEventType.DELETE_RECORD_EVENT_TYPE, "Deleted a record", entity.getName(), record);
@@ -528,12 +603,12 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			throw new ApplicationException("Failed to remove an entity instance of unspecified type.");
 		}
 
-		Record recordToDelete = entityDao.loadRecord(entity, record.getRecordId());
+		Record recordToDelete = getEntityDao().loadRecord(entity, record.getRecordId());
 		if (recordToDelete == null) {
 			log.debug("Attempted to remove a record that is not known to the system: " + record.getRecordId());
 			throw new ApplicationException("The record to be deleted is not in the repository.");
 		}
-		entityDao.removeRecord(entity, recordToDelete);
+		getEntityDao().removeRecord(entity, recordToDelete);
 
 		// Generate a notification event to inform interested listeners that this event has occurred.
 		NotificationEvent event = NotificationEventFactory.createNotificationEvent(EventType.DELETE_EVENT_TYPE, record);
@@ -545,6 +620,10 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		return recordToDelete;
 	}
 
+    public void mergeRecords(Entity entity, Identifier retiredIdentifier, Identifier survivingIdentifier)
+            throws ApplicationException {
+    }
+    
 	public void initializeRepository(Entity entity) throws ApplicationException {
 		if (entity == null || entity.getName() == null) {
 			log.debug("Attempted to initialize the repository for an entity without specifying the entity type.");
@@ -581,7 +660,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 			if (links.size() == 10000) {
 				log.info("Finished persisting a block of " + links.size() + " links out of a total of: " + mapOfLinks.keySet().size());
-				entityDao.saveRecordLinks(links);
+				getEntityDao().saveRecordLinks(links);
 				links.clear();
 			}
 
@@ -590,7 +669,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			}
 		}
 		log.info("Finished persisting a block of " + links.size() + " links out of a total of " + mapOfLinks.size());
-		entityDao.saveRecordLinks(links);
+		getEntityDao().saveRecordLinks(links);
 		log.info("In initializing the repository, we evaluated " + pairCount + " record pairs.");
 	}
 
@@ -598,7 +677,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		MatchingService matchingService = Context.getMatchingService(entity.getName());
 		// Remove all the current links in the system by the current matching algorithm.
 		LinkSource linkSource = new LinkSource(matchingService.getMatchingServiceId());
-		entityDao.removeRecordLinksBySource(entity, linkSource, null);
+		getEntityDao().removeRecordLinksBySource(entity, linkSource, null);
 	}
 
 	public void declareIntent(Entity entity, DataAccessIntent intent) {
@@ -606,7 +685,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
             log.warn("Attempted to declare intent without specifying the entity type.");
             return;
         }
-        entityDao.declareIntent(entity, intent);
+        getEntityDao().declareIntent(entity, intent);
 	}
     
     public boolean assignGlobalIdentifier(Entity entity) throws ApplicationException {
@@ -629,7 +708,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         int maxCount = RECORD_BLOCK_SIZE;
         while (!done) {
             log.warn("Assigning global ids for block of size " + maxCount + " starting at index " + start);
-            List<Record> recordBlock = entityDao.findRecordsWithoutIdentifierInDomain(entity, domain, false, start, maxCount);
+            List<Record> recordBlock = getEntityDao().findRecordsWithoutIdentifierInDomain(entity, domain, false, start, maxCount);
             if (recordBlock.size() == 0) {
                 done = true;
                 continue;
@@ -646,7 +725,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         start = 0;
         while (!done) {
             log.warn("Assigning global ids with links for block of size " + maxCount + " starting at index " + start);
-            List<Record> recordBlock = entityDao.findRecordsWithoutIdentifierInDomain(entity, domain, true, start, maxCount);
+            List<Record> recordBlock = getEntityDao().findRecordsWithoutIdentifierInDomain(entity, domain, true, start, maxCount);
             if (recordBlock.size() == 0) {
                 done = true;
                 continue;
@@ -678,10 +757,10 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
                 log.debug("Assigning newly generated global identifier " + globalIdentifier.getIdentifier() +
                         " to record " + record.getRecordId());
             }
-            entityDao.updateRecord(entity, record);
+            getEntityDao().updateRecord(entity, record);
             ids.put(record.getRecordId(), record.getRecordId());
         } else {
-            List<Record> linkedRecords = entityDao.loadRecordLinksById(entity, record.getRecordId());
+            List<Record> linkedRecords = getEntityDao().loadRecordLinksById(entity, record.getRecordId());
             globalIdentifier = getGlobalIdentifierFromLinks(domain, linkedRecords);
             if (globalIdentifier != null) {
                 if (log.isDebugEnabled()) {
@@ -691,7 +770,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
                 globalIdentifier = cloneGlobalIdentifier(globalIdentifier);
                 globalIdentifier.setRecord(record);
                 record.addIdentifier(globalIdentifier);
-                entityDao.updateRecord(entity, record);
+                getEntityDao().updateRecord(entity, record);
                 ids.put(record.getRecordId(), record.getRecordId());
              // None of them have a global identifier so generate one and assign it to every entry in the cluster
             } else {
@@ -702,43 +781,17 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
                     log.debug("Assigning newly generated global identifier " + globalIdentifier.getIdentifier() +
                         " to record" + record.getRecordId());
                 }
-                entityDao.updateRecord(entity, record);
+                getEntityDao().updateRecord(entity, record);
                 ids.put(record.getRecordId(), record.getRecordId());
                 for (Record linkedRecord : linkedRecords) {
                     Identifier gid = cloneGlobalIdentifier(globalIdentifier);
                     gid.setRecord(linkedRecord);
                     linkedRecord.addIdentifier(gid);
-                    entityDao.updateRecord(entity, linkedRecord);
+                    getEntityDao().updateRecord(entity, linkedRecord);
                     ids.put(linkedRecord.getRecordId(), linkedRecord.getRecordId());
                 }
             }
         }
-    }
-
-    private Identifier extractGlobalIdentifier(Record record) {
-        IdentifierDomain globalIdentifierDomain = Context.getConfiguration().getGlobalIdentifierDomain();
-        for (Identifier identifier : record.getIdentifiers()) {
-            if (identifier.getIdentifierDomain().getIdentifierDomainName()
-                    .equalsIgnoreCase(globalIdentifierDomain.getIdentifierDomainName())) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Found global identifier in linked record of :" + identifier);                    
-                }
-                return identifier;
-            }
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("Unable to find global identifier in existing record to be linked.");
-        }
-        return null;
-    }
-
-    private Identifier cloneGlobalIdentifier(Identifier identifier) {
-        Identifier id = new Identifier();
-        id.setDateCreated(identifier.getDateCreated());
-        id.setIdentifier(identifier.getIdentifier());
-        id.setIdentifierDomain(identifier.getIdentifierDomain());
-        id.setUserCreatedBy(identifier.getUserCreatedBy());
-        return id;
     }
 
     private Identifier getGlobalIdentifierFromLinks(IdentifierDomain domain, List<Record> records) {
@@ -788,51 +841,14 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
     }
 
     private IdentifierDomain getPersistedIdentifierDomain(IdentifierDomain identifierDomain) {
-        IdentifierDomain identifierDomainFound = identifierDomainDao.findIdentifierDomain(identifierDomain);
+        IdentifierDomain identifierDomainFound = getIdentifierDomainDao().findIdentifierDomain(identifierDomain);
         if (identifierDomainFound == null) {
             identifierDomain.setDateCreated(new Date());
             identifierDomain.setUserCreatedBy(Context.getUserContext().getUser());
-            identifierDomainDao.addIdentifierDomain(identifierDomain);
+            getIdentifierDomainDao().addIdentifierDomain(identifierDomain);
             return identifierDomain;
         }
         return identifierDomainFound;
-    }
-    
-    private Identifier generateGlobalIdentifier(IdentifierDomain globalIdentifierDomain, Record record) {
-        UUID uuid = new UUID();
-        Identifier identifier = new Identifier();
-        identifier.setIdentifier(uuid.toString());
-        identifier.setIdentifierDomain(globalIdentifierDomain);
-        identifier.setRecord(record);
-        record.addIdentifier(identifier);
-        identifier.setDateCreated(new java.util.Date());
-        identifier.setUserCreatedBy(Context.getUserContext().getUser());
-        return identifier;
-    }
-
-    private void removeGlobalIdentifier(Record record, IdentifierDomain globalIdentifierDomain) {
-        List<Identifier> toBeRemoved = new java.util.ArrayList<Identifier>();
-        for (Identifier id : record.getIdentifiers()) {
-            if (id.getIdentifierDomain() != null &&
-                    id.getIdentifierDomain().getIdentifierDomainName() != null &&
-                    id.getIdentifierDomain().getIdentifierDomainName()
-                        .equalsIgnoreCase(globalIdentifierDomain.getIdentifierDomainName())) {
-                toBeRemoved.add(id);
-            }
-        } 
-        record.getIdentifiers().removeAll(toBeRemoved);
-    }
-
-    private boolean hasGlobalIdentifier(Record record, IdentifierDomain globalIdentifierDomain) {
-        for (Identifier id : record.getIdentifiers()) {
-            if (id.getIdentifierDomain() != null &&
-                    id.getIdentifierDomain().getIdentifierDomainName() != null &&
-                    id.getIdentifierDomain().getIdentifierDomainName()
-                        .equalsIgnoreCase(globalIdentifierDomain.getIdentifierDomainName())) {
-                return true;
-            }
-        }
-        return false;
     }
 
 	private boolean isValidIdentifier(Identifier identifier) throws ApplicationException {
@@ -856,147 +872,6 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		identifier.setIdentifierDomain(domain);
 		return true;
 	}
-
-	private void findAndUpdateRecordLinks(Entity entity, Record record, RecordState state) throws ApplicationException {
-	    List<RecordLink> currLinks = entityDao.loadRecordLinks(record.getEntity(), record.getRecordId());
-	    Set<RecordLink> preLinks = new HashSet<RecordLink>();
-	    state.setPreLinks(preLinks);
-	    for (RecordLink link : currLinks) {
-	        if (log.isDebugEnabled()) {
-	            log.debug("Deleting the record link during an update; " + link);
-	            preLinks.add(link);
-	            entityDao.removeRecordLink(link);
-	        }
-	    }
-	    findAndProcessAddRecordLinks(entity, record, state);
-	}
-	
-	private Set<RecordLink> findAndProcessAddRecordLinks(Entity entity, Record record, RecordState state) throws ApplicationException {
-
-		// Call the matching service to find any record pairs that must be linked
-		MatchingService matchingService = Context.getMatchingService(entity.getName());
-		Set<RecordPair> pairs = matchingService.match(record);
-
-		// If no matching records are found then return an empty list
-		Set<RecordLink> links = new HashSet<RecordLink>();
-		if (pairs.size() == 0) {
-            if (Context.getConfiguration().getGlobalIdentifier().isAssignGlobalIdentifier() &&
-                    !hasGlobalIdentifier(record, Context.getConfiguration().getGlobalIdentifierDomain())) {                
-                generateGlobalIdentifier(Context.getConfiguration().getGlobalIdentifierDomain(), record);
-                entityDao.updateRecord(record.getEntity(), record);
-            }		    
-		    capturePostIdentifiers(record, state);
-			return links;
-		}
-
-		if (log.isDebugEnabled()) {
-			log.debug("While adding node " + record.getRecordId() + " found links to nodes " + pairs);
-		}
-
-		Set<RecordInPair> targetRecords = getTargetRecords(record, pairs);
-
-		Identifier globalIdentifier = null;
-		for (RecordInPair recordInPair : targetRecords) {
-            if (Context.getConfiguration().getGlobalIdentifier().isAssignGlobalIdentifier() &&
-                    globalIdentifier == null) {
-                globalIdentifier = extractGlobalIdentifier(recordInPair.getRecord());
-                if (globalIdentifier != null) {
-                    removeGlobalIdentifier(record, Context.getConfiguration().getGlobalIdentifierDomain());
-                    globalIdentifier = cloneGlobalIdentifier(globalIdentifier);
-                    record.addIdentifier(globalIdentifier);
-                    globalIdentifier.setRecord(record);
-                    entityDao.updateRecord(record.getEntity(), record);
-                } else {
-                    log.warn("Found an existing record that doesn't have a global identifier: " + 
-                            recordInPair.getRecord().getEntity() + "," + recordInPair.getRecord().getRecordId());
-                }
-            }
-			RecordLink link = createRecordLink(record, recordInPair);
-			links.add(link);
-			if (log.isDebugEnabled()) {
-				log.debug("Creating record link: " + link);
-			}
-			entityDao.saveRecordLink(link);
-		}
-        state.getPostLinks().addAll(links);
-		return links;
-	}
-
-    private RecordLink createRecordLink(Record record, RecordInPair recordInPair) {
-		RecordLink link = new RecordLink();
-		link.setLeftRecord(record);
-		link.setRightRecord(recordInPair.getRecord());
-		link.setWeight(recordInPair.getPair().getWeight());
-		link.setVector(recordInPair.getPair().getVector());
-		link.setDateCreated(new Date());
-		link.setUserCreatedBy(Context.getUserContext().getUser());
-		if (recordInPair.getPair().getMatchOutcome() == RecordPair.MATCH_OUTCOME_LINKED) {
-			link.setState(RecordLinkState.MATCH);
-		} else if (recordInPair.getPair().getMatchOutcome() == RecordPair.MATCH_OUTCOME_POSSIBLE) {
-			link.setState(RecordLinkState.POSSIBLE_MATCH);
-		} else {
-			log.error("A link was encountered in an invalid state: " + recordInPair.getPair());
-		}
-		link.setLinkSource(recordInPair.getPair().getLinkSource());
-		log.info("Create entity link: " + link);
-		return link;
-	}
-
-	// The matching algorithm has identified a number of pairs that need be persisted.
-	// Each record pair points to two entities, the one that was used to identify other matches
-	// and the matching records. This method extracts from each record pair the other record
-	// (not the one that initiated the matching process).
-	//
-	private Set<RecordInPair> getTargetRecords(Record record, Set<RecordPair> pairs) {
-
-		Set<RecordInPair> targets = new HashSet<RecordInPair>();
-		for (RecordPair pair : pairs) {
-			if (pair.getLeftRecord().getRecordId().equals(record.getRecordId())) {
-				RecordInPair target = new RecordInPair(pair.getRightRecord(), pair);
-				targets.add(target);
-			} else if (pair.getRightRecord().getRecordId().equals(record.getRecordId())) {
-				RecordInPair target = new RecordInPair(pair.getLeftRecord(), pair);
-				targets.add(target);
-			} else {
-				log.warn("THIS SHOULD NOT HAPPEN: We found a record pair where neither of the records are the initiating one: " + pair);
-			}
-		}
-		return targets;
-	}
-
-    private RecordState capturePostIdentifiers(Record record, RecordState state) {
-        Set<Identifier> postIdentifiers = copyIdentifiers(record);
-        state.setPostIdentifiers(postIdentifiers);
-        return state;
-    }
-    
-    private Set<Identifier> copyIdentifiers(Record record) {
-        Set<Identifier> ids = new HashSet<Identifier>();
-        for (Identifier id : record.getIdentifiers()) {
-            if (id.getDateVoided() != null) {
-                continue;
-            }
-            Identifier newId = new Identifier();
-            newId.setIdentifier(id.getIdentifier());
-            newId.setIdentifierDomain(id.getIdentifierDomain());            
-            ids.add(newId);
-        }
-        return ids;
-    }
-    
-    public UpdateEventNotificationGenerator getUpdateEventNotificationGenerator() {
-        if (notificationGenerator == null) {
-            notificationGenerator = new UpdateEventNotificationGenerator(getIdentifierDomainDao(),
-                    getUpdateNotificationRegistrationEntries());
-        }
-        return notificationGenerator;
-    }
-    
-    public List<UpdateNotificationRegistrationEntry> getUpdateNotificationRegistrationEntries() {
-        updateNotificationEntries = Context.getConfiguration().getAdminConfiguration()
-                .getUpdateNotificationRegistrationEntries();
-        return updateNotificationEntries;
-    }
     
 	private void validateRecord(Entity entity, Record record) throws ApplicationException {
 		// TODO: Need to apply the validation rules that are attached to the entity
@@ -1018,7 +893,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			throw new ApplicationException("Failed to generate custom fields for an entity of unspecified type.");
 		}
 		log.info("Re-generating all the custom fields in the repository for entity: " + entity.getName());
-		long recordCount = entityDao.getRecordCount(entity);
+		long recordCount = getEntityDao().getRecordCount(entity);
 		if (recordCount == 0) {
 			log.info("Finished generating custom fields for " + recordCount + " records.");
 			return;
@@ -1027,7 +902,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		int start=0;
 		int blockSize = TRANSACTION_BLOCK_SIZE;
 		while (start < recordCount) {
-			List<Record> records = entityDao.loadRecords(entity, start, blockSize);
+			List<Record> records = getEntityDao().loadRecords(entity, start, blockSize);
 			generateCustomFields(entity, records);
 			start += records.size();
 			log.info("Finished generating custom fields for " + start + " records.");
@@ -1038,7 +913,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		for (Record record : records) {
 			populateCustomFields(entity, record);
 		}
-		entityDao.updateRecords(entity, records);
+		getEntityDao().updateRecords(entity, records);
 	}
 
 	private void validateRecordLink(Entity entityDef, RecordLink link) {
@@ -1058,22 +933,6 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 	    }
 	}
 
-	public IdentifierDomainDao getIdentifierDomainDao() {
-		return identifierDomainDao;
-	}
-
-	public void setIdentifierDomainDao(IdentifierDomainDao identifierDomainDao) {
-		this.identifierDomainDao = identifierDomainDao;
-	}
-
-	public EntityDao getEntityDao() {
-		return entityDao;
-	}
-
-	public void setEntityDao(EntityDao entityDao) {
-		this.entityDao = entityDao;
-	}
-
 	public EntityDefinitionManagerService getEntityDefinitionService() {
 		return entityDefinitionService;
 	}
@@ -1088,17 +947,17 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		}
 		List<Entity> entities = entityDefinitionService.loadEntities();
 		for (Entity entity : entities) {
-			entityDao.initializeStore(entity);
+			getEntityDao().initializeStore(entity);
 		}
 		initialized = true;
 	}
 
 	public synchronized void initializeStore(Entity entity) throws InitializationException {
-			entityDao.initializeStore(entity);
+			getEntityDao().initializeStore(entity);
 	}
 
 	public void shutdownStore(Entity entity) {
-		entityDao.shutdownStore(entity);
+		getEntityDao().shutdownStore(entity);
 	}
 
 	public boolean isReady() {
@@ -1111,7 +970,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		}
 		List<Entity> entities = entityDefinitionService.loadEntities();
 		for (Entity entity : entities) {
-			entityDao.shutdownStore(entity);
+			getEntityDao().shutdownStore(entity);
 		}
 		initialized = true;
 	}
@@ -1136,23 +995,4 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 	public void setEntityCacheManager(RecordCacheManager entityCacheManager) {
 		this.entityCacheManager = entityCacheManager;
 	}
-
-	private class RecordInPair
-	{
-		private RecordPair pair;
-		private Record record;
-
-		public RecordInPair(Record record, RecordPair pair) {
-			this.pair = pair;
-			this.record = record;
-		}
-
-		public RecordPair getPair() {
-			return pair;
-		}
-
-		public Record getRecord() {
-			return record;
-		}
-	}	
 }

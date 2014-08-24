@@ -55,6 +55,8 @@ public interface EntityInstanceDataServiceAsync
 
     void loadRecordLinksPaged(RecordSearchCriteriaWeb searchCriteria, AsyncCallback<RecordLinksListWeb> callback);
 
+    void loadRecordLinks(EntityWeb entityModel, Long leftRecordId, Long rightRecordId, String state, AsyncCallback<RecordLinkWeb> callback);
+
     void loadRecordLinks(EntityWeb entityModel, String state, int firstResult, int maxResults,
             AsyncCallback<List<RecordLinkWeb>> callback);
 
@@ -63,6 +65,6 @@ public interface EntityInstanceDataServiceAsync
     void updateRecordLink(EntityWeb entityModel, RecordLinkWeb linkPair, AsyncCallback<RecordLinkWeb> callback);
 
     void loadLinksFromRecord(EntityWeb entityModel, RecordWeb entity, AsyncCallback<List<RecordWeb>> callback);
-    
-    void getLoggedLinks( LoggedLinkSearchCriteriaWeb search, AsyncCallback<LoggedLinkListWeb> callback);
+
+    void getLoggedLinks(LoggedLinkSearchCriteriaWeb search, AsyncCallback<LoggedLinkListWeb> callback);
 }

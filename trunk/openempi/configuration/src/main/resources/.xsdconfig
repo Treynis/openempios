@@ -30,6 +30,9 @@
     <xb:namespace uri="http://configuration.openempi.openhie.org/probabilistic-matching">
         <xb:package>org.openhie.openempi.configuration.xml.probabilisticmatching</xb:package>
     </xb:namespace>
+    <xb:namespace uri="http://configuration.openempi.openhie.org/shallow-matching">
+        <xb:package>org.openhie.openempi.configuration.xml.shallowmatching</xb:package>
+    </xb:namespace>
     <xb:namespace uri="http://configuration.openempi.openhie.org/single-best-record">
         <xb:package>org.openhie.openempi.configuration.xml.singlebestrecord</xb:package>
     </xb:namespace>    

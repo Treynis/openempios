@@ -3,14 +3,14 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>		
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
-	<artifactId>openempi-webapp-server</artifactId>
+	<artifactId>openempi-entity-webapp-server</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - Web (Server Side)</name>
+	<name>OpenEMPI Entity - Web (Server Side)</name>
 
 	<dependencies>
 		<dependency>
@@ -34,42 +34,52 @@
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-basic-blocking</artifactId>
+			<artifactId>openempi-entity-basic-blocking</artifactId>
 			<version>${release.version}</version>
 		</dependency>		
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-basic-blocking-hp</artifactId>
+			<artifactId>openempi-entity-basic-blocking-hp</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-file-loader-hp</artifactId>
+			<artifactId>openempi-entity-file-loader-hp</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-file-loader-map</artifactId>
+			<artifactId>openempi-entity-file-loader-map</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-exact-matching</artifactId>
+			<artifactId>openempi-entity-exact-matching</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+                <dependency>
+                        <groupId>org.openhie.openempi</groupId>
+                        <artifactId>openempi-entity-shallow-matching</artifactId>
+                        <version>${release.version}</version>
+                </dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-probabilistic-matching</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-probabilistic-matching</artifactId>
+			<artifactId>openempi-entity-file-loader-map</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-file-loader-map</artifactId>
+			<artifactId>openempi-entity-record-cache</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
@@ -79,7 +89,7 @@
 		</dependency>		
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-openpixpdq-adapter</artifactId>
+			<artifactId>openempi-entity-openpixpdq-adapter</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>

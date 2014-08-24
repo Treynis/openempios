@@ -7,29 +7,29 @@
 
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
-	<artifactId>openempi-file-loader-map</artifactId>
+	<artifactId>openempi-entity-file-loader-map</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - File Loader with Mapping</name>
+	<name>OpenEMPI Entity - File Loader with Mapping</name>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-configuration</artifactId>
+			<artifactId>openempi-entity-configuration</artifactId>
 			<version>${release.version}</version>
 		</dependency>	
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
 			<type>test-jar</type>
 			<scope>test</scope>

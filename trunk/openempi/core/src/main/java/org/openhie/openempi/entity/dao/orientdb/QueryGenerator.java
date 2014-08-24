@@ -255,6 +255,17 @@ public class QueryGenerator
 		}
 		return query.toString();
 	}
+	
+	public static String generateDirtyRecordQueryPaged(Entity entity, int maxResults) {
+	    StringBuffer query = new StringBuffer("select from " + entity.getName() + 
+	            " where dateVoided is null and _dirty = true");
+	    addPagingModifiersToQuery(0, maxResults, query);
+
+	    if (log.isDebugEnabled()) {
+	        log.debug("Generated query: " + query.toString());
+	    }
+	    return query.toString();
+	}
 
 	public static String generateRecordQueryByIdentifier(Entity entity, Identifier identifier, Map<String, Object> params, int firstResult, int maxResults) {
 		StringBuffer query = new StringBuffer("select from identifier where dateVoided is null ");
@@ -289,13 +300,18 @@ public class QueryGenerator
 		return query.toString();
 	}
 
+	// TODO:  select  from person let $id = out_identifierEdge where set($id.identifierDomainId) not contains 9991;
+	// TODO:  select  from person let $id = out_identifierEdge where set($id.identifierDomainId) not contains 9990;
+	// Need to fix this since the identifers are no longer a 
     public static String generateRecordQueryNotInIdentifierDomain(Entity entity, Integer identifierDomainId,
             boolean hasLinks, Map<String, Object> params, int firstResult, int maxResults) {
         StringBuffer query = new StringBuffer("select from ");
-        query.append(entity.getName()).append(" where dateVoided is null ");
+        query.append(entity.getName()).append(" let $id = ")
+            .append(Constants.IDENTIFIER_OUT_PROPERTY)
+            .append(" where dateVoided is null ");
         if (identifierDomainId != null ) {
             query
-                .append(" and (identifierSet.size() = 0 or identifierSet contains (")
+                .append(" and (identifierSet.size() = 0 or set($id.identifierDomainId) not contains (")
                 .append(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY)
                 .append(" = :")
                 .append(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY)

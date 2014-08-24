@@ -40,6 +40,7 @@ import javax.persistence.TemporalType;
 
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
+import org.jfree.util.Log;
 
 /**
  * JobType entity.
@@ -55,11 +56,14 @@ import org.hibernate.annotations.Parameter;
 public class JobEntry extends BaseObject implements Serializable
 {
     private static final long serialVersionUID = 6170253797278224912L;
-
+    public static final String KEY_VALUE_SEPARATOR = "::";
+    public static final String PARAMETER_SEPARATOR = ",";
+    
     private Integer jobEntryId;
     private JobStatus jobStatus;
     private JobType jobType;
     private String jobDescription;
+    private String jobParameters;
     private org.openhie.openempi.model.Entity entity;
     private Date dateCreated;
     private Date dateStarted;
@@ -112,6 +116,30 @@ public class JobEntry extends BaseObject implements Serializable
         this.jobDescription = jobDescription;
     }
 
+    @Column(name = "job_parameters")
+    public String getJobParameters() {
+        return jobParameters;
+    }
+
+    public void setJobParameters(String jobParameters) {
+        this.jobParameters = jobParameters;
+    }
+    
+    public String addJobParameter(String key, String value) {
+        if (key == null || value == null || key.indexOf(KEY_VALUE_SEPARATOR) >= 0 ||
+                value.indexOf(KEY_VALUE_SEPARATOR) >= 0) {
+            Log.warn("User attempted to add invalid parameter to job entry: <" + key + "," + value + ">");
+            return null;
+        }
+        String parameter = key + KEY_VALUE_SEPARATOR + value;
+        if (jobParameters == null) {
+            jobParameters = parameter;
+        } else {
+            jobParameters += PARAMETER_SEPARATOR + parameter;
+        }
+        return parameter;
+    }
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "entity_version_id", nullable = false)
     public org.openhie.openempi.model.Entity getEntity() {
@@ -133,7 +161,7 @@ public class JobEntry extends BaseObject implements Serializable
     }
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "date_started", nullable = false)
+    @Column(name = "date_started", nullable = true)
     public Date getDateStarted() {
         return dateStarted;
     }
@@ -217,8 +245,9 @@ public class JobEntry extends BaseObject implements Serializable
     @Override
     public String toString() {
         return "JobEntry [jobEntryId=" + jobEntryId + ", jobStatus=" + jobStatus+ ", jobType=" + jobType
-                + ", jobDescription=" + jobDescription + ", entity=" + entity+ ", dateCreated="
-                + dateCreated+ ", dateStarted=" + dateStarted + ", dateCompleted=" + dateCompleted + ", itemsProcessed=" + itemsProcessed
+                + ", jobDescription=" + jobDescription + ", jobParameters=" + jobParameters
+                + ", entity=" + entity+ ", dateCreated=" + dateCreated+ ", dateStarted=" + dateStarted
+                + ", dateCompleted=" + dateCompleted + ", itemsProcessed=" + itemsProcessed
                 + ", itemsSuccessful=" + itemsSuccessful + ", itemsErrored=" + itemsErrored + "]";
     }
 }

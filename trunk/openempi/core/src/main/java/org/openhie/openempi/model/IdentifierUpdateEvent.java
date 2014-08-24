@@ -117,7 +117,7 @@ public class IdentifierUpdateEvent extends BaseObject implements Serializable
 		this.updateRecipient = updateRecipient;
 	}
 
-	@Temporal(TemporalType.DATE)
+	@Temporal(TemporalType.TIMESTAMP)
 	@Column(name = "date_created")
 	@XmlElement
 	public Date getDateCreated() {

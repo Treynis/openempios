@@ -71,8 +71,8 @@ import com.extjs.gxt.ui.client.widget.layout.FitLayout;
 import com.extjs.gxt.ui.client.widget.layout.FormLayout;
 import com.extjs.gxt.ui.client.widget.layout.TableLayout;
 import com.extjs.gxt.ui.client.widget.toolbar.FillToolItem;
+import com.extjs.gxt.ui.client.widget.toolbar.ToolBar;
 import com.extjs.gxt.ui.client.widget.Info;
-
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.i18n.client.DateTimeFormat;
 
@@ -411,6 +411,8 @@ public class  JobQueueView extends BaseEntityView
         jobStatusCombo.setTriggerAction(TriggerAction.ALL);
         jobStatusCombo.setFieldLabel("Job Status");
         jobStatusCombo.setAllowBlank(false);
+        jobStatusCombo.setReadOnly(true);
+        jobStatusCombo.disable();
 
         jobDescriptionEdit.setFieldLabel("Description");
         jobDescriptionEdit.setHeight(60);
@@ -439,19 +441,23 @@ public class  JobQueueView extends BaseEntityView
         dateCompletedEdit.setFieldLabel("Date Completed");
         dateCompletedEdit.setToolTip("yyyy-MM-dd HH:mm");
         dateCompletedEdit.setPropertyEditor(dateFormat);
-
+        dateCompletedEdit.setReadOnly(true);
+        dateCompletedEdit.disable();
 
         itemsProcessedEdit = new NumberField();
         itemsProcessedEdit.setFieldLabel("Items Processed");
         itemsProcessedEdit.setAllowNegative(false);
+        itemsProcessedEdit.disable();
 
         itemsSuccessfulEdit = new NumberField();
         itemsSuccessfulEdit.setFieldLabel("Items Successful");
         itemsSuccessfulEdit.setAllowNegative(false);
+        itemsSuccessfulEdit.disable();
 
         itemsErroredEdit = new NumberField();
         itemsErroredEdit.setFieldLabel("Items Errored");
         itemsErroredEdit.setAllowNegative(false);
+        itemsErroredEdit.disable();
 
         formItemsContainer = setupItemsLayoutContainer();
         gridEventLogs = setupEventLogsGrid();
@@ -571,38 +577,46 @@ public class  JobQueueView extends BaseEntityView
 		gridContainer.setBorders(true);
 		gridContainer.setLayout(new FitLayout());
 
-	    ContentPanel cp = new ContentPanel();
-	        cp.setHeading("Job Queue Entries");
-	        cp.setHeaderVisible(false);
-	        cp.setBodyBorder(false);
-	        cp.setLayout(new FillLayout());
+	    ToolBar toolBar = new ToolBar();
+        toolBar.add(new Button("Refresh", IconHelper.create("images/arrow_refresh.png"), new SelectionListener<ButtonEvent>() {
+              @Override
+              public void componentSelected(ButtonEvent ce) {                     
+                  showWaitCursor();
+                  controller.handleEvent(new AppEvent(AppEvents.JobEntriesRequest, null));
+              }
+        }));
 
-	        grid = setupGrid(entity);
-	        cp.add(grid);
+	   ContentPanel cp = new ContentPanel();
+	   cp.setHeading("Job Queue Entries");
+	   cp.setHeaderVisible(false);
+	   cp.setBodyBorder(false);
+	   cp.setLayout(new FillLayout());
+	   cp.setTopComponent(toolBar);
+        
+	   grid = setupGrid(entity);
+	   cp.add(grid);
 
-	    gridContainer.add(cp);
+	   gridContainer.add(cp);
 
-		// forms and buttons
-		formButtonContainer = new LayoutContainer();
-		formButtonContainer.setScrollMode(Scroll.AUTO);
-
-		jobEntryPanel = setupJobEntryPanel();
-        buttonPanel = setupButtonPanel();
-
-        formButtonContainer.add(jobEntryPanel);
-        formButtonContainer.add(buttonPanel);
-
-		BorderLayoutData data = new BorderLayoutData(LayoutRegion.CENTER);
-		data.setMargins(new Margins(4, 2, 4, 2));
-		container.add(formButtonContainer, data);
-		container.add(gridContainer, new BorderLayoutData(LayoutRegion.NORTH, 200));
-
-
-		LayoutContainer wrapper = (LayoutContainer) Registry.get(Constants.CENTER_PANEL);
-		wrapper.removeAll();
-		wrapper.add(container);
-		wrapper.layout();
-		GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime() - time), null);
-
+	   // forms and buttons
+	   formButtonContainer = new LayoutContainer();
+	   formButtonContainer.setScrollMode(Scroll.AUTO);
+	   
+	   jobEntryPanel = setupJobEntryPanel();
+	   buttonPanel = setupButtonPanel();
+        
+	   formButtonContainer.add(jobEntryPanel);
+	   formButtonContainer.add(buttonPanel);
+        
+	   BorderLayoutData data = new BorderLayoutData(LayoutRegion.CENTER);
+	   data.setMargins(new Margins(4, 2, 4, 2));
+	   container.add(formButtonContainer, data);
+	   container.add(gridContainer, new BorderLayoutData(LayoutRegion.NORTH, 200));
+	   
+	   LayoutContainer wrapper = (LayoutContainer) Registry.get(Constants.CENTER_PANEL);
+	   wrapper.removeAll();
+	   wrapper.add(container);
+	   wrapper.layout();
+	   GWT.log("Done Initializing the UI in " + (new java.util.Date().getTime() - time), null);
 	}
 }

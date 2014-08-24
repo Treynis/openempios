@@ -62,7 +62,9 @@ public class Constants
     public static final String ENTITY_VALIDATION_RULES = "entityValidationRules";
     public static final String ENTITY_ATTRIBUTE_MODEL = "entityAttributeModel";
 
+    public static final String ADVANCED_SEARCH = "advancedSearch";
     public static final String ADVANCED_SEARCH_LIST = "advancedSearchList";
+    public static final String BASIC_SEARCH = "basicSearch";
     public static final String BASIC_SEARCH_LIST = "basicSearchList";
     public static final String ADVANCED_SEARCH_CRITERIA = "advancedSearchCriteria";
     public static final String ADVANCED_SEARCH_FUZZY_MATCH = "advancedSearchFuzzyMatch";

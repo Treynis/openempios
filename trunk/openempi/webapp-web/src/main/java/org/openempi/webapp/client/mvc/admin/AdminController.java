@@ -27,7 +27,6 @@ import org.openempi.webapp.client.Constants;
 import org.openempi.webapp.client.domain.AuthenticationException;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.mvc.Controller;
-import org.openempi.webapp.client.ui.util.Utility;
 
 import com.extjs.gxt.ui.client.Registry;
 import com.extjs.gxt.ui.client.data.BaseModelData;
@@ -105,14 +104,8 @@ public class AdminController extends Controller
 					}
 
 					public void onSuccess(String message) {
-						if (message == null) {
-							Info.display("Information", "Finished assigning global identifiers successfully.");
-                            logInfoMessage(currentEntity.getName(), "Finished assigning global identifiers successfully.", new Date());
-
-						} else {
-							Info.display("Warning", "Encountered a problem while assigning global identifiers: " + message);
-	                        logInfoMessage(currentEntity.getName(), "Encountered a problem while assigning global identifiers: " + message, new Date());
-						}
+	                    Info.display("Information", message);
+	                    logInfoMessage(currentEntity.getName(), message, new Date());
 					}
 				});
 		} else if (event.getType() == AppEvents.AdminStopPixPdqServer) {
@@ -148,7 +141,6 @@ public class AdminController extends Controller
             Info.display("Information", "Initiating the process of initializing links; please wait...");
             logInfoMessage(currentEntity.getName(), "Initiating the process of initializing links.", new Date());
 
-//			getAdminService().initializeRepository(new AsyncCallback<String>() {
 			getAdminService().initializeRepository(currentEntity, new AsyncCallback<String>() {
 				public void onFailure(Throwable caught) {
 
@@ -160,13 +152,8 @@ public class AdminController extends Controller
 				}
 
 				public void onSuccess(String message) {
-					if (message == null) {
-						Info.display("Information", "Links were initialized successfuly.");
-	                    logInfoMessage(currentEntity.getName(), "Links were initialized successfuly.", new Date());
-					} else {
-						Info.display("Warning", "Links did not initialize successfuly: " + message);
-                        logInfoMessage(currentEntity.getName(), "Links did not initialize successfuly: " + message, new Date());
-					}
+				    Info.display("Information", message);
+				    logInfoMessage(currentEntity.getName(), message, new Date());
 				}
 			});
 		} else if (event.getType() == AppEvents.LinkAllRecordPairs) {
@@ -190,13 +177,8 @@ public class AdminController extends Controller
 				}
 
 				public void onSuccess(String message) {
-					if (message == null) {
-						Info.display("Information", "All record pairs were regenerated successfuly.");
-                        logInfoMessage(currentEntity.getName(), "All record pairs were regenerated successfuly.", new Date());
-					} else {
-						Info.display("Warning", "All record pairs did not regenerate successfuly: " + message);
-                        logInfoMessage(currentEntity.getName(), "All record pairs did not regenerate successfuly: " + message, new Date());
-					}
+                    Info.display("Information", message);
+                    logInfoMessage(currentEntity.getName(), message, new Date());
 				}
 			});
 		} else if (event.getType() == AppEvents.InitializeCustomConfiguration) {
@@ -220,13 +202,8 @@ public class AdminController extends Controller
 				}
 
 				public void onSuccess(String message) {
-					if (message == null) {
-						Info.display("Information", "Custom fields were regenerated successfuly.");
-                        logInfoMessage(currentEntity.getName(), "Custom fields were regenerated successfuly.", new Date());
-					} else {
-						Info.display("Warning", "Custom fields did not regenerate successfuly: " + message);
-                        logInfoMessage(currentEntity.getName(), "Custom fields did not regenerate successfuly: " + message, new Date());
-					}
+                    Info.display("Information", message);
+                    logInfoMessage(currentEntity.getName(), message, new Date());
 				}
 			});
 		} else if (event.getType() == AppEvents.RebuildBlockingIndex) {
@@ -250,13 +227,8 @@ public class AdminController extends Controller
 				}
 
 				public void onSuccess(String message) {
-					if (message == null) {
-						Info.display("Information", "Blocking indexes were rebuilt successfuly.");
-	                    logInfoMessage(currentEntity.getName(), "Blocking indexes were rebuilt successfuly.", new Date());
-					} else {
-						Info.display("Warning", "Rebuild blocking indexes did not build successfuly: " + message);
-                        logInfoMessage(currentEntity.getName(), "Rebuild blocking indexes did not build successfuly: " + message, new Date());
-					}
+					Info.display("Information", message);
+                    logInfoMessage(currentEntity.getName(), message, new Date());
 				}
 			});
 		}

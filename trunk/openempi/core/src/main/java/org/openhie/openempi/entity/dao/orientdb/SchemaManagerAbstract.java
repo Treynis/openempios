@@ -50,7 +50,6 @@ import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
-import com.tinkerpop.blueprints.impls.orient.OrientGraph;
 
 public abstract class SchemaManagerAbstract extends Constants implements SchemaManager, Observer
 {
@@ -94,6 +93,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
     }
 
     public boolean isClassDefined(OrientBaseGraph db, String className) {
+        refreshSchema(db);
         Collection<OClass> classes = db.getRawGraph().getMetadata().getSchema().getClasses();
         log.debug("The repository currently has " + classes.size() + " classes defined:");
         for (OClass oclass : classes) {
@@ -137,6 +137,22 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             final OStorage stg = Orient.instance().getStorage(entityStore.getStorageName());
             if (stg != null) {
                 stg.close();
+                boolean done = false;
+                int count = 0;
+                while (!done) {
+                    done = stg.getStatus().equals(OStorage.STATUS.CLOSED);
+                    log.info("Status of storage " + stg.getClass() + " after close is: " + stg.getStatus());
+                    try {
+                        count++;
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                    }
+                    if (count > 5) {
+                        log.info("Storage has not shutdown after " + count + " retries.");
+//                        stg.close(true, true);
+                        done = true;
+                    }
+                }
             }
         } catch (Exception e) {
             log.warn("Failed while shutting down the store: " + e, e);
@@ -233,8 +249,9 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             throw new RuntimeException("Invalid base class name " + baseClassName);
         }
         String className = entity.getName();
+        int[] clusterIds = null;
         final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
-                .createClassInternal(className, baseClass, null);
+                .createClass(className, baseClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
         sourceClass.saveInternal();
         String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
@@ -261,7 +278,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         String className = entityStore.getEntityName();
         OClass vertexClass = findGraphClass(db, VERTEX_CLASS_NAME);
         final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
-                .createClassInternal(className, vertexClass, clusterIds);
+                .createClass(className, vertexClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
         sourceClass.saveInternal();
         entityStore.setEntityClass(sourceClass);
@@ -277,24 +294,40 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
 
         // Create schema for storing associated identifiers
         className = IDENTIFIER_TYPE;
+        clusterIds = null;
         final OClassImpl idClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
-                .createClassInternal(className, vertexClass, null);
+                .createClass(className, vertexClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + idClass.getDefaultClusterId());
         idClass.saveInternal();
         entityStore.setIdentifierClass(idClass);
 
         addAttributesToClass(className, idClass, IDENTIFIER_ATTRIBUTES);
 
+        OClass edgeClass = findGraphClass(db, EDGE_CLASS_NAME);
+        // Create schema for storing links to identifiers
+//        className = IDENTIFIER_EDGE_TYPE;
+//        clusterIds = null;
+//        final OClassImpl identifierEdgeClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
+//                .createClass(className, edgeClass, clusterIds);
+//        log.info("Class " + className + " has been assigned cluster " + identifierEdgeClass.getDefaultClusterId());
+//        identifierEdgeClass.saveInternal();
+        
         // Create schema for storing links
         className = RECORD_LINK_TYPE;
-        OClass edgeClass = findGraphClass(db, EDGE_CLASS_NAME);
+        clusterIds = null;
         final OClassImpl linkClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
-                .createClassInternal(className, edgeClass, null);
+                .createClass(className, edgeClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + linkClass.getDefaultClusterId());
         linkClass.saveInternal();
 
         addAttributesToClass(className, linkClass, LINK_ATTRIBUTES);
 
+        Collection<OClass> classes = db.getRawGraph().getMetadata().getSchema().getClasses();
+        StringBuffer sb = new StringBuffer();
+        for (OClass clazz : classes) {
+            sb.append("Class: " + clazz.getName() + "\n");
+        }
+        log.debug("Before creating the indexes the list of classes is: " + sb.toString());
         createIndexes(entity, db);
 
         log.info("Finished initializing graph classes.");
@@ -551,7 +584,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             return;
         }
 
-        prop = sourceClass.addPropertyInternal(fieldName, type, null, null);
+        prop = (OPropertyImpl) sourceClass.createProperty(fieldName, type);
         if (isCaseSensitive) {
         	prop.setCollate(new OCaseInsensitiveCollate());
         }

@@ -65,6 +65,10 @@ public interface RecordManagerService
 	public Record removeRecord(Entity entity, Record record) throws ApplicationException;
 
 	@Transactional(propagation=Propagation.REQUIRED, readOnly=false)
+    public void mergeRecords(Entity entity, Identifier retiredIdentifier, Identifier survivingIdentifier)
+            throws ApplicationException;
+	
+	@Transactional(propagation=Propagation.REQUIRED, readOnly=false)
 	public RecordLink addRecordLink(RecordLink link) throws ApplicationException;
 
 	@Transactional(propagation=Propagation.REQUIRED, readOnly=false)

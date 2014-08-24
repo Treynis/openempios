@@ -23,4 +23,5 @@ package org.openhie.openempi.cluster;
 public class Constants
 {
     public static final String CONFIGURATION_REGISTRY_KEY = "configurationRegistry";
+    public static final String RECORD_ID_QUEUE_KEY = "recordIdQueue";
 }

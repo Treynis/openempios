@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.openhie.openempi.ApplicationException;
-import org.openhie.openempi.entity.RecordQueryService;
 import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Record;
@@ -37,8 +36,6 @@ public interface EntityLoaderManager
     public Record addRecord(Entity entity, Record record) throws ApplicationException;
 
     public Set<Record> addRecords(Entity entity, Collection<Record> records) throws ApplicationException;
-
-    public RecordQueryService getEntityQueryService();
 
     public Map<String, Object> getPropertyMap();
 

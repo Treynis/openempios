@@ -173,6 +173,7 @@ public class BlockingServiceCache
             Record record = loadRecord(new Long(key));
             if (record == null) {
                 log.warn("Unable to find record with id " + key + " in the db.");
+                continue;
             }
             log.trace("Located the record " + key + " in the cache.");
             records.add(record);
@@ -333,7 +334,7 @@ public class BlockingServiceCache
         public BlockingDataGenerator(Entity entity, Record record, Record newRecord, BlockingTaskWorkType workType) {
             this.entity = entity;
             this.record = record;
-            this.newRecord = record;
+            this.newRecord = newRecord;
             this.workType = workType;
         }
 

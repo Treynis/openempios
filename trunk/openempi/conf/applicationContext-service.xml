@@ -251,6 +251,20 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		<property name="entityCacheManager" ref="entityCacheManager"/>
 	</bean>
 
+	<bean id="dirtyRecordMatcher"
+		class="org.openhie.openempi.entity.impl.DirtyRecordMatcher">
+		<property name="identifierDomainDao" ref="identifierDomainDao" />		
+		<property name="entityDao" ref="entityDao"/>
+		<property name="maxRecordsPerRun" value="1000"/>
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+		
+<!-- 
+		<property name="entityDefinitionService" ref="entityDefinitionManagerService"/>
+		<property name="entityCacheManager" ref="entityCacheManager"/>
+-->
+	</bean>
+
 	<bean id="recordLinkResourceServiceImpl"
 		class="org.openhie.openempi.service.impl.RecordLinkResourceServiceImpl">
 	</bean>
@@ -289,10 +303,59 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 	</bean>
 
 	<bean id="jobQueueService"
-		class="org.openhie.openempi.service.impl.JobQueueServiceImpl">
+		class="org.openhie.openempi.jobqueue.impl.JobQueueServiceImpl">
 		<property name="jobEntryDao" ref="jobEntryDao" />
 	</bean>
-	
+
+	<bean id="jobQueueProcessor"
+		class="org.openhie.openempi.jobqueue.impl.JobQueueProcessor">
+		<property name="jobEntryDao" ref="jobEntryDao" />
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="fileImportJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.FileImportJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="blockingInitializationJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.BlockingInitializationJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="matchingAllPairsJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.MatchingTasksJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="matchingInitializationJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.MatchingTasksJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="globalIdGenerationJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.GlobalIdGenerationJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="customFieldGenerationJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.CustomFieldGenerationJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="dataProfilingJobHandler"
+		class="org.openhie.openempi.jobqueue.impl.DataProfilingJobTypeHandler">
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
 	<bean id="naiveBlockingService"
 		class="org.openhie.openempi.blocking.naive.NaiveBlockingServiceImpl">
 		<property name="entityDao" ref="entityDao" />
@@ -627,11 +690,6 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 				<entry key="IdentifierTransformationFunction" value-ref="IdentifierTransformationFunction"/>
 			</map>
 		</property>
-	</bean>
-
-	<bean id="personLoaderManager" class="org.openhie.openempi.loader.SpringPersonLoaderManager">
-		<property name="username" value="admin" />
-		<property name="password" value="admin" />
 	</bean>
 
 	<bean id="entityLoaderManager" class="org.openhie.openempi.loader.SpringEntityLoaderManager">

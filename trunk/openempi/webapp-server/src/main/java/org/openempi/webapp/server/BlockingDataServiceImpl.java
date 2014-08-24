@@ -39,6 +39,8 @@ import org.openhie.openempi.context.Context;
 
 public class BlockingDataServiceImpl extends AbstractRemoteServiceServlet implements BlockingDataService
 {
+    private static final long serialVersionUID = 2707492638994310226L;
+    
     public final static String BLOCKING_ROUNDS_REGISTRY_KEY = "blockingRounds";
     public final static String MAXIMUM_BLOCK_SIZE = "maxBlockSize";
     public final static String SN_BLOCKING_ROUNDS_REGISTRY_KEY = "sortedNeighborhood.blockingRounds";

@@ -25,27 +25,24 @@ import java.util.List;
 
 import org.openempi.webapp.client.AppEvents;
 import org.openempi.webapp.client.ConfigurationDataServiceAsync;
-import org.openempi.webapp.client.ReferenceDataServiceAsync;
 import org.openempi.webapp.client.Constants;
+import org.openempi.webapp.client.EntityDefinitionDataServiceAsync;
+import org.openempi.webapp.client.ReferenceDataServiceAsync;
 import org.openempi.webapp.client.domain.AuthenticationException;
-import org.openempi.webapp.client.mvc.Controller;
 import org.openempi.webapp.client.model.CustomFieldWeb;
 import org.openempi.webapp.client.model.EntityWeb;
 import org.openempi.webapp.client.model.ModelPropertyWeb;
 import org.openempi.webapp.client.model.SystemConfigurationWeb;
 import org.openempi.webapp.client.model.UserFileWeb;
 import org.openempi.webapp.client.model.UserWeb;
+import org.openempi.webapp.client.mvc.Controller;
 import org.openempi.webapp.client.ui.util.Utility;
 
 import com.extjs.gxt.ui.client.Registry;
 import com.extjs.gxt.ui.client.event.EventType;
 import com.extjs.gxt.ui.client.mvc.AppEvent;
 import com.extjs.gxt.ui.client.mvc.Dispatcher;
-
-import org.openempi.webapp.client.EntityDefinitionDataServiceAsync;
 import com.google.gwt.user.client.rpc.AsyncCallback;
-
-import com.extjs.gxt.ui.client.widget.Info;
 
 public class EntityAttributeDesignController extends Controller
 {

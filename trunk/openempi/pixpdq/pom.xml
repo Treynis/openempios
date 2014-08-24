@@ -7,31 +7,24 @@
 
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
 	<artifactId>openpixpdq</artifactId>
 	<packaging>jar</packaging>
-	<name>OpenEMPI - OpenPIXPDQ Service</name>
+	<name>OpenEMPI Entity - OpenPIXPDQ Service</name>
 	<dependencies>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-configuration</artifactId>
+			<artifactId>openempi-entity-configuration</artifactId>
 			<version>${release.version}</version>
 		</dependency>	
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
+			<artifactId>openempi-entity-core</artifactId>
 			<version>${release.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-core</artifactId>
-			<version>${release.version}</version>
-			<type>test-jar</type>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>

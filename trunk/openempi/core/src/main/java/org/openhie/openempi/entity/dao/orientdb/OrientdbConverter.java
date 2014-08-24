@@ -64,7 +64,7 @@ public class OrientdbConverter
         return list;
     }
     
-    public static List<Record> convertVertexToRecord(RecordCacheManager cache, Entity entity, List<Vertex> result) {
+    public static List<Record> convertVertexToRecord(RecordCacheManager cache, Entity entity, Collection<Vertex> result) {
         List<Record> list = new ArrayList<Record>(result.size());
         for (Vertex vertex : result) {
             list.add(convertVertexToRecord(cache, entity, vertex));
@@ -91,6 +91,12 @@ public class OrientdbConverter
         for (String property : record.getPropertyNames()) {
             Object value = vertex.getProperty(property);
             record.set(property, value);
+        }
+        Boolean dirty = vertex.getProperty(Constants.DIRTY_RECORD_PROPERTY);
+        if (dirty == null || dirty.booleanValue() == false) {
+            record.setDirty(false);
+        } else {
+            record.setDirty(true);
         }
         extractIdAndCluster(vertex, record);
         if (vertex.getProperty(Constants.IDENTIFIER_OUT_PROPERTY) != null) {
@@ -152,6 +158,12 @@ public class OrientdbConverter
         for (String property : record.getPropertyNames()) {
             Object value = odoc.field(property);
             record.set(property, value);
+        }
+        Boolean dirty = odoc.field(Constants.DIRTY_RECORD_PROPERTY);
+        if (dirty == null || dirty.booleanValue() == false) {
+            record.setDirty(false);
+        } else {
+            record.setDirty(true);
         }
         extractIdAndCluster(odoc, record);
         extractIdentifiers(cache, odoc, record);
@@ -233,19 +245,20 @@ public class OrientdbConverter
         return list;
     }
 
-    public static Set<ODocument> extractEntitiesFromIdentifiers(Entity entityDef, List<ODocument> results) {
-        Set<ODocument> entities = new HashSet<ODocument>();
+    public static Set<ODocument> extractEntitiesFromIdentifiers(Entity entityDef, Iterable<Vertex> idVertices) {
         int entityVersionId = entityDef.getEntityVersionId().intValue();
 
-        for (ODocument idoc : results) {
-            ODocument entity = idoc.field(Constants.ENTITY_PROPERTY);
-
+        Set<ODocument> recVertices = new HashSet<ODocument>();
+        for (Vertex v : idVertices) {
+//            Object obj = v.getProperty(Constants.ENTITY_PROPERTY);
+//            Object obj2 = v.getProperty("in_identifierEdge");
+            ODocument entity = (ODocument) v.getProperty(Constants.ENTITY_PROPERTY);
             Long id = (Long) entity.field(Constants.ENTITY_VERSION_ID_PROPERTY);
             if (entity.field(Constants.DATE_VOIDED_PROPERTY) == null && entityVersionId == id.intValue()) {
-                entities.add(entity);
+                recVertices.add(entity);
             }
         }
-        return entities;
+        return recVertices;
     }
 
     private static Identifier convertODocumentToIdentifier(RecordCacheManager cache, ODocument odoc) {

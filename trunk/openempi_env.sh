@@ -1,4 +1,4 @@
-export JAVA_HOME=/sysnet/tools/jdk1.6.0
+export JAVA_HOME=/sysnet/tools/jdk1.7.0_67
 export JAVA_ROOT=${JAVA_HOME}
 export JDK_HOME=${JAVA_HOME}
 export SDK_HOME=${JAVA_HOME}

@@ -4,15 +4,15 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
-		<artifactId>openempi</artifactId>
-		<version>3.0.0-alpha2</version>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.0.0-beta</version>
 		<relativePath>../pom.xml</relativePath>		
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 
-	<artifactId>openempi-webapp-web</artifactId>
+	<artifactId>openempi-entity-webapp-web</artifactId>
 	<packaging>war</packaging>
-	<name>OpenEMPI - Web (Client Side)</name>
+	<name>OpenEMPI Entity - Web (Client Side)</name>
 
 	<dependencies>
 		<!--  GWT dependencies (from central repo) -->
@@ -31,12 +31,12 @@
 
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-webapp-server</artifactId>
+			<artifactId>openempi-entity-webapp-server</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-restful-webservices</artifactId>
+			<artifactId>openempi-entity-restful-webservices</artifactId>
 			<version>${release.version}</version>
 		</dependency>		
 		<dependency>
@@ -194,7 +194,17 @@
 				<version>1.1</version>
 				<configuration>
 					<server>tomcat</server>
-					<url>http://192.168.1.235:8080/manager</url>
+					<url>http://192.168.2.235:8080/manager</url>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<url>http://localhost:8080/manager/text</url>
+					<server>tomcat</server>
+					<path>/openempi-admin</path>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -208,6 +218,16 @@
 					<hostName>localhost</hostName>
 					<port>8080</port>
 				</configuration>				
+			</plugin>
+			<plugin>
+				<groupId>org.wildfly.plugins</groupId>
+				<artifactId>wildfly-maven-plugin</artifactId>
+				<version>1.0.1.Final</version>
+				<configuration>
+					<filename>openempi-webapp-web-${release.version}.war</filename>
+					<username>openempi</username>
+					<password>!1AaBbCc</password>
+				</configuration>
 			</plugin>
 		</plugins>
 		<pluginManagement>

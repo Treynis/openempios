@@ -31,7 +31,6 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Gender;
-import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.Race;
 
 public abstract class AbstractFileLoader implements FileLoader
@@ -66,22 +65,6 @@ public abstract class AbstractFileLoader implements FileLoader
 	}
 
 	public void shutdown() {
-	}
-
-	public void loadPerson(Person person) {
-		log.debug("Attempting to load person entry " + person);
-		try {
-			Boolean previewOnly = (Boolean) getParameter(PREVIEW_ONLY);
-			if (previewOnly == null || !previewOnly.booleanValue()) {
-				personManager.addPerson(person);
-			}
-		} catch (Exception e) {
-			log.error("Failed while adding person entry to the system. Error: " + e, e);
-			if (e.getCause() instanceof org.hibernate.exception.SQLGrammarException) {
-				org.hibernate.exception.SQLGrammarException sge = (org.hibernate.exception.SQLGrammarException) e;
-				log.error("Cause is: " + sge.getSQL());
-			}
-		}
 	}
 
 	public Race findRaceByCode(String raceCode) {
@@ -134,10 +117,6 @@ public abstract class AbstractFileLoader implements FileLoader
 		return gender;
 	}
 
-	public String parseFile(boolean skipHeaderLine, Entity entity, File file) {
-		return parseFile(skipHeaderLine, entity, file, true);
-	}
-
 	public String getParameterAsString(String parameterName) {
 		Object value = getParameter(parameterName);
 		if (value != null) {
@@ -166,8 +145,9 @@ public abstract class AbstractFileLoader implements FileLoader
 		return getEntityLoaderManager().getPropertyMap().get(parameterName);
 	}
 
-	public String parseFile(boolean skipHeaderLine, Entity entity, File file, boolean populateCustomFields) {
+	public FileLoaderResults parseFile(Entity entity, File file) {
 		BufferedReader reader = null;
+		FileLoaderResults results = new FileLoaderResults();
 		try {
 			reader = new BufferedReader(new FileReader(file));
 		} catch (FileNotFoundException e) {
@@ -175,6 +155,7 @@ public abstract class AbstractFileLoader implements FileLoader
 			throw new RuntimeException("Unable to read the input file.");
 		}
 
+		boolean skipHeaderLine = false;
 		if (getParameter(SKIP_HEADER_LINE) != null) {
 			skipHeaderLine = (Boolean) getParameter(SKIP_HEADER_LINE);
 		}
@@ -182,38 +163,37 @@ public abstract class AbstractFileLoader implements FileLoader
 			boolean done = false;
 			int lineIndex = 0;
 			int rowsImported = 0;
+			int rowsErrored = 0;
 			while (!done) {
 				String line = reader.readLine();
 				if (line == null) {
-					if (skipHeaderLine && lineIndex > 0) {
-						lineIndex--;
-					}
-					if (getloaderAlias().equals("concurrentDataLoader")) {
-						lineIndex--;
-						rowsImported--;
-					}
 					done = true;
 					continue;
 				}
-
+				
 				// Skip the first line since its a header.
 				if (lineIndex == 0 && skipHeaderLine) {
-					lineIndex++;
+	                lineIndex++;
 					continue;
 				}
 
-				boolean imported = processLine(entity, line, lineIndex++, populateCustomFields);
+				boolean imported = processLine(entity, line, lineIndex++);
 				if (imported) {
 					rowsImported++;
+				} else {
+				    rowsErrored++;
 				}
 			}
 			reader.close();
-			return "" + lineIndex + "-" + rowsImported;
-
+			results.setRecordProcessed(rowsImported+rowsErrored);
+			results.setRecordsLoaded(rowsImported);
+			results.setRecordsErrored(rowsErrored);
 		} catch (IOException e) {
 			log.error("Failed while loading the input file. Error: " + e);
-			throw new RuntimeException("Failed while loading the input file.");
+			results.setLoadingFailed(true);
+			results.setErrorMessage(e.getMessage());
 		}
+        return results;
 	}
 
 	public String getloaderAlias() {
@@ -241,9 +221,4 @@ public abstract class AbstractFileLoader implements FileLoader
 	}
 
 	protected abstract boolean processLine(Entity entity, String line, int lineIndex);
-
-	protected boolean processLine(Entity entity, String line, int lineIndex, boolean populateCustomFields) {
-		return processLine(entity, line, lineIndex);
-	}
-
 }
