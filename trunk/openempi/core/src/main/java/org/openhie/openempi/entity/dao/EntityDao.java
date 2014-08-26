@@ -119,4 +119,8 @@ public interface EntityDao
     public boolean classExists(Entity baseEntity, String className) throws ApplicationException;
     
     public void dropClass(Entity baseEntity, String className) throws ApplicationException;
+    
+    public void createIndexes(Entity entity) throws ApplicationException;
+    
+    public void dropIndexes(Entity entity) throws ApplicationException;
 }

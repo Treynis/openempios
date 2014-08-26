@@ -142,6 +142,8 @@ public class AppEvents
 
 	public static final EventType ComparatorFunctionNamesReceived = new EventType();
 
+	public static final EventType CreateEntityIndexes = new EventType();
+	
 	public static final EventType CustomFieldsConfigurationReceived = new EventType();
 
 	public static final EventType CustomFieldsConfigurationRequest = new EventType();
@@ -181,6 +183,8 @@ public class AppEvents
 	public static final EventType DeterministicMatchConfigurationSaveComplete = new EventType();
 
 	public static final EventType DeterministicMatchConfigurationView = new EventType();
+
+    public static final EventType DropEntityIndexes = new EventType();
 
 	public static final EventType EntityAttributeDatatypesReceived = new EventType();
 

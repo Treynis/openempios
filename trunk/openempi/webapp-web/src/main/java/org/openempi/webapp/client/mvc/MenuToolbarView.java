@@ -380,6 +380,16 @@ public class MenuToolbarView extends View
                 });
         adminMenu.add(menuItemGlobalIdentifiers);
 
+        MenuItem menuItemJobQueue = new MenuItem("Job Queue Entries",
+                IconHelper.create("images/pictures.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        Dispatcher.get().dispatch(AppEvents.JobQueueView);
+                    }
+                });
+        adminMenu.add(menuItemJobQueue);
+
         MenuItem menuItemStartPIXPDQ = new MenuItem("Start PIX/PDQ Server", IconHelper.create("images/clock_play.png"),
                 new SelectionListener<MenuEvent>()
                 {
@@ -399,16 +409,27 @@ public class MenuToolbarView extends View
                     }
                 });
         adminMenu.add(menuItemStopPIXPDQ);
+        
 
-        MenuItem menuItemJobQueue = new MenuItem("Job Queue Entries",
+        MenuItem menuItemCreateEntityIndexes = new MenuItem("Create Entity Indexes",
                 IconHelper.create("images/pictures.png"), new SelectionListener<MenuEvent>()
                 {
                     @Override
                     public void componentSelected(MenuEvent ce) {
-                        Dispatcher.get().dispatch(AppEvents.JobQueueView);
+                        Dispatcher.get().dispatch(AppEvents.CreateEntityIndexes);
                     }
                 });
-        adminMenu.add(menuItemJobQueue);
+        adminMenu.add(menuItemCreateEntityIndexes);
+
+        MenuItem menuItemDropEntityIndexes = new MenuItem("Drop Entity Indexes",
+                IconHelper.create("images/pictures.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        Dispatcher.get().dispatch(AppEvents.DropEntityIndexes);
+                    }
+                });
+        adminMenu.add(menuItemDropEntityIndexes);
         
         CheckMenuItem menuItemInfoPanel = new CheckMenuItem("Information Panel");
         Listener<MenuEvent> menuListener = new Listener<MenuEvent>() {

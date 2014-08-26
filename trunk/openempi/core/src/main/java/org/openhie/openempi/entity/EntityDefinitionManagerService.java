@@ -39,6 +39,10 @@ public interface EntityDefinitionManagerService
     public Entity loadEntityByName(String name);
 
     public Entity getEntityByName(String name);
+    
+    public void createEntityIndexes(Integer entityVersionId) throws ApplicationException;
+
+    public void dropEntityIndexes(Integer entityVersionId) throws ApplicationException;
 
     public List<Entity> findEntitiesByName(String name);
 	

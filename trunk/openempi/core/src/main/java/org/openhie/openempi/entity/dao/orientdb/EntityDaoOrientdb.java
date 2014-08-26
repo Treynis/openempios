@@ -986,7 +986,48 @@ public class EntityDaoOrientdb implements EntityDao
             }
         }
     }
-    
+
+    public void createIndexes(Entity entity) throws ApplicationException {
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        if (entityStore == null) {
+            log.warn("The entity against which indexes are to be created is unknown: " + entity);
+            throw new ApplicationException("The entity against which indexes are to be created is unknown.");
+        }
+        log.info("Creating indexes for class " + entity.getName());
+        OrientBaseGraph db = null;
+        try {
+            db = connectionManager.connectInitial(entityStore);
+            getSchemaManager(entity).createIndexes(entity, db);
+        } catch (Exception e) {
+            log.error("Failed while trying to create indexes for class: " + entity.getName() + " due to " + e, e);
+            throw new ApplicationException("Failed while creating indexes for an entity: " + e.getMessage());
+        } finally {
+            if (db != null) {
+                db.getRawGraph().close();
+            }
+        }
+    }
+
+    public void dropIndexes(Entity entity) throws ApplicationException {
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        if (entityStore == null) {
+            log.warn("The entity whose indexes are to be dropped is unknown: " + entity);
+            throw new ApplicationException("The entity whose indexes are to be dropped is unknown.");
+        }
+        log.info("Dropping indexes for class " + entity.getName());
+        OrientBaseGraph db = null;
+        try {
+            db = connectionManager.connectInitial(entityStore);
+            getSchemaManager(entity).removeIndexes(entity, db);
+        } catch (Exception e) {
+            log.error("Failed while trying to drop indexes for class: " + entity.getName() + " due to " + e, e);
+            throw new ApplicationException("Failed while drop indexes for an entity: " + e.getMessage());
+        } finally {
+            if (db != null) {
+                db.getRawGraph().close();
+            }
+        }
+    }
 
     public void createClass(Entity baseEntity, Entity classEntity, String baseClass)
             throws ApplicationException {
