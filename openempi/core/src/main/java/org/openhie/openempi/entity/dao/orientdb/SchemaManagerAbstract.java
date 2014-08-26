@@ -41,6 +41,7 @@ import org.openhie.openempi.notification.ObservationEventType;
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.collate.OCaseInsensitiveCollate;
 import com.orientechnologies.orient.core.index.OIndex;
+import com.orientechnologies.orient.core.index.OIndexException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
 import com.orientechnologies.orient.core.metadata.schema.OClassImpl;
 import com.orientechnologies.orient.core.metadata.schema.OProperty;
@@ -450,7 +451,11 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         }
         sql.append(")  NOTUNIQUE");
         log.warn("Creating index: " + sql);
-        db.command(new OCommandSQL(sql.toString())).execute(new Object[] {});
+        try {
+            db.command(new OCommandSQL(sql.toString())).execute(new Object[] {});
+        } catch (OIndexException e) {
+            log.info("Index already exists:" + sql);
+        }
     }
 
     private String nameFromAttributes(Collection<String> attribs) {

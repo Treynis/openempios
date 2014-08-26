@@ -112,5 +112,5 @@ public interface RecordManagerService
 
 	public void declareIntent(Entity entity, DataAccessIntent intent);
 	
-	public boolean assignGlobalIdentifier(Entity entity) throws ApplicationException;
+	public boolean assignGlobalIdentifier(Entity entity) throws ApplicationException;	
 }

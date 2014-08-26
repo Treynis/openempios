@@ -233,6 +233,7 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 	<bean id="entityDefinitionManagerService"
 		class="org.openhie.openempi.entity.impl.EntityDefinitionManagerServiceImpl">
 		<property name="entityDefinitionDao" ref="entityDefinitionDao" />
+		<property name="entityDao" ref="entityDao"/>
 	</bean>
 
 	<bean id="recordManagerService"

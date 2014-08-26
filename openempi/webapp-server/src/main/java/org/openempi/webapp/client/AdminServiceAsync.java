@@ -28,6 +28,10 @@ public interface AdminServiceAsync
 {
 	public void assignGlobalIdentifiers(EntityWeb entity, AsyncCallback<String> callback);
 
+	public void createEntityIndexes(EntityWeb entity, AsyncCallback<String> callback);
+
+    public void dropEntityIndexes(EntityWeb entity, AsyncCallback<String> callback);
+
 	public void startPixPdqServer(AsyncCallback<String> callback);
 
 	public void stopPixPdqServer(AsyncCallback<String> callback);

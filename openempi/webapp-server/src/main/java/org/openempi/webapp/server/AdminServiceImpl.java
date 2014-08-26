@@ -110,6 +110,38 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
         return msg;
 	}
 
+    public String createEntityIndexes(EntityWeb entityWeb) {
+        log.debug("Create all the indexes for entity: " + entityWeb.getDisplayName());
+        
+        authenticateCaller();
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        String msg = "Succeeded in creating indexes for entity " + entityWeb.getDisplayName();
+        try {
+            Context.getEntityDefinitionManagerService().createEntityIndexes(entity.getEntityVersionId());
+        } catch (Throwable t) {
+            log.error("Failed while trying to create indexes for an entity: " + t, t);
+            msg = t.getMessage();
+        }
+        return msg;
+    }
+
+    public String dropEntityIndexes(EntityWeb entityWeb) {
+        log.debug("Drop all the indexes for entity: " + entityWeb.getDisplayName());
+        
+        authenticateCaller();
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        String msg = "Succeeded in dropping indexes for entity " + entityWeb.getDisplayName();
+        try {
+            Context.getEntityDefinitionManagerService().dropEntityIndexes(entity.getEntityVersionId());
+        } catch (Throwable t) {
+            log.error("Failed while trying to drop indexes for an entity: " + t, t);
+            msg = t.getMessage();
+        }
+        return msg;
+    }
+    
 	private File getConfigurationFile() throws IOException {
 		String openEmpiHome = Context.getOpenEmpiHome();
 		if (openEmpiHome != null && openEmpiHome.length() > 0) {
