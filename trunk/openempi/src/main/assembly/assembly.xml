@@ -21,7 +21,7 @@
 
 -->
 <assembly>
-	<id>openempi</id>
+	<id>openempi-entity</id>
 	<formats>
 		<format>zip</format>
 		<format>tar.gz</format>
@@ -29,7 +29,7 @@
 	</formats>
 	<files>
 		<file>
-			<source>core/target/openempi-core-${release.version}.jar</source>
+			<source>core/target/openempi-entity-core-${release.version}.jar</source>
 			<outputDirectory>/</outputDirectory>
 			<destName>openempi-core-${release.version}.jar</destName>
 			<fileMode>0644</fileMode>
@@ -43,27 +43,27 @@
 		</file>
 -->
 		<file>
-			<source>pixpdq-adapter/target/openempi-openpixpdq-adapter-${release.version}.jar</source>
+			<source>pixpdq-adapter/target/openempi-entity-openpixpdq-adapter-${release.version}.jar</source>
 			<outputDirectory>/</outputDirectory>
-			<destName>openempi-openpixpdq-adapter-${release.version}.jar</destName>
+			<destName>openempi-entity-openpixpdq-adapter-${release.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
 		<file>
-			<source>nhin-adapter/target/openempi-nhin-adapter-${release.version}.war</source>
+			<source>nhin-adapter/target/openempi-entity-nhin-adapter-${release.version}.war</source>
 			<outputDirectory>/</outputDirectory>
-			<destName>openempi-nhin-adapter-${release.version}.war</destName>
+			<destName>openempi-entity-nhin-adapter-${release.version}.war</destName>
 			<fileMode>0644</fileMode>
 		</file>
 		<file>
-			<source>nhin-proxy/target/openempi-nhin-proxy-${release.version}.jar</source>
+			<source>nhin-proxy/target/openempi-entity-nhin-proxy-${release.version}.jar</source>
 			<outputDirectory>/</outputDirectory>
-			<destName>openempi-nhin-proxy-${release.version}.jar</destName>
+			<destName>openempi-entity-nhin-proxy-${release.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
 		<file>
-			<source>webapp-web/target/openempi-webapp-web-${release.version}.war</source>
+			<source>webapp-web/target/openempi-entity-webapp-web-${release.version}.war</source>
 			<outputDirectory>/</outputDirectory>
-			<destName>openempi-webapp-web-${release.version}.war</destName>
+			<destName>openempi-entity-webapp-web-${release.version}.war</destName>
 			<fileMode>0644</fileMode>
 		</file>
 		

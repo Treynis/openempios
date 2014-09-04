@@ -23,7 +23,7 @@
 -->
 <project name="openempi">
     <bannerLeft>
-        <name>openempi</name>
+        <name>openempi-entity</name>
         <src>https://appfuse.dev.java.net/images/appfuse-title.gif</src>
         <href>http://appfuse.org</href>
     </bannerLeft>
