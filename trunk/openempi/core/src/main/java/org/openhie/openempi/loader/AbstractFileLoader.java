@@ -37,13 +37,6 @@ public abstract class AbstractFileLoader implements FileLoader
 {
 	protected Logger log = Logger.getLogger(AbstractFileLoader.class);
 
-	public final static String MAPPING_FILE = "mappingFile";
-	public final static String LOADER_ALIAS = "flexibleDataLoader";
-	public final static String SKIP_HEADER_LINE = "skipHeaderLine";
-	public final static String IS_IMPORT = "isImport";
-	public final static String IS_MASSIVE_INSERT = "isMassiveInsert";
-	public final static String PREVIEW_ONLY = "previewOnly";
-
 	public final static String SKIP_HEADER_LINE_DISPLAY = "Skip Header Line";
 	public final static String IS_IMPORT_DISPLAY = "Is Import";
 	public final static String IS_MASSIVE_INSERT_DISPLAY = "Bulk Import";
@@ -156,9 +149,10 @@ public abstract class AbstractFileLoader implements FileLoader
 		}
 
 		boolean skipHeaderLine = false;
-		if (getParameter(SKIP_HEADER_LINE) != null) {
-			skipHeaderLine = (Boolean) getParameter(SKIP_HEADER_LINE);
+		if (getParameter(FileLoaderParameters.SKIP_HEADER_LINE) != null) {
+			skipHeaderLine = (Boolean) getParameter(FileLoaderParameters.SKIP_HEADER_LINE);
 		}
+		
 		try {
 			boolean done = false;
 			int lineIndex = 0;

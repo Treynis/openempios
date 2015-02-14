@@ -38,17 +38,41 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class EntityAttributeDatatype extends BaseObject implements Serializable
 {
 	private static final long serialVersionUID = 1755441952879179847L;
-	public static final int INTEGER_DATATYPE_CD = 1;
-	public static final int SHORT_DATATYPE_CD = 2;
-	public static final int LONG_DATATYPE_CD = 3;
-	public static final int DOUBLE_DATATYPE_CD = 4;
-	public static final int FLOAT_DATATYPE_CD = 5;
-	public static final int STRING_DATATYPE_CD = 6;
+	
 	public static final int BOOLEAN_DATATYPE_CD = 7;
 	public static final int DATE_DATATYPE_CD = 8;
-	public static final int TIMESTAMP_DATATYPE_CD = 9;
-	public static final int LINKSET_DATATYPE_CO = 10;
+	public static final int DOUBLE_DATATYPE_CD = 4;
 	public static final int EMBEDDEDSET_DATATYPE_CD = 11;
+	public static final int FLOAT_DATATYPE_CD = 5;
+	public static final int INTEGER_DATATYPE_CD = 1;
+	public static final int LINKSET_DATATYPE_CO = 10;
+	public static final int LONG_DATATYPE_CD = 3;
+	public static final int SHORT_DATATYPE_CD = 2;
+	public static final int STRING_DATATYPE_CD = 6;
+	public static final int TIMESTAMP_DATATYPE_CD = 9;
+	
+	public static final EntityAttributeDatatype BOOLEAN_DATATYPE = 
+			new EntityAttributeDatatype(BOOLEAN_DATATYPE_CD);
+	public static final EntityAttributeDatatype DATE_DATATYPE = 
+			new EntityAttributeDatatype(DATE_DATATYPE_CD);
+	public static final EntityAttributeDatatype DOUBLE_DATATYPE = 
+			new EntityAttributeDatatype(DOUBLE_DATATYPE_CD);
+	public static final EntityAttributeDatatype EMBEDDEDSET_DATATYPE = 
+			new EntityAttributeDatatype(EMBEDDEDSET_DATATYPE_CD);
+	public static final EntityAttributeDatatype FLOAT_DATATYPE = 
+			new EntityAttributeDatatype(FLOAT_DATATYPE_CD);
+	public static final EntityAttributeDatatype INTEGER_DATATYPE = 
+			new EntityAttributeDatatype(INTEGER_DATATYPE_CD);
+	public static final EntityAttributeDatatype LINKSET_DATATYPE = 
+			new EntityAttributeDatatype(LINKSET_DATATYPE_CO);
+	public static final EntityAttributeDatatype LONG_DATATYPE = 
+			new EntityAttributeDatatype(LONG_DATATYPE_CD);
+	public static final EntityAttributeDatatype SHORT_DATATYPE = 
+			new EntityAttributeDatatype(SHORT_DATATYPE_CD);
+	public static final EntityAttributeDatatype STRING_DATATYPE = 
+			new EntityAttributeDatatype(STRING_DATATYPE_CD);
+	public static final EntityAttributeDatatype TIMESTAMP_DATATYPE = 
+			new EntityAttributeDatatype(TIMESTAMP_DATATYPE_CD);
 	
 	private Integer datatypeCd;
 	private String name;

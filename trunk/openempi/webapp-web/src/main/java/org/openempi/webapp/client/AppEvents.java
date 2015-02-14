@@ -140,6 +140,8 @@ public class AppEvents
 
 	public static final EventType BlockingHPConfigurationRequest = new EventType();
 
+	public static final EventType ClearLoggedLinks = new EventType();
+
 	public static final EventType ComparatorFunctionNamesReceived = new EventType();
 
 	public static final EventType CreateEntityIndexes = new EventType();

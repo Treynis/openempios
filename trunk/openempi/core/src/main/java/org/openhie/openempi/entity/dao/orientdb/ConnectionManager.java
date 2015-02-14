@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientGraph;
@@ -86,19 +87,38 @@ public class ConnectionManager
         }
     }
     
+    void close(EntityStore store, OrientBaseGraph db) {
+    	if (log.isDebugEnabled()) {
+    		log.debug("Closing pool connection for entity " + store.getEntityName());
+    	}
+    	db.shutdown();
+    }
+    
+    void closeInternal(EntityStore store, OrientBaseGraph db) {
+    	if (log.isDebugEnabled()) {
+    		log.debug("Closing internal connection for entity " + store.getEntityName());
+    	}
+    	db.shutdown();
+    }
+    
     void shutdown(EntityStore store) {
         OrientGraphFactory pool = connectionPoolByEntity.get(store.getEntityName());
         if (pool != null) {
             log.info("Shutting down the connection pool to OrientDB for entity " + store.getEntityName());
             pool.close();
-        }        
+        }
+        try {
+            Orient.instance().shutdown();
+            log.info("OrientDB instance has been shutdown.");
+        } catch (Exception e) {
+            log.info("While shutting down the connection to OrientDB, we encountered a problem: " + e, e);
+        }
     }
     
     private synchronized OrientGraphFactory getConnectionPool(EntityStore store, String username, String password) {
         OrientGraphFactory connectionPool = connectionPoolByEntity.get(store.getEntityName());
         if (connectionPool == null) {
             OGlobalConfiguration.CLIENT_CHANNEL_MAX_POOL.setValue(120);
-            OGlobalConfiguration.MVRBTREE_TIMEOUT.setValue(20000);
             OGlobalConfiguration.STORAGE_RECORD_LOCK_TIMEOUT.setValue(20000);
             connectionPool = new OrientGraphFactory(store.getStoreUrl(), username, password);
             connectionPool.setupPool(minPoolConnections, maxPoolConnections);

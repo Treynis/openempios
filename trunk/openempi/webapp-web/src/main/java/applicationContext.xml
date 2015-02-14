@@ -32,7 +32,9 @@
     <!-- pixManagerAdapter:
         The java adapter class that provides the patient data source for this Pix Manager (required).
         This class must implement org.openhealthtools.openpixpdq.api.IPixManagerAdapter -->
-    <bean id="pixManagerAdapter" class="org.openhie.openempi.openpixpdqadapter.PixManagerAdapter" />  
+    <bean id="pixManagerAdapter" class="org.openhie.openempi.openpixpdqadapter.PixManagerAdapter">
+    	<property name="enforceDistinctIdentifiers" value="true"></property>
+    </bean>  
     
     <!-- PdSupplierAdapter:
       The java adapter class that provides the patient data source for this Patient Demographics Supplier 

@@ -76,9 +76,15 @@
 		<property name="maxPoolConnections" value="${orientdb.maxPoolConnections}" />
     </bean>
 
+	<bean id="recordProducer"
+		class="org.openhie.openempi.entity.dao.orientdb.RecordProducerImpl">
+		<property name="entityDao" ref="entityDao"/>
+		<property name="blockSize" value="10000"/>
+	</bean>	
+	
     <bean id="entityCacheManager"
-		class="org.openhie.openempi.entity.impl.EntityCacheManagerImpl"
-		init-method="initialize">
+		class="org.openhie.openempi.entity.impl.RecordCacheManagerImpl"
+		init-method="initialize" destroy-method="destroy">
 	<property name="identifierDomainDao" ref="identifierDomainDao"/>
 	<property name="userDao" ref="userDao"/>
         <property name="cacheConfigLocation" value="${OPENEMPI_HOME}/conf/openempiCache.xml"/>

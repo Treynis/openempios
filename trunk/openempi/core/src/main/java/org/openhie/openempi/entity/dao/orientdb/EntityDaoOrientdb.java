@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.Logger;
 import org.openhie.openempi.ApplicationException;
@@ -46,7 +47,6 @@ import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
 import org.openhie.openempi.model.User;
 
-import com.orientechnologies.orient.core.db.record.OIdentifiable;
 import com.orientechnologies.orient.core.exception.OConcurrentModificationException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
@@ -54,6 +54,8 @@ import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.sql.query.OSQLAsynchQuery;
 import com.orientechnologies.orient.core.sql.query.OSQLSynchQuery;
+import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 import com.tinkerpop.blueprints.impls.orient.OrientEdge;
@@ -76,20 +78,15 @@ public class EntityDaoOrientdb implements EntityDao
         try {
             db = connect(entityStore);
             Vertex instance = saveRecordAndIdentifiers(entity, record, db);
+            db.commit();
             return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, instance);
         } catch (Exception e) {
             log.error("Failed while trying to save an instance of entity: " + entityStore.getEntityName() + " due to "
                     + e, e);
             throw new RuntimeException("Failed to save an entity: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
-    }
-
-    private String getClassName(String name) {
-        return "class:" + name;
     }
 
     public void declareIntent(Entity entity, DataAccessIntent intent) {
@@ -123,15 +120,14 @@ public class EntityDaoOrientdb implements EntityDao
             for (Vertex vertex : savedVertices) {
                 saved.add(OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, vertex));
             }
+            db.commit();
             return saved;
         } catch (Exception e) {
             log.error("Failed while trying to save a set of records of entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             throw new RuntimeException("Failed to save a set of records: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -168,6 +164,7 @@ public class EntityDaoOrientdb implements EntityDao
         db.commit();
         return instance;
     }
+     * @param commit 
     */
     private Vertex saveRecordAndIdentifiers(Entity entity, Record record, OrientGraph db) {
         populateInternalPropertiesForCreate(entity, record);
@@ -184,13 +181,16 @@ public class EntityDaoOrientdb implements EntityDao
             properties.put(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
         }
         OrientVertex instance = (OrientVertex) db.addVertex(getClassName(entity.getName()), properties);
+        instance.save();
         for (Identifier identifier : record.getIdentifiers()) {
             OrientVertex vertex = (OrientVertex) saveIdentifier(db, instance, record, identifier);
             OrientEdge edge = db.addEdge(null, instance, vertex, Constants.IDENTIFIER_EDGE_TYPE);
-            log.info("Created vertex for identifier " + vertex + " and edge " + edge);
-//            instance.addEdge(getClassName(Constants.IDENTIFIER_EDGE_TYPE), vertex);
+            edge.save();
+            if (log.isTraceEnabled()) {
+                log.trace("Created vertex for identifier " + vertex + " and edge " + edge);
+            }
         }
-        db.getRawGraph().commit(true);
+        instance.save();
         return instance;
     }
     
@@ -207,108 +207,6 @@ public class EntityDaoOrientdb implements EntityDao
         }
         return db;
     }
-    
-    OrientGraph getConnection(Entity entity) {
-        EntityStore entityStore = getEntityStoreByName(entity.getName());
-        if (entityStore == null) {
-            return null;
-        }
-        OrientGraph db = null;
-        try {
-            db = connect(entityStore);
-        } catch (Exception e) {
-            log.warn("Unable to obtain a database connection: " + e, e);
-        }
-        return db;
-    }
-    
-    private Vertex saveIdentifier(OrientGraph db, Vertex owner, Record record, Identifier identifier) {
-        Map<String,Object> properties = new HashMap<String,Object>();
-        if (identifier.getRecord() == null) {
-            identifier.setRecord(record);
-        }
-        properties.put(Constants.IDENTIFIER_PROPERTY, identifier.getIdentifier());
-        properties.put(Constants.ENTITY_PROPERTY, owner);
-        properties.put(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, identifier.getIdentifierDomainId());
-        populateInternalIdentifierPropertiesForCreate(properties, record);
-        return db.addVertex(getClassName(IDENTIFIER_TYPE), properties);
-   }
-
-    public void deleteRecord(Entity entity, Record record) throws ApplicationException {
-        validateRecordIdentity(record);
-        EntityStore entityStore = getEntityStoreByName(entity.getName());
-        OrientGraph db = null;
-        try {
-            db = connect(entityStore);
-            ORID orid = extractORID(entityStore, record);
-            Object obj = db.getRawGraph().load(orid);
-            if (obj == null) {
-                if (log.isTraceEnabled()) {
-                    log.trace("Attempted to delete an object that is not known in the database. Operation was ignored.");
-                }
-                return;
-            }
-            User deletedBy = Context.getUserContext().getUser();
-            Date now = new Date();
-            ODocument odoc = (ODocument) obj;
-            odoc.field(Constants.DATE_VOIDED_PROPERTY, now);
-            odoc.field(Constants.USER_VOIDED_BY_PROPERTY, deletedBy.getId());
-            Set<ODocument> identifiers = OrientdbConverter.getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
-            if (identifiers != null && identifiers.size() > 0) {
-                for (ODocument idoc : identifiers) {
-                    idoc.field(Constants.DATE_VOIDED_PROPERTY, now);
-                    idoc.field(Constants.USER_VOIDED_BY_PROPERTY, deletedBy.getId());
-                    idoc.save();
-                }
-            }
-            removeEdgesToNode(db, odoc);
-            odoc.save();
-            db.commit();
-        } catch (Exception e) {
-            log.error("Failed while trying to delete an instance of entity: " + entityStore.getEntityName()
-                    + " due to " + e, e);
-            throw new RuntimeException("Failed to delete an entity: " + e.getMessage());
-        } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
-        }
-    }
-
-    public void removeRecord(Entity entity, Record record) throws ApplicationException {
-        validateRecordIdentity(record);
-        EntityStore entityStore = getEntityStoreByName(entity.getName());
-        OrientGraph db = null;
-        try {
-            db = connect(entityStore);
-            ORID orid = extractORID(entityStore, record);
-            Object obj = db.getRawGraph().load(orid);
-            if (obj == null) {
-                if (log.isTraceEnabled()) {
-                    log.trace("Attempted to remove an object that is not known in the database. Operation was ignored.");
-                }
-                return;
-            }
-            ODocument odoc = (ODocument) obj;
-            Set<ODocument> identifiers = OrientdbConverter.getIdentifiers(odoc.field(Constants.IDENTIFIER_OUT_PROPERTY));
-            if (identifiers != null && identifiers.size() > 0) {
-                for (ODocument idoc : identifiers) {
-                    idoc.delete();
-                }
-            }
-            removeEdgesToNode(db, odoc);
-            odoc.delete();
-            db.commit();
-        } catch (Exception e) {
-            log.error("Failed while trying to remove an instance of entity: " + entityStore.getEntityName()
-                    + " due to " + e, e);
-            throw new RuntimeException("Failed to remove an entity: " + e.getMessage());
-        } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
-        }
-    }
 
     public void updateRecords(Entity entity, List<Record> records) throws ApplicationException {
         EntityStore entityStore = getEntityStoreByName(entity.getName());
@@ -319,23 +217,22 @@ public class EntityDaoOrientdb implements EntityDao
             Date now = new Date();
             for (Record record : records) {
                 ORID orid = extractORID(entityStore, record);
-                Object obj = db.getRawGraph().load(orid);
-                if (obj == null) {
+                OrientVertex vertex = db.getVertex(orid);
+                if (vertex == null) {
                     log.debug("Attempted to update an object that is not known in the database: " + orid);
                     continue;
                 }
-                ODocument odoc = (ODocument) obj;
-                updateIdentifiers(db, odoc, record.getIdentifiers(), now);
-                updateDocumentWithRecord(odoc, record);
+                updateIdentifiers(db, vertex, record, now);
+                updateVertexWithRecord(vertex, record);
                 boolean dirty = record.isDirty();
                 if (dirty == false) {
-                    odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
+                    vertex.setProperty(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
                 } else {
-                    odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
+                    vertex.setProperty(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
                 }                
-                odoc.field(Constants.DATE_CHANGED_PROPERTY, now);
-                odoc.field(Constants.USER_CHANGED_BY_PROPERTY, changedBy.getId());
-                odoc.save();
+                vertex.setProperty(Constants.DATE_CHANGED_PROPERTY, now);
+                vertex.setProperty(Constants.USER_CHANGED_BY_PROPERTY, changedBy.getId());
+                vertex.save();
             }
             db.commit();
         } catch (Exception e) {
@@ -343,12 +240,89 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             throw new RuntimeException("Failed to update an entity: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
+    public void deleteRecord(Entity entity, Record record) throws ApplicationException {
+        validateRecordIdentity(record);
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        OrientGraph db = null;
+        try {
+            db = connect(entityStore);
+            ORID orid = extractORID(entityStore, record);
+            OrientVertex vertex = db.getVertex(orid);
+            if (vertex == null) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Attempted to delete a record that is not known in the database. Operation was ignored.");
+                }
+                return;
+            }
+            User deletedBy = Context.getUserContext().getUser();
+            Date now = new Date();
+            vertex.setProperty(Constants.DATE_VOIDED_PROPERTY, now);
+            vertex.setProperty(Constants.USER_VOIDED_BY_PROPERTY, deletedBy.getId());
+            
+            Iterable<Edge> edges = vertex.getEdges(Direction.OUT, Constants.IDENTIFIER_EDGE_TYPE);
+            for (Edge edge : edges) {
+                OrientEdge theEdge = (OrientEdge) edge;
+                OrientVertex ivertex = theEdge.getVertex(Direction.IN);
+                ivertex.setProperty(Constants.DATE_VOIDED_PROPERTY, now);
+                ivertex.setProperty(Constants.USER_VOIDED_BY_PROPERTY, deletedBy.getId());
+                ivertex.save();
+            }
+
+            edges = vertex.getEdges(Direction.BOTH, Constants.RECORD_LINK_TYPE);
+            for (Edge edge : edges) {
+                db.removeEdge(edge);
+            }
+            vertex.save();
+            db.commit();
+        } catch (Exception e) {
+            log.error("Failed while trying to delete a record of entity: " + entityStore.getEntityName()
+                    + " due to " + e, e);
+            throw new RuntimeException("Failed to delete the record: " + e.getMessage());
+        } finally {
+            close(entityStore, db);
+        }
+    }
+
+    public void removeRecord(Entity entity, Record record) throws ApplicationException {
+        validateRecordIdentity(record);
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        OrientGraph db = null;
+        try {
+            db = connect(entityStore);
+            ORID orid = extractORID(entityStore, record);
+            OrientVertex vertex = db.getVertex(orid);
+            if (vertex == null) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Attempted to remove a record that is not known in the database. Operation was ignored.");
+                }
+                return;
+            }
+            Iterable<Edge> edges = vertex.getEdges(Direction.OUT, Constants.IDENTIFIER_EDGE_TYPE);
+            for (Edge edge : edges) {
+                OrientEdge theEdge = (OrientEdge) edge;
+                OrientVertex ivertex = theEdge.getVertex(Direction.IN);
+                db.removeVertex(ivertex);
+            }
+            
+            edges = vertex.getEdges(Direction.BOTH, Constants.RECORD_LINK_TYPE);
+            for (Edge edge : edges) {
+                db.removeEdge(edge);
+            }
+            db.removeVertex(vertex);
+            db.commit();
+        } catch (Exception e) {
+            log.error("Failed while trying to remove an instance of entity: " + entityStore.getEntityName()
+                    + " due to " + e, e);
+            throw new RuntimeException("Failed to remove an entity: " + e.getMessage());
+        } finally {
+            close(entityStore, db);
+        }
+    }
+    
     public Record updateRecord(Entity entity, Record record) throws ApplicationException {
         validateRecordIdentity(record);
         EntityStore entityStore = getEntityStoreByName(entity.getName());
@@ -356,38 +330,55 @@ public class EntityDaoOrientdb implements EntityDao
         try {
             db = connect(entityStore);
             ORID orid = extractORID(entityStore, record);
-            ODocument obj = db.getRawGraph().load(orid);
-            if (obj == null) {
+            OrientVertex vertex = db.getVertex(orid);
+            if (vertex == null) {
                 log.debug("Attempted to update an object that is not known in the database.");
                 return null;
             }
             User changedBy = Context.getUserContext().getUser();
             Date now = new Date();
-            ODocument odoc = (ODocument) obj;
-            updateIdentifiers(db, obj, record.getIdentifiers(), now);
-            updateDocumentWithRecord(odoc, record);
+            updateIdentifiers(db, vertex, record, now);
+            updateVertexWithRecord(vertex, record);
             boolean dirty = record.isDirty();
             if (dirty == false) {
-                odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
+                vertex.setProperty(Constants.DIRTY_RECORD_PROPERTY, Boolean.FALSE);
             } else {
-                odoc.field(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
+                vertex.setProperty(Constants.DIRTY_RECORD_PROPERTY, Boolean.TRUE);
             }
-            odoc.field(Constants.DATE_CHANGED_PROPERTY, now);
-            odoc.field(Constants.USER_CHANGED_BY_PROPERTY, changedBy.getId());
-            odoc.save();
+            vertex.setProperty(Constants.DATE_CHANGED_PROPERTY, now);
+            vertex.setProperty(Constants.USER_CHANGED_BY_PROPERTY, changedBy.getId());
+            vertex.save();
             db.commit();
-            return OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, odoc);
+            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, vertex);
         } catch (Exception e) {
             log.error("Failed while trying to update an instance of entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             throw new RuntimeException("Failed to update an entity: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
-
+    
+    private void updateVertexWithRecord(OrientVertex vertex, Record record) {
+        for (String fieldName : record.getPropertyNames()) {
+            // We don't allow clients to modify internal attributes
+            if (schemaManager.isInternalAttribute(fieldName)) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Skipping internal field " + fieldName + " during an update.");
+                }
+                continue;
+            }
+            Object value = record.get(fieldName);
+            if (log.isTraceEnabled()) {
+                log.trace("Updating the value of field " + fieldName + " with the value " + value);
+            }
+            if (value == null) {
+                continue;
+            }
+            vertex.setProperty(fieldName, value);
+        }
+    }
+    
     public void saveData(Entity entity, String className, Record record) {
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         OrientGraph db = null;
@@ -425,13 +416,11 @@ public class EntityDaoOrientdb implements EntityDao
                     + e, e);
             throw new RuntimeException("Failed to save a record due to: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
-    public Object loadObject(Entity entity, String recordId) {
+    public Map<String,Object> loadObject(Entity entity, String recordId) {
         OrientGraph db = null;
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         String query = "select from " + recordId;
@@ -441,15 +430,15 @@ public class EntityDaoOrientdb implements EntityDao
             if (result == null || result.size() == 0) {
                 return null;
             }
-            return result.get(0);
+            ODocument odoc = result.get(0);
+            Map<String,Object> record = convertODocumentToMap(odoc);   
+            return record;
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return null;
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -479,9 +468,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return null;
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -504,9 +491,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return recordSet;
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -516,23 +501,19 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
-            List<ODocument> result = db.getRawGraph().query(new OSQLSynchQuery<ODocument>(query));
-            if (result == null || result.size() == 0) {
-                return new ArrayList<Record>();
-            }
-            return OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, result);
+            @SuppressWarnings("unchecked")
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query));
+            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, result);
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
-    public List<ODocument> executeQuery(Entity entity, String query) {
+    public List<Map<String,Object>> executeQuery(Entity entity, String query) {
         OrientGraph db = null;
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         if (log.isDebugEnabled()) {
@@ -549,16 +530,30 @@ public class EntityDaoOrientdb implements EntityDao
             if (result == null || result.size() == 0) {
                 return null;
             }
-            return result;
+            List<Map<String,Object>> records = new ArrayList<Map<String,Object>>(result.size());
+            for (ODocument odoc : result) {
+                Map<String, Object> record = convertODocumentToMap(odoc);
+                records.add(record);
+            }
+            return records;
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return null;
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
+    }
+
+    private Map<String, Object> convertODocumentToMap(ODocument odoc) {
+        Map<String,Object> record = new HashMap<String,Object>();
+        record.put(Constants.RECORDID_KEY, odoc.getIdentity().toString());
+        record.put(Constants.CLUSTERID_KEY, odoc.getIdentity().getClusterId());
+        record.put(Constants.CLUSTERPOSITION_KEY, odoc.getIdentity().getClusterPosition());
+        for (String fieldName : odoc.fieldNames()) {
+            record.put(fieldName, odoc.field(fieldName));
+        }
+        return record;
     }
 
     public void executeQueryAsync(Entity entity, String query, AsyncQueryCallback callback) {
@@ -579,9 +574,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return;
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -594,22 +587,13 @@ public class EntityDaoOrientdb implements EntityDao
             db = connect(entityStore);
 
             Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute();
-            if (result == null) {
-                return new ArrayList<Record>();
-            }
-            List<Vertex> records = new ArrayList<Vertex>();
-            for (Vertex v : result) {
-                records.add(v);
-            }
-            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, records);
+            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, result);
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -620,19 +604,15 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
-            List<ODocument> result = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query)).execute(params);
-            if (result == null || result.size() == 0) {
-                return new ArrayList<Record>();
-            }
-            return OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, result);
+            @SuppressWarnings("unchecked")
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute(params);
+            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, result);
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -648,16 +628,14 @@ public class EntityDaoOrientdb implements EntityDao
             if (result == null) {
                 return new ArrayList<Record>();
             }
-            Set<ODocument> records = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
-            return  new ArrayList<Record>(OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, records));
+            Set<Vertex> records = OrientdbConverter.extractRecordsFromIdentifiers(entity, result);
+            return  new ArrayList<Record>(OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, records));
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -673,16 +651,14 @@ public class EntityDaoOrientdb implements EntityDao
             if (result == null) {
                 return new ArrayList<Record>();
             }
-            Set<ODocument> records = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
-            return  new ArrayList<Record>(OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, records));
+            Set<Vertex> records = OrientdbConverter.extractRecordsFromIdentifiers(entity, result);
+            return  new ArrayList<Record>(OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, records));
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -706,9 +682,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -728,9 +702,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new Long(0);
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -749,9 +721,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new Long(0);
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -767,7 +737,7 @@ public class EntityDaoOrientdb implements EntityDao
             if (result == null) {
                 return 0L;
             }
-            Set<ODocument> records = OrientdbConverter.extractEntitiesFromIdentifiers(entity, result);
+            Set<Vertex> records = OrientdbConverter.extractRecordsFromIdentifiers(entity, result);
             return new Long(records.size());
 
         } catch (Exception e) {
@@ -775,14 +745,59 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new Long(0);
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
     
+    public List<Long> getRecordIds(Entity entity, int firstResult, int maxResults) {
+        String query = "select @rid from " + entity.getName() + " where dateVoided is null skip " + firstResult + 
+                " limit " + maxResults;
+        return loadRecordIds(entity, query);
+    }
+
     public List<Long> getAllRecordIds(Entity entity) {
         String query = "select @rid from " + entity.getName() + " where dateVoided is null";
+        return loadRecordIds(entity, query);
+    }
+
+    public void loadRecords(Entity entity, List<BlockingQueue<Record>> queues, int blockSize) {
+        OrientGraph db = null;
+        EntityStore entityStore = getEntityStoreByName(entity.getName());
+        try {
+            ORID last = new ORecordId();
+            db = connect(entityStore);
+            String queryString = "select from " + entity.getName() + " where @rid > ? limit " + blockSize;
+            final OSQLSynchQuery<ODocument> query = new OSQLSynchQuery<ODocument>(queryString);
+            List<ODocument> resultset = db.getRawGraph().query(query, last);
+            int totalCount=0;
+            while (!resultset.isEmpty()) {
+                last = resultset.get(resultset.size() - 1).getIdentity();
+                List<Record> records = OrientdbConverter.
+                        convertODocumentToRecord(getEntityCacheManager(), entity, resultset);
+                addToQueues(queues, records);
+                totalCount += records.size();
+                if (totalCount % 10000 == 0) {
+                    log.warn("Producer loaded " + totalCount + " records.");
+                }
+                resultset = db.getRawGraph().query(query, last);
+            }
+        } catch (Exception e) {
+            log.error("Failed while trying to load all record for entity: " + entityStore.getEntityName()
+                    + " due to " + e, e);
+        } finally {
+            close(entityStore, db);
+        }
+    }
+    
+    private void addToQueues(List<BlockingQueue<Record>> queues, List<Record> records) throws InterruptedException {
+        for (Record record : records) {
+            for (BlockingQueue<Record> queue : queues) {
+                queue.put(record);
+            }
+        }
+    }
+
+    private List<Long> loadRecordIds(Entity entity, String query) {
         OrientGraph db = null;
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
@@ -802,9 +817,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new ArrayList<Long>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -815,19 +828,15 @@ public class EntityDaoOrientdb implements EntityDao
         EntityStore entityStore = getEntityStoreByName(entity.getName());
         try {
             db = connect(entityStore);
-            List<ODocument> result = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query)).execute(params);
-            if (result == null || result.size() == 0) {
-                return new ArrayList<Record>();
-            }
-            return OrientdbConverter.convertODocumentToRecord(getEntityCacheManager(), entity, result);
+            @SuppressWarnings("unchecked")
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query)).execute(params);
+            return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, result);
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
                     + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -848,20 +857,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return null;
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
-        }
-    }
-
-    private String addClusterIdIfMissing(EntityStore entityStore, String entityName, String recordLinkId) {
-        try {
-            Integer.parseInt(recordLinkId);
-            // If we were able to parse it as a number then it is missing the cluster ID
-            String recordId = "#" + entityStore.getClusterId(entityName) + ":" + recordLinkId;
-            return recordId;
-        } catch (NumberFormatException e) {
-            return recordLinkId;
+        	close(entityStore, db);
         }
     }
 
@@ -881,9 +877,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new Long(0);
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -904,9 +898,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new ArrayList<RecordLink>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -928,9 +920,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new ArrayList<RecordLink>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -952,9 +942,7 @@ public class EntityDaoOrientdb implements EntityDao
                     + " due to " + e, e);
             return new ArrayList<RecordLink>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -981,9 +969,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to locate a class: " + className + " due to " + e, e);
             throw new ApplicationException("Failed while trying to locate a class: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -1002,9 +988,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to create indexes for class: " + entity.getName() + " due to " + e, e);
             throw new ApplicationException("Failed while creating indexes for an entity: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	closeInitial(entityStore, db);
         }
     }
 
@@ -1023,9 +1007,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to drop indexes for class: " + entity.getName() + " due to " + e, e);
             throw new ApplicationException("Failed while drop indexes for an entity: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	closeInitial(entityStore, db);
         }
     }
 
@@ -1057,9 +1039,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to create a class: " + classEntity + " due to " + e, e);
             throw new ApplicationException("Failed while creating a new class: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	closeInitial(entityStore, db);
         }
     }
     
@@ -1083,9 +1063,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while dropping class " + className + " due to " + e, e);
             throw new ApplicationException("Failed while dropping a class: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	closeInitial(entityStore, db);
         }        
     }
     
@@ -1108,9 +1086,7 @@ public class EntityDaoOrientdb implements EntityDao
                             + entityStore.getEntityName() + " due to " + e, e);
             return new ArrayList<Record>();
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -1143,24 +1119,8 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to save an instance of entity link: " + link + " due to " + e, e);
             throw new RuntimeException("Failed to save a record link: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
-    }
-
-    private boolean checkIfLinkExists(OrientGraph db, EntityStore entityStore, RecordLink link) {
-        String leftRid = addClusterIdIfMissing(entityStore, entityStore.getEntityName(),
-                link.getLeftRecord().getRecordId().toString());
-        String rightRid = addClusterIdIfMissing(entityStore, entityStore.getEntityName(),
-                link.getRightRecord().getRecordId().toString());
-        String query = "select from (traverse bothe() from " + leftRid + ") where source = " + 
-                link.getLinkSource().getLinkSourceId() + " and (out = '" + rightRid + "' or in = '" + rightRid + "')";
-        List<ODocument> result = db.getRawGraph().query(new OSQLSynchQuery<ODocument>(query));
-        if (result.isEmpty()) {
-            return false;
-        }
-        return true;
     }
 
     public void removeRecordLink(RecordLink link) {
@@ -1180,9 +1140,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to remove a record link: " + link + " due to " + e, e);
             throw new RuntimeException("Failed to remove a record link: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -1201,9 +1159,7 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to get record links due to " + e, e);
             throw new RuntimeException("Failed to get record links due to: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        	close(entityStore, db);
         }
     }
 
@@ -1227,10 +1183,147 @@ public class EntityDaoOrientdb implements EntityDao
             log.error("Failed while trying to remove all record links due to " + e, e);
             throw new RuntimeException("Failed to remove all record links due to: " + e.getMessage());
         } finally {
-            if (db != null) {
-                db.getRawGraph().close();
+        	close(entityStore, db);
+        }
+    }
+
+    public synchronized void initializeStore(Entity entity) {
+    	initializeStore(entity, Context.getConfiguration().getAdminConfiguration().getDataDirectory());
+    }
+    
+    public synchronized void initializeStore(Entity entity, String dataDirectory) {
+        ConnectionManager connectionMgr = getConnectionManager();
+        if (schemaManager == null) {
+            schemaManager = SchemaManagerFactory.createSchemaManager(connectionMgr);
+            schemaManager.setParameter(Constants.DATA_DIRECTORY_KEY, dataDirectory);
+        }
+        EntityStore store = getEntityStoreByName(entity.getName());
+        schemaManager.initializeSchema(entity, store);
+    }
+    
+    SchemaManager getSchemaManager(Entity entity) {
+        if (schemaManager == null) {
+            initializeStore(entity);
+        }
+        return schemaManager;
+    }
+
+    public static ConnectionManager getConnectionManager() {
+        return connectionManager;
+    }
+
+    public static void setConnectionManager(ConnectionManager connectionManager) {
+        EntityDaoOrientdb.connectionManager = connectionManager;
+    }
+    
+    private OrientVertex saveIdentifier(OrientGraph db, Vertex owner, Record record, Identifier identifier) {
+        Map<String,Object> properties = new HashMap<String,Object>();
+        if (identifier.getRecord() == null) {
+            identifier.setRecord(record);
+        }
+        properties.put(Constants.IDENTIFIER_PROPERTY, identifier.getIdentifier());
+        properties.put(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, identifier.getIdentifierDomainId());
+        populateInternalIdentifierPropertiesForCreate(properties, record);
+        return db.addVertex(getClassName(IDENTIFIER_TYPE), properties);
+   }
+
+    private void updateIdentifiers(OrientGraph db, OrientVertex vertex, Record record, Date now) {
+        List<Identifier> newIds = record.getIdentifiers();
+        Iterable<Edge> edges = vertex.getEdges(Direction.OUT, Constants.IDENTIFIER_EDGE_TYPE);
+        Set<OrientVertex> oldIds = new HashSet<OrientVertex>();
+        for (Edge edge : edges) {
+            log.warn("Found edge: " + (OrientEdge) edge);
+            OrientEdge theEdge = (OrientEdge) edge;
+            oldIds.add(theEdge.getVertex(Direction.IN));
+        }
+        
+        Map<Long, OrientVertex> oldIdMap = buildMapFromIdentifierVertexSet(oldIds);
+        Map<Long, Identifier> newIdMap = buildMapFromList(newIds);
+
+        // Case 1. An element from the old identifier list was deleted
+        if (oldIds.size() > 0) {
+            for (OrientVertex ivertex : oldIds) {
+                Long id = OrientdbConverter.extractId(ivertex);
+                if (newIdMap.get(id) == null) {
+                    ivertex.setProperty(Constants.DATE_VOIDED_PROPERTY, now);
+                    ivertex.setProperty(Constants.USER_VOIDED_BY_PROPERTY, Context.getUserContext().getUser().getId());
+                    log.debug("An identifier with identifier " + ivertex.getProperty(Constants.IDENTIFIER_PROPERTY)
+                            + " was deleted.");
+                    ivertex.save();
+                }
             }
         }
+
+        record.set(Constants.DATE_CREATED_PROPERTY, vertex.getProperty(Constants.DATE_CREATED_PROPERTY));
+        record.set(Constants.USER_CREATED_BY_PROPERTY, vertex.getProperty(Constants.USER_CREATED_BY_PROPERTY));
+
+        // Case 2. An new identifier was added
+        for (Identifier id : newIds) {
+            if (id.getIdentifierId() == null || oldIdMap.get(id.getIdentifierId()) == null) {
+                OrientVertex ivertex = saveIdentifier(db, vertex, record, id);
+                ivertex.save();
+                OrientEdge edge = db.addEdge(null, vertex, ivertex, Constants.IDENTIFIER_EDGE_TYPE);
+                edge.save();
+                if (log.isTraceEnabled()) {
+                    log.trace("Created vertex for identifier " + vertex + " and edge " + edge);
+                }
+                oldIds.add(ivertex);
+            }
+        }
+
+        // Case 3. An element was updated
+        for (Identifier id : newIds) {
+            OrientVertex ivertex = oldIdMap.get(id.getIdentifierId());
+            if (ivertex != null) {
+                ivertex.setProperty(Constants.IDENTIFIER_PROPERTY, id.getIdentifier());
+                if (id.getIdentifierDomain() != null) {
+                    ivertex.setProperty(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, id.getIdentifierDomain().getIdentifierDomainId());
+                } else {
+                    ivertex.setProperty(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, id.getIdentifierDomainId());                    
+                }
+                log.debug("An identifier with identifier " + ivertex.getProperty(Constants.IDENTIFIER_PROPERTY)
+                        + " was updated.");
+                ivertex.save();
+            }
+        }
+    }
+
+    private Map<Long, OrientVertex> buildMapFromIdentifierVertexSet(Set<OrientVertex> ids) {
+        Map<Long, OrientVertex> map = new HashMap<Long, OrientVertex>();
+        if (ids != null && ids.size() > 0) {
+            for (OrientVertex v : ids) {
+                Long id = OrientdbConverter.extractId(v);
+                map.put(id, v);
+            }
+        }
+        return map;
+    }
+    
+    private Map<Long, Identifier> buildMapFromList(List<Identifier> ids) {
+        Map<Long, Identifier> map = new HashMap<Long, Identifier>();
+        if (ids == null || ids.size() == 0) {
+            return map;
+        }
+        for (Identifier id : ids) {
+            if (id.getIdentifierId() != null) {
+                map.put(id.getIdentifierId(), id);
+            }
+        }
+        return map;
+    }
+    
+    private boolean checkIfLinkExists(OrientGraph db, EntityStore entityStore, RecordLink link) {
+        String leftRid = addClusterIdIfMissing(entityStore, entityStore.getEntityName(),
+                link.getLeftRecord().getRecordId().toString());
+        String rightRid = addClusterIdIfMissing(entityStore, entityStore.getEntityName(),
+                link.getRightRecord().getRecordId().toString());
+        String query = "select from (traverse bothe() from " + leftRid + ") where source = " + 
+                link.getLinkSource().getLinkSourceId() + " and (out = '" + rightRid + "' or in = '" + rightRid + "')";
+        List<ODocument> result = db.getRawGraph().query(new OSQLSynchQuery<ODocument>(query));
+        if (result.isEmpty()) {
+            return false;
+        }
+        return true;
     }
 
     private void updateLinkEdges(OrientGraph db, EntityStore entityStore, RecordLink link) {
@@ -1248,10 +1341,17 @@ public class EntityDaoOrientdb implements EntityDao
             db.commit();
         } catch (Exception e) {
             log.error("Failed while trying to update the record link using link: " + link + " due to " + e, e);
-        } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
+        }
+    }
+
+    private String addClusterIdIfMissing(EntityStore entityStore, String entityName, String recordLinkId) {
+        try {
+            Integer.parseInt(recordLinkId);
+            // If we were able to parse it as a number then it is missing the cluster ID
+            String recordId = "#" + entityStore.getClusterId(entityName) + ":" + recordLinkId;
+            return recordId;
+        } catch (NumberFormatException e) {
+            return recordLinkId;
         }
     }
 
@@ -1284,44 +1384,6 @@ public class EntityDaoOrientdb implements EntityDao
         return props;
     }
 
-    private void removeEdgesToNode(OrientGraph db, ODocument node) {
-        ORID identity = node.getIdentity();
-        
-        Object outSet = node.field(Constants.VERTEX_IN_PROPERTY);
-        Object inSet = node.field(Constants.VERTEX_OUT_PROPERTY);
-
-        if (outSet == null && inSet == null) {
-            // Record doesn't have any links
-            return;
-        }
-
-        removeEdgeOrSetOfEdges(db, outSet, identity);
-        removeEdgeOrSetOfEdges(db, inSet, identity);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void removeEdgeOrSetOfEdges(OrientGraph db, Object nodeOrSet, ORID identity) {
-        if (nodeOrSet == null) {
-            return;
-        }
-        try {
-            if (nodeOrSet instanceof Set<?>) {
-                Set<OIdentifiable> set = (Set<OIdentifiable>) nodeOrSet;            
-                for (OIdentifiable oid : set) {
-                    if (oid != null) {
-                        ODocument edge = (ODocument) oid;
-                        db.getRawGraph().delete(edge);
-                    }
-                }
-            } else if (nodeOrSet instanceof ODocument) {
-                ODocument edge = (ODocument) nodeOrSet;
-                db.getRawGraph().delete(edge);
-            }
-        } catch (Exception e) {
-            log.error("Failed while trying to remove record links to node: " + identity + " due to " + e, e);
-        }
-    }
-
     private ORID extractORID(EntityStore entityStore, Record record) {
         Integer clusterId = (Integer) record.get(Constants.ORIENTDB_CLUSTER_ID_KEY);
         if (clusterId == null || clusterId < 0) {
@@ -1333,87 +1395,6 @@ public class EntityDaoOrientdb implements EntityDao
             }
         }
         return OrientdbConverter.getORIDFromRecordId(clusterId, record.getRecordId());
-    }
-
-
-    private void updateIdentifiers(OrientGraph db, ODocument odoc, List<Identifier> newIds, Date now) {
-        Set<ODocument> oldIdentifiers = OrientdbConverter.getIdentifiers(odoc.field(Constants.IDENTIFIER_EDGE_TYPE));
-        Map<Long, ODocument> oldIdMap = buildMapFromDocumentList(oldIdentifiers);
-        Map<Long, Identifier> newIdMap = buildMapFromList(newIds);
-
-        // Case 1. An element from the old identifier list was deleted
-        if (oldIdentifiers != null) {
-            for (ODocument idoc : oldIdentifiers) {
-                Long id = OrientdbConverter.extractId(idoc);
-                if (newIdMap.get(id) == null) {
-                    idoc.field(Constants.DATE_VOIDED_PROPERTY, now);
-                    idoc.field(Constants.USER_VOIDED_BY_PROPERTY, Context.getUserContext().getUser().getId());
-                    log.debug("An identifier with identifier " + idoc.field(Constants.IDENTIFIER_PROPERTY)
-                            + " was deleted.");
-                    db.getRawGraph().save(idoc);
-                }
-            }
-        }
-
-        // Case 2. An new identifier was added
-        for (Identifier id : newIds) {
-            if (id.getIdentifierId() == null || oldIdMap.get(id.getIdentifierId()) == null) {
-                ODocument idoc = createODocumentFromIdentifier(db, odoc, id);
-                idoc.field(Constants.DATE_CREATED_PROPERTY, now);
-                idoc.field(Constants.USER_CREATED_BY_PROPERTY, Context.getUserContext().getUser().getId());
-                log.debug("An identifier with identifier " + id.getIdentifier() + " was added.");
-                db.getRawGraph().save(idoc);
-                oldIdentifiers.add(idoc);
-            }
-        }
-
-        // Case 3. An element was updated
-        for (Identifier id : newIds) {
-            ODocument idoc = oldIdMap.get(id.getIdentifierId());
-            if (idoc != null) {
-                idoc.field(Constants.IDENTIFIER_PROPERTY, id.getIdentifier());
-                if (id.getIdentifierDomain() != null) {
-                    idoc.field(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, id.getIdentifierDomain().getIdentifierDomainId());
-                } else {
-                    idoc.field(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, id.getIdentifierDomainId());                    
-                }
-                log.debug("An identifier with identifier " + idoc.field(Constants.IDENTIFIER_PROPERTY)
-                        + " was updated.");
-                db.getRawGraph().save(idoc);
-            }
-        }
-        odoc.field(Constants.IDENTIFIER_EDGE_TYPE, oldIdentifiers);
-    }
-
-    private ODocument createODocumentFromIdentifier(OrientGraph db, ODocument odoc, Identifier identifier) {
-        ODocument idoc = db.getRawGraph().newInstance(IDENTIFIER_TYPE);
-        idoc.field(Constants.IDENTIFIER_PROPERTY, identifier.getIdentifier());
-        idoc.field(Constants.ENTITY_PROPERTY, odoc);
-        idoc.field(Constants.IDENTIFIER_DOMAIN_ID_PROPERTY, identifier.getIdentifierDomainId());
-        return idoc;
-    }
-
-    private Map<Long, ODocument> buildMapFromDocumentList(Set<ODocument> ids) {
-        Map<Long, ODocument> map = new HashMap<Long, ODocument>();
-        if (ids == null || ids.size() == 0) {
-            return map;
-        }
-        for (ODocument idoc : ids) {
-            Long id = OrientdbConverter.extractId(idoc);
-            map.put(id, idoc);
-        }
-        return map;
-    }
-    
-    private Map<Long, Identifier> buildMapFromList(List<Identifier> ids) {
-        Map<Long, Identifier> map = new HashMap<Long, Identifier>();
-        if (ids == null || ids.size() == 0) {
-            return map;
-        }
-        for (Identifier id : ids) {
-            map.put(id.getIdentifierId(), id);
-        }
-        return map;
     }
 
     private void updateDocumentWithRecord(ODocument odoc, Record record) {
@@ -1446,40 +1427,28 @@ public class EntityDaoOrientdb implements EntityDao
         }
     }
 
-    public synchronized void initializeStore(Entity entity) {
-        ConnectionManager connectionMgr = getConnectionManager();
-        if (schemaManager == null) {
-            schemaManager = SchemaManagerFactory.createSchemaManager(connectionMgr);
-            schemaManager.setParameter(Constants.DATA_DIRECTORY_KEY,
-                    Context.getConfiguration().getAdminConfiguration().getDataDirectory());
-        }
-        EntityStore store = getEntityStoreByName(entity.getName());
-        schemaManager.initializeSchema(entity, store);
-        connectionMgr.connect(store);
-    }
-
-        
-    private EntityStore getEntityStoreByName(String entityName) {
+    public EntityStore getEntityStoreByName(String entityName) {
         return schemaManager.getEntityStoreByName(entityName);
     }
     
     private OrientGraph connect(EntityStore entityStore) {
         return getConnectionManager().connect(entityStore);
     }
+
+    private void close(EntityStore entityStore, OrientBaseGraph db) {
+    	if (db != null) {
+    		getConnectionManager().close(entityStore, db);
+    	}
+    }
+
+    private void closeInitial(EntityStore entityStore, OrientBaseGraph db) {
+    	if (db != null) {
+    		getConnectionManager().closeInternal(entityStore, db);
+    	}
+    }
     
-    SchemaManager getSchemaManager(Entity entity) {
-        if (schemaManager == null) {
-            initializeStore(entity);
-        }
-        return schemaManager;
-    }
-
-    public static ConnectionManager getConnectionManager() {
-        return connectionManager;
-    }
-
-    public static void setConnectionManager(ConnectionManager connectionManager) {
-        EntityDaoOrientdb.connectionManager = connectionManager;
+    private String getClassName(String name) {
+        return "class:" + name;
     }
 
     private void populateInternalPropertiesForCreate(Entity entity, Record record) {

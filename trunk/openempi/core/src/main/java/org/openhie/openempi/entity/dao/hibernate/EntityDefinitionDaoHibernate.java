@@ -23,7 +23,6 @@ package org.openhie.openempi.entity.dao.hibernate;
 import java.util.List;
 
 import org.openhie.openempi.DaoException;
-import org.openhie.openempi.configuration.CustomField;
 import org.openhie.openempi.dao.hibernate.UniversalDaoHibernate;
 import org.openhie.openempi.entity.dao.EntityDefinitionDao;
 import org.openhie.openempi.model.Entity;

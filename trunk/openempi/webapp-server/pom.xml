@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
 		<artifactId>openempi-entity</artifactId>
-		<version>3.0.0-beta</version>
+		<version>3.0.0</version>
 		<relativePath>../pom.xml</relativePath>		
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
@@ -75,11 +75,6 @@
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
 			<artifactId>openempi-entity-file-loader-map</artifactId>
-			<version>${release.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-entity-record-cache</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>

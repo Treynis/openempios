@@ -56,6 +56,7 @@ public class RecordCacheDaoImpl implements RecordCacheDao
         return record;
     }
 
+    /*
     public void loadAllRecordsSync(RecordCacheEntityInstance cache) {
         Entity entity = cache.getEntity();
         StringBuffer sb = new StringBuffer("select");
@@ -76,7 +77,7 @@ public class RecordCacheDaoImpl implements RecordCacheDao
             for (ODocument odoc : list) {
                 ORID orid = odoc.getIdentity();
                 Record record = OrientdbConverter.convertODocumentToRecord(getEntityDao(entity).getEntityCacheManager(), entity, odoc);
-                record.setRecordId(orid.getClusterPosition().longValueHigh());
+                record.setRecordId(orid.getClusterPosition());
                 cache.addRecord(record);
                 count++;
             }
@@ -84,7 +85,7 @@ public class RecordCacheDaoImpl implements RecordCacheDao
             log.info("Loaded a block of " + list.size() + " records into the cache.");
         }
         log.info("Loaded " + count + " records into the cache.");
-    }
+    }*/
 
     public void loadAllRecords(final RecordCacheEntityInstance cache) {
         final Entity entity = cache.getEntity();
@@ -98,7 +99,7 @@ public class RecordCacheDaoImpl implements RecordCacheDao
                 ODocument odoc = (ODocument) iRecord;
                 ORID orid = odoc.getIdentity();
                 Record record = OrientdbConverter.convertODocumentToRecord(getEntityDao(entity).getEntityCacheManager(), entity, odoc);
-                record.setRecordId(orid.getClusterPosition().longValueHigh());
+                record.setRecordId(orid.getClusterPosition());
                 cache.addRecord(record);                
                 return false;
             }

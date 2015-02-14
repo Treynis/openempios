@@ -145,6 +145,9 @@ public class ExactMatchingConfigurationLoader implements ConfigurationLoader
 		matchField.setFieldName(field.getFieldName());
 		if (field.getComparatorFunction() != null) {
 			matchField.setComparatorFunction(buildComparatorFunctionFromXml(field.getComparatorFunction()));
+			if (field.getMatchThreshold() == 0) {
+				field.setMatchThreshold(1.0f);
+			}
 			matchField.setMatchThreshold(field.getMatchThreshold());
 		}
 		return matchField;

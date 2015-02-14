@@ -82,8 +82,8 @@
 			<xs:element name="field-name" type="xs:string"/>
 			<xs:element name="agreement-probability" type="xs:float" minOccurs="0"/>
 			<xs:element name="disagreement-probability" type="xs:float" minOccurs="0"/>
-			<xs:element name="comparator-function" type="mpi:comparator-function" minOccurs="0"/>
-			<xs:element name="match-threshold" type="xs:float" minOccurs="0"/>
+			<xs:element name="comparator-function" type="mpi:comparator-function" minOccurs="1" maxOccurs="1"/>
+			<xs:element name="match-threshold" type="xs:float" minOccurs="1" maxOccurs="1"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="vector-classification">

@@ -23,6 +23,7 @@ package org.openhie.openempi.blocking.basicblockinghp.dao.orientdb;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -59,13 +60,13 @@ public class BlockingDaoOrientdb implements BlockingDao
 		log.debug("Counting block sizes for round " + round.getName() + " using query:\n" + query);
 		
 		List<Long> valueCounts = new ArrayList<Long>();
-		List<ODocument> results = getEntityDao(entity).executeQuery(entity, query);
+		List<Map<String,Object>> results = getEntityDao(entity).executeQuery(entity, query);
 		if (results == null || results.size() == 0) {
 			return 0L;
 		}
-		for (ODocument odoc : results) {
-			if (odoc.field("c") != null && ((Long) odoc.field("c")) > 0) {
-				valueCounts.add((Long) odoc.field("c"));
+		for (Map<String,Object> odoc : results) {
+			if (odoc.get("c") != null && ((Long) odoc.get("c")) > 0) {
+				valueCounts.add((Long) odoc.get("c"));
 			}
 		}
 		long totalRecordPairCount=0;
@@ -125,15 +126,15 @@ public class BlockingDaoOrientdb implements BlockingDao
 	    StringBuilder sb = new StringBuilder("select count(*) from ");
 	    sb.append(roundClass.getRoundClass().getName());
 	    log.debug("Retrieving the count of blocking data using: " + sb.toString());
-	    List<ODocument> countDoc = getEntityDao(entity).executeQuery(entity, sb.toString());
-	    Long count = (Long) countDoc.get(0).field("count");
+	    List<Map<String,Object>> countDoc = getEntityDao(entity).executeQuery(entity, sb.toString());
+	    Long count = (Long) countDoc.get(0).get("count");
 	    return count;
 	}
 	
 	@SuppressWarnings("unchecked")
     public Set<Long> loadBlockData(Entity entity, String blockRecordId) {
-	    ODocument odoc = (ODocument) getEntityDao(entity).loadObject(entity, blockRecordId);
-        Set<Long> rids = (Set<Long>) odoc.field(RECORDIDS_FIELD);
+	    Map<String,Object> odoc = getEntityDao(entity).loadObject(entity, blockRecordId);
+        Set<Long> rids = (Set<Long>) odoc.get(RECORDIDS_FIELD);
         return rids;
 	}
 
@@ -149,13 +150,13 @@ public class BlockingDaoOrientdb implements BlockingDao
             .append("'");
         String query = sb.toString();
         log.debug("Retrieving block data using: " + query);
-        List<ODocument> list = getEntityDao(entity).executeQuery(entity, query);
+        List<Map<String,Object>> list = getEntityDao(entity).executeQuery(entity, query);
         Record record=null;
         if (list != null && list.size() > 0) {
             // There should only be one of these
-            for (ODocument odoc : list) {
-                String key = (String) odoc.field(BLOCKINGKEYVALUE_FIELD);
-                Set<Long> rids = (Set<Long>) odoc.field(RECORDIDS_FIELD);
+            for (Map<String,Object> odoc : list) {
+                String key = (String) odoc.get(BLOCKINGKEYVALUE_FIELD);
+                Set<Long> rids = (Set<Long>) odoc.get(RECORDIDS_FIELD);
                 record = new Record(roundClass.getRoundClass());
                 OrientdbConverter.extractIdAndCluster(odoc, record);
                 record.set(BLOCKINGKEYVALUE_FIELD, key);
@@ -174,12 +175,13 @@ public class BlockingDaoOrientdb implements BlockingDao
             .append(".size() > 1");
         String query = sb.toString();
         log.debug("Retrieving block data using: " + query);
-        List<ODocument> list = getEntityDao(entity).executeQuery(entity, query);
+        List<Map<String,Object>> list = getEntityDao(entity).executeQuery(entity, query);
         Set<String> rids = new HashSet<String>();
         if (list != null && list.size() > 0) {
             // There should only be one of these
-            for (ODocument odoc : list) {
-                ODocument doc = odoc.field("rid");
+            for (Map<String,Object> record : list) {
+//                ODocument doc = odoc.field("rid");
+                ODocument doc = (ODocument) record.get("rid");
                 String key = doc.getIdentity().toString();
                 rids.add(key);
             }

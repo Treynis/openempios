@@ -86,7 +86,6 @@ public class UserManagerImpl extends UniversalManagerImpl implements UserManager
     
     public String createSession(User user) {
     	String sessionKey = SessionGenerator.generateSessionId();
-    	log.warn("Got a session key of " + sessionKey);
     	UserSession userSession = new UserSession(sessionKey, user, new java.util.Date());
     	userSessionDao.saveUserSession(userSession);
     	return sessionKey;
@@ -98,12 +97,6 @@ public class UserManagerImpl extends UniversalManagerImpl implements UserManager
 			log.warn("Authentication attempt failed due to missing credentials: username=" + username + "; password=" + password);
 			throw new AuthenticationException("Authentication failed; no credentials were provided in the request.");
 		}
-				
-//    	User user = (User) getUserByUsername(username);
-//		if (user == null) {
-//			log.warn("Authentication attempt with unknown username " + username);
-//			throw new AuthenticationException("Authentication failed.");
-//		}
 
 		User user = null;
         try {
@@ -131,21 +124,25 @@ public class UserManagerImpl extends UniversalManagerImpl implements UserManager
     }
     
     public User authenticate(String sessionKey) throws AuthenticationException {
-    	log.debug("Authentication request for user with session id: " + sessionKey);
+        if (log.isDebugEnabled()) {
+            log.debug("Authentication request for user with session id: " + sessionKey);
+        }
     	UserSession userSession = userSessionDao.findBySessionKey(sessionKey);
     	if (userSession == null) {
     		log.warn("Authentication attempt failed due to invalid session key: " + sessionKey);
     		throw new AuthenticationException("Invalid session key");
     	}
-    	log.debug("Authentication attempt succeeded for user: " + userSession.getUser().getUsername() + " and session key " + sessionKey);
+        if (log.isDebugEnabled()) {
+            log.debug("Authentication attempt succeeded for user: " + userSession.getUser().getUsername() + " and session key " + sessionKey);
+        }
+        userSession.setDateModified(new java.util.Date());
+        SessionUpdater updater = new SessionUpdater(userSession);
+        Context.executeTask(updater);
     	return userSession.getUser();
     }
     
-    /** 
-     * TODO Need to add support for a logout operation that removes the session from the system
-     */
-    public void logout(UserSession userSession) {
-    	
+    public void logout(String sessionKey) {
+    	userSessionDao.removeUserSession(sessionKey);
     }
     
     public Set<Permission> getUserPermissions(User user) {
@@ -327,5 +324,21 @@ public class UserManagerImpl extends UniversalManagerImpl implements UserManager
     @Required
     public void setRoleDao(RoleDao roleDao) {
         this.roleDao = roleDao;
+    }
+    
+    public class SessionUpdater implements Runnable
+    {
+        private UserSession session;
+        
+        public SessionUpdater(UserSession session) {
+            this.session = session;
+        }
+        
+        public void run() {
+            userSessionDao.saveUserSession(session);
+            if (log.isDebugEnabled()) {
+                log.debug("Updated the last modification time for session: " + session);
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿INSERT INTO entity (entity_version_id,entity_id,version_id,name,description,display_name,date_created,created_by_id) VALUES ('2','1','1','person','person entity definition model','person','2013-10-29 10:38:18.038','-1');
+﻿
+INSERT INTO entity (entity_version_id,entity_id,version_id,name,description,display_name,synchronous_matching,date_created,created_by_id) VALUES ('2','1','1','person','person entity definition model','person','true','2013-10-29 10:38:18.038','-1');
 
 INSERT INTO entity_attribute_group (entity_attribute_group_id,name,display_name,display_order,entity_version_id) VALUES ('1','contactInfo','Contact Info','2','2');
 INSERT INTO entity_attribute_group (entity_attribute_group_id,name,display_name,display_order,entity_version_id) VALUES ('2','recordManagement','Record Management','5','2');

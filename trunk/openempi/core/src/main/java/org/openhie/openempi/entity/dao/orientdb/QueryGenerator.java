@@ -72,7 +72,9 @@ public class QueryGenerator
 			}
 			EntityAttribute attrib = entity.findAttributeByName(property);
 			if (attrib == null) {
-				log.error("This should not occur; a query record has property " + property + " that is not defined in the entity: " + entity.getName());
+			    if (log.isDebugEnabled()) {
+			        log.error("Internal property " + property + " will not be included in query for: " + entity.getName());
+			    }
 				continue;
 			}
 			addCriterionToQuery(attrib, record.get(property), query, params);
@@ -125,7 +127,7 @@ public class QueryGenerator
 
 	public static String generateQueryForRecordLinks(Entity entity, String recordId) {
 	    // select from (traverse bothe() from 11:3077) where source = 3 and @class = 'recordLink';
-		StringBuffer query = new StringBuffer("select from (traverse bothe() from ");
+		StringBuffer query = new StringBuffer("select from (traverse * from ");
         query.append(recordId)
             .append(") where @class = '")
             .append(Constants.RECORD_LINK_TYPE)
@@ -134,7 +136,7 @@ public class QueryGenerator
 	}
 
 	public static String generateQueryForRecordLinks(Entity entity, String recordId, RecordLinkState state) {
-        StringBuffer query = new StringBuffer("select from (traverse bothe() from ");
+        StringBuffer query = new StringBuffer("select from (traverse * from ");
         query.append(recordId)
             .append(") where @class = '")
             .append(Constants.RECORD_LINK_TYPE)
@@ -164,9 +166,11 @@ public class QueryGenerator
 			}
 			EntityAttribute attrib = entity.findAttributeByName(property);
 			if (attrib == null) {
-				log.error("This should not occur; a query record has property " + property + " that is not defined in the entity: " + entity.getName());
-				continue;
-			}
+                if (log.isDebugEnabled()) {
+                    log.error("Internal property " + property + " will not be included in query for: " + entity.getName());
+                }
+                continue;
+            }
 			addCriterionToQuery(attrib, record.get(property), query, params);
 		}
 
@@ -379,6 +383,12 @@ public class QueryGenerator
 				.append(":").append((attrib.getName()));
                 params.put(attrib.getName(), value);
 				break;
+			case LINKSET:
+				throw new RuntimeException("Datatype " + attrib.getDatatype().getDatatypeCd() +
+						" is not supported.");
+			case EMBEDDEDSET:
+				throw new RuntimeException("Datatype " + attrib.getDatatype().getDatatypeCd() +
+						" is not supported.");
 		}
 	}
 

@@ -26,14 +26,14 @@
 	xmlns="http://configuration.openempi.openhie.org/fileloadermap"
 	xmlns:fl="http://configuration.openempi.openhie.org/fileloadermap"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	delimeter=","
+	delimiter=","
 	header-first-line="true">
 	<fields>
 		<field
 			datatype="String"
 			one-to-many="true"
 			is-identifier="true"
-			delimeter=":">
+			delimiter=":">
 			<subfields>
 				<field
 					datatype="String">
@@ -61,7 +61,7 @@
 			datatype="String"
 			one-to-many="true"
 			is-identifier="true"
-			delimeter=":">
+			delimiter=":">
 			<subfields>
 				<field
 					datatype="String">
@@ -89,7 +89,7 @@
 			datatype="String"
 			one-to-many="true"
 			is-identifier="true"
-			delimeter=":">
+			delimiter=":">
 			<subfields>
 				<field
 					datatype="String">
@@ -117,7 +117,7 @@
 			datatype="String"
 			one-to-many="true"
 			is-identifier="true"
-			delimeter=":">
+			delimiter=":">
 			<subfields>
 				<field
 					datatype="String">

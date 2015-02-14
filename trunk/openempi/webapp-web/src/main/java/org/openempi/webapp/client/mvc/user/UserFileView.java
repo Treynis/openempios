@@ -188,13 +188,13 @@ public class UserFileView extends View
 		column.setWidth(200);
 		configs.add(column);
 
-		column = new ColumnConfig("dateCreated", "Date Created", 250);
+		column = new ColumnConfig("dateCreated", "Date Created", 200);
 //		column.setAlignment(HorizontalAlignment.RIGHT);
 		column.setDateTimeFormat(DateTimeFormat.getFullDateTimeFormat());
 		configs.add(column);
 
-		column = new ColumnConfig("imported", "Imported?", 70);
-		column.setAlignment(HorizontalAlignment.RIGHT);
+		column = new ColumnConfig("imported", "Imported?", 80);
+//		column.setAlignment(HorizontalAlignment.RIGHT);
 		configs.add(column);
 
 //		column = new ColumnConfig("rowsImported", "Rows Imported", 115);
@@ -454,7 +454,7 @@ public class UserFileView extends View
 				}
 
 
-	     		showWaitCursor();
+//	     		showWaitCursor();
 
 	        	List<UserFileWeb> userFileEntries = grid.getSelectionModel().getSelectedItems();
 

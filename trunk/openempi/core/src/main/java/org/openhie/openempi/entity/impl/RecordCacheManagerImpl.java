@@ -32,10 +32,11 @@ import org.openhie.openempi.model.User;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
+import net.sf.ehcache.Status;
 import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 
-public class EntityCacheManagerImpl implements RecordCacheManager
+public class RecordCacheManagerImpl implements RecordCacheManager
 {
 	private static final String IDENTIFIER_DOMAIN_CACHE = "identifierDomainCache";
 	private static final String USER_CACHE = "userCache";
@@ -77,6 +78,18 @@ public class EntityCacheManagerImpl implements RecordCacheManager
 			initialized = true;
 		}
 	}
+	
+	public synchronized void destroy() {
+	    if (userCache != null) {
+            cacheManager.removeCache(userCache.getName());
+	    }
+        if (identifierDomainCache != null) {
+            cacheManager.removeCache(identifierDomainCache.getName());
+        }
+        if (cacheManager.getStatus() != Status.STATUS_SHUTDOWN) {
+            cacheManager.shutdown();
+        }
+	}
 
 	public IdentifierDomain getIdentifierDomain(Integer identifierDomainId) {
 		Element element = identifierDomainCache.get(identifierDomainId);
@@ -86,10 +99,10 @@ public class EntityCacheManagerImpl implements RecordCacheManager
 		        addOrUpdateCacheEntry(identifierDomainCache, domain.getIdentifierDomainId(), domain);
 		        return domain;
 		    }
-			log.warn("Unable to find identifier domain with id: " + identifierDomainId);
+//			log.warn("Unable to find identifier domain with id: " + identifierDomainId);
 			return null;
 		}
-		return (IdentifierDomain) element.getValue();
+		return (IdentifierDomain) element.getObjectValue();
 	}
 
 	public User getUser(Long userId) {
@@ -98,7 +111,7 @@ public class EntityCacheManagerImpl implements RecordCacheManager
 			log.warn("Unable to find user with id: " + userId);
 			return null;
 		}
-		return (User) element.getValue();
+		return (User) element.getObjectValue();
 	}
 	
 	private void populateUserCache(Cache cache) {

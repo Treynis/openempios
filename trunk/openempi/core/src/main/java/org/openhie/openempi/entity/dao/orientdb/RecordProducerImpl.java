@@ -18,32 +18,38 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.openhie.openempi.dao;
+package org.openhie.openempi.entity.dao.orientdb;
 
-import java.util.List;
+import org.openhie.openempi.entity.dao.EntityDao;
+import org.openhie.openempi.entity.impl.AbstractRecordProducer;
 
-import org.openhie.openempi.model.JobEntry;
-import org.openhie.openempi.model.JobEntryEventLog;
-import org.openhie.openempi.model.JobStatus;
-import org.openhie.openempi.model.JobType;
-
-public interface JobEntryDao extends UniversalDao
+public class RecordProducerImpl extends AbstractRecordProducer
 {
-    public JobEntry createJobEntry(JobEntry jobEntry);
+    private EntityDao entityDao;
+    private int blockSize;
 
-    public List<JobEntry> getJobEntries();
+    public RecordProducerImpl() {
 
-    public JobEntry getJobEntry(JobEntry jobEntry);
+    }
 
-    public JobEntry updateJobEntry(JobEntry jobEntry);
+    @Override
+    public void run() {
+        entityDao.loadRecords(getEntity(), getQueueList(), getBlockSize());
+    }
 
-    public void deleteJobEntry(JobEntry jobEntry);
+    public int getBlockSize() {
+        return blockSize;
+    }
 
-    public void logJobEntryEvent(JobEntry jobEntry, JobEntryEventLog eventLog);
+    public void setBlockSize(int blockSize) {
+        this.blockSize = blockSize;
+    }
 
-    public List<JobEntryEventLog> getJobEntryEventLogs(Integer jobEntryId);
+    public EntityDao getEntityDao() {
+        return entityDao;
+    }
 
-    public List<JobType> getJobTypes();
-
-    public List<JobStatus> getJobStatuses();
+    public void setEntityDao(EntityDao entityDao) {
+        this.entityDao = entityDao;
+    }
 }

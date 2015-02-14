@@ -58,12 +58,13 @@ public class ConcurrentFileLoader extends AbstractFileLoader
     private UserContext userContext;
 
     public ConcurrentFileLoader() {
-        userContext = Context.getUserContext();
+
     }
 
     @Override
     public void init() {
         log.info("Initializing the Concurrent File Loader.");
+        userContext = Context.getUserContext();
     }
 
     @Override
@@ -122,7 +123,9 @@ public class ConcurrentFileLoader extends AbstractFileLoader
         }
 
         public void run() {
-            log.info("Processing record: " + lineRecord);
+            if (log.isDebugEnabled()) {
+                log.info("Processing record: " + lineRecord);
+            }
             boolean skipHeaderLine = false;
             Context.setUserContext(userContext);
             

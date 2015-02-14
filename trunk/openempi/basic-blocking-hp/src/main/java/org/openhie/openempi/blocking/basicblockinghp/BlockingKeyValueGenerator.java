@@ -45,8 +45,8 @@ public class BlockingKeyValueGenerator
 			index++;
 		}
 		String blockingKeyValue = generateBlockingKeyValue(attributes);
-		if (log.isDebugEnabled()) {
-			log.debug("Generated BKV: " + blockingKeyValue + " using fields: " + fields + " and record: " + record);
+		if (log.isTraceEnabled()) {
+			log.trace("Generated BKV: " + blockingKeyValue + " using fields: " + fields + " and record: " + record);
 		}
 		return blockingKeyValue;
 	}

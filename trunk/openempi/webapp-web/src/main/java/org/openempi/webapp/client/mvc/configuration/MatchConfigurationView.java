@@ -853,7 +853,7 @@ public class MatchConfigurationView extends BaseEntityView
 
         TabItem attributeDataPart4Tab = new TabItem("Vector Selection");
         attributeDataPart4Tab.setLayout(new FitLayout());
-        attributeDataPart4Tab.add(VectorSelectionPanel());
+        attributeDataPart4Tab.add(createVectorSelectionPanel());
 
         tabPanel.add(attributeDataPart1Tab);
         tabPanel.add(attributeDataPart2Tab);
@@ -1356,7 +1356,7 @@ public class MatchConfigurationView extends BaseEntityView
         return cpLogging;
     }
 
-    private ContentPanel VectorSelectionPanel() {
+    private ContentPanel createVectorSelectionPanel() {
         ContentPanel cpVectorSelection = new ContentPanel();
         cpVectorSelection.setFrame(true);
         cpVectorSelection.setHeaderVisible(false);

@@ -54,8 +54,8 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
 	}
 
 	public int getAuditEventCount(final Date startDate, final Date endDate, final List<Integer> auditEventTypeCodes) {
-		return (Integer) getHibernateTemplate().execute(new HibernateCallback() {			
-			public Object doInHibernate(Session session) throws HibernateException, SQLException {
+		return (Integer) getHibernateTemplate().execute(new HibernateCallback<Integer>() {			
+			public Integer doInHibernate(Session session) throws HibernateException, SQLException {
 				Query query = buildFilterQuery(session, startDate, endDate, auditEventTypeCodes, "select count(*) from AuditEvent where 1=1 ", "");
 				int eventCount = ((Long) query.uniqueResult()).intValue();
 
@@ -68,16 +68,16 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
 		return this.filterAuditEventsPaged(startDate, endDate, auditEventTypeCodes, 0, 0);
 	}
 
-	@SuppressWarnings("unchecked")
 	public List<AuditEvent> filterAuditEventsPaged(final Date startDate, final Date endDate, final List<Integer> auditEventTypeCodes, final int firstResult, final int maxResults) {
 		if (startDate == null && endDate == null && auditEventTypeCodes == null) {
 			return new java.util.ArrayList<AuditEvent>();
 		}
 
-		return (List<AuditEvent>) getHibernateTemplate().execute(new HibernateCallback() {
-			public Object doInHibernate(Session session) throws HibernateException, SQLException {
+		return (List<AuditEvent>) getHibernateTemplate().execute(new HibernateCallback<List<AuditEvent>>() {
+			public List<AuditEvent> doInHibernate(Session session) throws HibernateException, SQLException {
 
 				Query query = buildFilterQuery(session, startDate, endDate, auditEventTypeCodes, "from AuditEvent where 1=1 ", " order by dateCreated desc");
+			    @SuppressWarnings("unchecked")
 		        List<AuditEvent> events = (List<AuditEvent>)
 		        		query
 		        			.setFirstResult(firstResult)
@@ -128,19 +128,18 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
 		return this.filterAuditEventEntriesPaged(startDate, endDate, auditEventTypeCodes, 0, 0);
 	}
 
-	@SuppressWarnings("unchecked")
 	public List<AuditEventEntry> filterAuditEventEntriesPaged(final Date startDate, final Date endDate, final List<Integer> auditEventTypeCodes, final int firstResult, final int maxResults) {
 		if (startDate == null && endDate == null && auditEventTypeCodes == null) {
 			return new java.util.ArrayList<AuditEventEntry>();
 		}
 
-		return (List<AuditEventEntry>) getHibernateTemplate().execute(new HibernateCallback() {
-			public Object doInHibernate(Session session) throws HibernateException, SQLException {
+		return (List<AuditEventEntry>) getHibernateTemplate().execute(new HibernateCallback<List<AuditEventEntry>>() {
+			public List<AuditEventEntry> doInHibernate(Session session) throws HibernateException, SQLException {
 
 				Query query = buildFilterQuery(session, startDate, endDate, auditEventTypeCodes, "from AuditEventEntry where 1=1 ", " order by dateCreated desc");
-		        List<AuditEvent> events = (List<AuditEvent>)
-		        		query
-		        			.setFirstResult(firstResult)
+		        @SuppressWarnings("unchecked")
+                List<AuditEventEntry> events = (List<AuditEventEntry>)
+		        		query.setFirstResult(firstResult)
 		        			.setMaxResults(maxResults)
 		        			.list();
 		        log.trace("Search for audit event found " + events.size() + " entries.");
@@ -151,8 +150,8 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
 	}
 
 	public int getAuditEventEntryCount(final Date startDate, final Date endDate, final List<Integer> auditEventTypeCodes) {
-		return (Integer) getHibernateTemplate().execute(new HibernateCallback() {
-			public Object doInHibernate(Session session) throws HibernateException, SQLException {
+		return (Integer) getHibernateTemplate().execute(new HibernateCallback<Integer>() {
+			public Integer doInHibernate(Session session) throws HibernateException, SQLException {
 				Query query = buildFilterQuery(session, startDate, endDate, auditEventTypeCodes, "select count(*) from AuditEventEntry where 1=1 ", "");
 				int eventCount = ((Long) query.uniqueResult()).intValue();
 
@@ -164,8 +163,8 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
     public LoggedLink getLoggedLink(final Integer loggedLinkId) {
         log.trace("Loading Logged link with id " + loggedLinkId);
         LoggedLink loggedLink =
-                (LoggedLink) getHibernateTemplate().execute(new HibernateCallback() {
-                    public Object doInHibernate(Session session) throws HibernateException, SQLException {
+                (LoggedLink) getHibernateTemplate().execute(new HibernateCallback<LoggedLink>() {
+                    public LoggedLink doInHibernate(Session session) throws HibernateException, SQLException {
                         LoggedLink pair = (LoggedLink) session.load(LoggedLink.class, loggedLinkId);
                         if (pair == null || pair.getRightRecordId() == null || pair.getLeftRecordId() == null) {
                             return pair;
@@ -179,6 +178,17 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
         return loggedLink;
     }
 
+    public void clearLoggedLinks(int entityVersionId) {
+        if (log.isDebugEnabled()) {
+            log.debug("Removing all logged links associated with entity: " + entityVersionId);
+        }
+        int deleteCount = getHibernateTemplate()
+                .bulkUpdate("delete from LoggedLink where entityId = ?", entityVersionId);
+        if (log.isDebugEnabled()) {
+            log.debug("Removed " + deleteCount + " logged links from system.");
+        }
+    }
+
     public int getLoggedLinksCount(int entityVersionId, int vectorValue) {
         int count = ((Long) getSession()
                 .createQuery("select count(*) from LoggedLink where vectorValue = " + vectorValue + " and entityId = " + entityVersionId)
@@ -188,14 +198,14 @@ public class AuditEventDaoHibernate extends UniversalDaoHibernate implements Aud
 
     public List<LoggedLink> getLoggedLinks(final int entityVersionId, final int vectorValue, final int start, final int maxResults) {
         log.trace("Retrieving logged links.");
-        @SuppressWarnings("unchecked")
         List<LoggedLink> links = (List<LoggedLink>) getHibernateTemplate()
-                .execute(new HibernateCallback() {
-                    public Object doInHibernate(Session session) throws HibernateException, SQLException {
+                .execute(new HibernateCallback<List<LoggedLink>>() {
+                    public List<LoggedLink> doInHibernate(Session session) throws HibernateException, SQLException {
                         Query query = session.createQuery("from LoggedLink where vectorValue = " + vectorValue + " and entityId = " + entityVersionId);
                         query.setFirstResult(start);
                         query.setMaxResults(maxResults);
-                        List<LoggedLink> list = query.list();
+                        @SuppressWarnings("unchecked")
+                        List<LoggedLink> list = (List<LoggedLink>) query.list();
                         return list;
                     }
                 });

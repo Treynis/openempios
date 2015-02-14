@@ -168,7 +168,7 @@ INSERT INTO permission (permission_id, permission_name, permission_description) 
 
 CREATE TABLE role_permission (
   role_id        bigint NOT NULL,
-  permission_id  integer NOT NULL,
+  permission_id  bigint NOT NULL,
   PRIMARY KEY (role_id, permission_id),
   /* Foreign keys */
   CONSTRAINT fk_permission_id

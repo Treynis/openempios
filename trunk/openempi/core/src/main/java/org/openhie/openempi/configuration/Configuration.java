@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -61,6 +62,7 @@ import org.openhie.openempi.matching.MatchingService;
 import org.openhie.openempi.matching.ShallowMatchingService;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.User;
+import org.openhie.openempi.model.Version;
 import org.openhie.openempi.service.Parameterizable;
 import org.openhie.openempi.service.impl.BaseServiceImpl;
 import org.openhie.openempi.singlebestrecord.SingleBestRecordService;
@@ -73,6 +75,7 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 	private MpiConfigDocument configuration;
 	private GlobalIdentifier globalIdentifier;
 	private AdminConfiguration adminConfiguration;
+	private Version version;
 	
 	private Map<String, Object> defaultConfigurationRegistry;
 	private Map<String, Component> extensionRegistry;
@@ -80,6 +83,7 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 
 	public void init() {
 		configureLoggingEnvironment();
+		loadVersion();
 		defaultConfigurationRegistry = new HashMap<String,Object>();
 		extensionRegistry = new HashMap<String,Component>();
 		loaderByEntity = new HashMap<String,ConfigurationLoader>();
@@ -95,6 +99,18 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		}
 	}
 
+    private void loadVersion() {
+        Properties properties = new Properties();
+        try {
+            InputStream inStream =Context.class.getClassLoader().getResourceAsStream("version.properties");
+            properties.load(inStream);
+            version  = Version.loadFromProperties(properties);
+            log.info(version);
+        } catch (Exception e) {
+            log.warn("Unable to load version.properties due to: " + e, e);
+        }
+    }
+    
 //    private void setupRecordCache() {
 //        Object obj = Context.getApplicationContext().getBean(Constants.RECORD_CACHE_SERVICE);
 //        if (obj == null) {
@@ -272,6 +288,8 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 		} else {
 			adminConfiguration.setDataDirectory(adminConfig.getDataDirectory());
 		}
+		
+		adminConfiguration.setSessionDuration(adminConfig.getSessionDuration());
 		
         if (configuration.getMpiConfig().getAdminConfiguration().getUpdateNotificationEntries() != null
                 && configuration.getMpiConfig().getAdminConfiguration().getUpdateNotificationEntries()
@@ -723,6 +741,10 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
     private String generateLoaderKey(ComponentType type, String entityName) {
         String key = type.componentTypeName() + "-" + entityName;
         return key;
+    }
+    
+    public Version getVersion() {
+        return version;
     }
 	
 	public String getConfigFile() {

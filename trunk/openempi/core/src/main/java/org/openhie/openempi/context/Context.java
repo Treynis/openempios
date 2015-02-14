@@ -46,6 +46,7 @@ import org.openhie.openempi.cluster.ClusterManager;
 import org.openhie.openempi.configuration.Configuration;
 import org.openhie.openempi.configuration.ScheduledTaskEntry;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
+import org.openhie.openempi.entity.ForEachRecordConsumer;
 import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.RecordQueryService;
@@ -77,6 +78,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 public class Context implements ApplicationContextAware
 {
+    private static final String FOR_EACH_RECORD_CONSUMER = "forEachRecordConsumer";
     protected static final Log log = LogFactory.getLog(Context.class);
 	private static final int THREAD_POOL_SIZE = 5;
 	private static final int SCHEDULER_THREAD_POOL_SIZE = 5;
@@ -129,7 +131,7 @@ public class Context implements ApplicationContextAware
 		try {
 			applicationContext = new ClassPathXmlApplicationContext(getConfigLocationsAsArray());
 			applicationContext.getBean("context");
-			startCluster();
+            startCluster();
 			configuration.init();
 			threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 			scheduler = Executors.newScheduledThreadPool(SCHEDULER_THREAD_POOL_SIZE);
@@ -168,7 +170,6 @@ public class Context implements ApplicationContextAware
         for (BlockingService service : blockingServiceList) {
             stopBlockingService(service);
         }
-        stopRecordCacheService(null);
 		stopPersistenceService(null);
 		stopThreadPool();
 		clusterManager.stop();
@@ -201,7 +202,9 @@ public class Context implements ApplicationContextAware
 		}
 		observable.setChanged();
 		observable.notifyObservers(eventData);
-		log.info("Notified observers of the occurence of an " + eventType.name() + " event.");
+		if (log.isDebugEnabled()) {
+		    log.debug("Notified observers of the occurence of an " + eventType.name() + " event.");
+		}
 	}
 	
 	public static void registerObserver(Observer observer, ObservationEventType eventType) {
@@ -211,7 +214,9 @@ public class Context implements ApplicationContextAware
 			return;
 		}
 		observable.addObserver(observer);
-		log.info("Added event observer: " + observer + " for event of type " + eventType.name());
+        if (log.isDebugEnabled()) {
+            log.debug("Added event observer: " + observer + " for event of type " + eventType.name());
+        }
 	}
 	
 	public static void unregisterObserver(Observer observer, ObservationEventType eventType) {
@@ -221,7 +226,9 @@ public class Context implements ApplicationContextAware
 			return;
 		}
 		observable.deleteObserver(observer);
-		log.info("Removed event observer: " + observer + " for event of type " + eventType.name());
+        if (log.isDebugEnabled()) {
+            log.debug("Removed event observer: " + observer + " for event of type " + eventType.name());
+        }
 	}
 	
 	private static void stopScheduledTasks() {
@@ -323,10 +330,11 @@ public class Context implements ApplicationContextAware
 	}
 
 	private static void addExtensionContextsFromFile(ArrayList<String> configFiles) {
+	    Scanner scanner = null;
 		try {
 			String filename = getOpenEmpiHome() + "/conf/" + getExtensionsContextsPropertiesFilename();
 			log.debug("Attempting to load extension contexts from " + filename);
-			Scanner scanner = new Scanner(new File(filename));
+			scanner = new Scanner(new File(filename));
 			while (scanner.hasNext()) {
 			    String line = scanner.nextLine();
 			    if (line != null && line.startsWith("#")) {
@@ -338,6 +346,10 @@ public class Context implements ApplicationContextAware
 		} catch (Exception e) {
 			log.warn("Unable to load the extension contexts properties file; will resort to System property. Error: " + e, e);
 			return;
+		} finally {
+		    if (scanner != null) {
+		        scanner.close();
+		    }
 		}
 	}
 
@@ -488,6 +500,17 @@ public class Context implements ApplicationContextAware
 		return future;
 	}
 	
+	public static ForEachRecordConsumer getForEachRecordConsumer() {
+	    try {
+	        ForEachRecordConsumer forEach = (ForEachRecordConsumer)
+	                getApplicationContext().getBean(FOR_EACH_RECORD_CONSUMER);
+	        return forEach;
+	    } catch (Throwable t) {
+	        log.error("Failed while attempting to setup a For Each Record Processor: " + t, t);
+	        throw new RuntimeException(t);
+	    }
+	}
+
 	public static Future<Object> scheduleRunnable(Runnable runnable) {
 	    try {
 	        Future<Object> future = threadPool.submit(runnable, new Object());

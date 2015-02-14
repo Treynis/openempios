@@ -230,6 +230,10 @@ public class AuditEventServiceImpl extends BaseServiceImpl implements AuditEvent
 		return messageLogDao.filterMessageLogEntries(startDate, endDate, messageType, firstResult, maxResults);
 	}
 
+	public void clearLoggedLinks(int entityVersionId) {
+	    auditEventDao.clearLoggedLinks(entityVersionId);
+	}
+	
     public int getLoggedLinksCount(int entityVersionId, int vectorValue) {
         return auditEventDao.getLoggedLinksCount(entityVersionId, vectorValue);
     }

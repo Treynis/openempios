@@ -28,6 +28,8 @@ public interface AdminService extends RemoteService
 {
 	public String assignGlobalIdentifiers(EntityWeb entity) throws Exception;
     
+	public String clearLoggedLinks(EntityWeb entity) throws Exception;
+	
 	public String createEntityIndexes(EntityWeb entity) throws Exception;
     
     public String dropEntityIndexes(EntityWeb entity) throws Exception;

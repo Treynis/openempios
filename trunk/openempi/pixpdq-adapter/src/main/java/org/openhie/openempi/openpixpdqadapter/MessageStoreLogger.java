@@ -58,6 +58,9 @@ public class MessageStoreLogger extends BasePixPdqAdapter implements IMessageSto
 		if (log.isTraceEnabled()) {
 			log.trace("Logging the message: " + entry);
 		}
+		if (entry.getIncomingMessage() == null) {
+		    entry.setIncomingMessage("");
+		}
 		auditService.saveMessageLogEntry(entry);
 	}
 }

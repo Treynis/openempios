@@ -28,6 +28,8 @@ public interface AdminServiceAsync
 {
 	public void assignGlobalIdentifiers(EntityWeb entity, AsyncCallback<String> callback);
 
+	public void clearLoggedLinks(EntityWeb entity, AsyncCallback<String> callback);
+
 	public void createEntityIndexes(EntityWeb entity, AsyncCallback<String> callback);
 
     public void dropEntityIndexes(EntityWeb entity, AsyncCallback<String> callback);

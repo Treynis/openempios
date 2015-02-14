@@ -40,11 +40,11 @@ public class FileLoaderMapTest extends BaseServiceTestCase
 	        File dir = new File(Context.getOpenEmpiHome() + "/conf");
 	        File file = new File(dir, "file-loader-map.xml");
 	        FileLoaderMap fileMap = (FileLoaderMap) u.unmarshal(new FileInputStream(file));
-	        log.debug("File will be parsed using the delimeter: " + fileMap.getDelimeter());
+	        log.debug("File will be parsed using the delimeter: " + fileMap.getDelimiter());
 	        for (int i=0; i < fileMap.getFields().getField().size(); i++) {
 	        	FieldType field = fileMap.getFields().getField().get(i);
 	        	if (field.isOneToMany()) {
-	        		log.debug("Field will be decomposed into subfields using delimeter: " + field.getDelimeter());
+	        		log.debug("Field will be decomposed into subfields using delimeter: " + field.getDelimiter());
 	        		for (FieldType subfield : field.getSubfields().getField()) {
 		        		log.debug("Will import field " + subfield.getFieldName() + " which should appear at column " + i);	        			
 	        		}

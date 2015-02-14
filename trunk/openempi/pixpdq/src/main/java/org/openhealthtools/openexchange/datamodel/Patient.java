@@ -43,7 +43,8 @@ public class Patient {
 	/* a list of patient identifiers of this patient*/
 	private List<PatientIdentifier> patientIds = new ArrayList<PatientIdentifier>();
 
-	private PersonName  patientName; 
+	private String     recordId;
+	private PersonName  patientName;
 	private PersonName  mothersMaidenName;
     private Calendar    birthDateTime;
     private SexType     administrativeSex;
@@ -851,10 +852,10 @@ public class Patient {
 		
 		return true;
 	}
+	
 	public void setPatientIds(List<PatientIdentifier> patientIds) {
 		this.patientIds = patientIds;
 	}
-
 
 	public void setPhoneNumbers(List<PhoneNumber> phoneNumbers) {
 		this.phoneNumbers = phoneNumbers;
@@ -864,7 +865,6 @@ public class Patient {
 	public void setAddresses(List<Address> addresses) {
 		this.addresses = addresses;
 	}
-
 
 	public void setVisits(List<Visit> visits) {
 		this.visits = visits;
@@ -878,5 +878,11 @@ public class Patient {
         this.nextOfKin = nextOfKin;
     }
 
-    
+	public String getRecordId() {
+		return recordId;
+	}
+
+	public void setRecordId(String recordId) {
+		this.recordId = recordId;
+	}
 }

@@ -78,6 +78,51 @@
     </Actor>
 
     <!--=========================================================-->     
+    <!--The PDQm Supplier actor configuration                   -->
+    <!--=========================================================-->     
+    <Actor name="pdsupfhir" type="PdSupplierFhir">
+      <Description>Paient Demographics Supplier (PDQm) HL7 FHIR</Description>
+      <Identifier name="ReceivingApplication">
+         <UniversalId>1.3.6.1.4.1.21367.13.10.360</UniversalId>
+         <UniversalIdType>ISO</UniversalIdType>
+      </Identifier>
+      <Identifier name="ReceivingFacility">
+         <UniversalId>1.3.6.1.4.1.21367.13.50.5360</UniversalId>
+         <UniversalIdType>ISO</UniversalIdType>
+      </Identifier>
+      <!-- Configuration file for each client domains -->
+      <IncludeFile name="PixPdqClientDomains.xml" />
+
+      <!--QueryProperties - (PropertySet) optional:
+         This set of properties specifies global characteristics of the PDQ
+         server over this connection.  The allowed parts are:
+             WildcardAfter - (String) optional: Specifies the wildcard value this connection
+         expects at the end of a value.  If this value is not supplied, it defaults to *.
+             WildcardBefore - (String) optional: Specifies the wildcard value this connection
+         expects at the end of a value.   If this value is not supplied, it defaults to *.
+             ContinuationQueryByOpenPIXPDQ - (boolean) optional: If value=true, the continuation
+         query is handled by OpenPIXPDQ, otherwise by pluggable EMPI. If this value is not 
+         supplier, it defaults to true. 
+             ContinuationPointerTimeout - (Long) optional: Specifies the timeout in milliseconds
+         of a continuation pointer.  Defaults to 600000 milliseconds(10 minutes). This property
+         is used only when ContinuationQueryByOpenPIXPDQ is set to true.
+       -->
+      <PropertySet name="QueryProperties">
+        <Entry name="WildcardBefore" value="*"/>
+        <Entry name="WildcardAfter" value="*"/>
+        <Entry name="ContinuationQueryByOpenPIXPDQ" value="true"/>
+        <Entry name="ContinuationPointerTimeout" value="600000"/>
+      </PropertySet>
+      <!--DateTimeFormat -(PropertySet) optional:
+         BirthdateFormat - (String) optional: Specifies the format of birthdate this connection
+         expects for a birthdate field.   If this value is not supplied, it defaults to "yyyyMMdd".
+      -->
+      <PropertySet name="DateTimeFormat">
+        <Entry name="Birthdate" value="yyyyMMdd"/>
+      </PropertySet>
+    </Actor>
+
+    <!--=========================================================-->     
     <!--The PDQ Supplier v3 actor configuration                   -->
     <!--=========================================================-->     
     <Actor name="pdsupV3" type="PdSupplierV3">

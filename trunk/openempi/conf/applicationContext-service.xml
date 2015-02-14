@@ -251,7 +251,13 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		<property name="entityDefinitionService" ref="entityDefinitionManagerService"/>
 		<property name="entityCacheManager" ref="entityCacheManager"/>
 	</bean>
-
+	
+	<bean id="forEachRecordConsumer"
+		class="org.openhie.openempi.entity.impl.ForEachRecordConsumerImpl"
+		scope="prototype">
+		<property name="recordProducer" ref="recordProducer" />
+	</bean>
+	
 	<bean id="dirtyRecordMatcher"
 		class="org.openhie.openempi.entity.impl.DirtyRecordMatcher">
 		<property name="identifierDomainDao" ref="identifierDomainDao" />		
@@ -311,6 +317,13 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 	<bean id="jobQueueProcessor"
 		class="org.openhie.openempi.jobqueue.impl.JobQueueProcessor">
 		<property name="jobEntryDao" ref="jobEntryDao" />
+		<property name="username" value="admin"/>
+		<property name="password" value="admin"/>
+	</bean>
+
+	<bean id="userSessionRemover"
+		class="org.openhie.openempi.service.impl.UserSessionRemover">
+		<property name="userSessionDao" ref="userSessionDao" />
 		<property name="username" value="admin"/>
 		<property name="password" value="admin"/>
 	</bean>

@@ -70,14 +70,9 @@ public class RestAuthFilterFactory implements ResourceFilterFactory
             log.debug("Url invoked is: " + uriInfo.getPath());
 
             // We need to let the caller get through to the authentication call
-            if (uriInfo.getPath() != null
-                    && (uriInfo.getPath().equalsIgnoreCase("security-resource/authenticate")
-                            || uriInfo.getPath().startsWith("records")
-                            || uriInfo.getPath().startsWith("record-links")                            
-                            || uriInfo.getPath().startsWith("entities")
-                            || uriInfo.getPath().startsWith("entity-attributes")
-                            || uriInfo.getPath().startsWith("identifier-domains")
-                            || uriInfo.getPath().equalsIgnoreCase("application.wadl"))) {
+            if (uriInfo.getPath() != null &&
+                    (uriInfo.getPath().equalsIgnoreCase("security-resource/authenticate") ||
+            		 uriInfo.getPath().startsWith("application.wadl"))) {
                 log.debug("Request permitted due to URI being present in the exclusion list.");
                 return request;
             }

@@ -92,9 +92,6 @@ import org.openhealthtools.openexchange.datamodel.PhoneNumber;
 import org.openhealthtools.openexchange.datamodel.SharedEnums.SexType;
 import org.openhealthtools.openpixpdq.api.PdqQuery;
 import org.openhealthtools.openpixpdq.common.ContinuationPointer;
-import org.openhealthtools.openpixpdq.common.PixPdqException;
-import org.openhie.openempi.openpixpdq.v3.impl.PdqSupplierV3;
-
 
 public class Hl7ConversionHelper
 {
