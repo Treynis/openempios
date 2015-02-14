@@ -34,9 +34,6 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
 
@@ -59,6 +56,7 @@ public class UserSession implements Serializable
 	private String sessionKey;
 	private User user;
 	private Date dateCreated;
+	private Date dateModified;
 	
 	/** default constructor */	
 	public UserSession() {
@@ -70,6 +68,7 @@ public class UserSession implements Serializable
 		this.sessionKey = sessionKey;
 		this.user = user;
 		this.dateCreated = dateCreated;
+		this.dateModified = dateCreated;
 	}
 	
 	/** full constructor */
@@ -78,6 +77,7 @@ public class UserSession implements Serializable
 		this.sessionKey = sessionKey;
 		this.user = user;
 		this.dateCreated = dateCreated;
+        this.dateModified = dateCreated;
 	}
 
 	// Property accessors
@@ -101,7 +101,7 @@ public class UserSession implements Serializable
 		this.sessionKey = sessionKey;
 	}
 
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "user_id", nullable = false)
 	public User getUser() {
 		return user;
@@ -121,22 +121,44 @@ public class UserSession implements Serializable
 		this.dateCreated = dateCreated;
 	}
 
-	@Override
-	public boolean equals(final Object other) {
-		if (!(other instanceof UserSession))
-			return false;
-		UserSession castOther = (UserSession) other;
-		return new EqualsBuilder().append(sessionKey, castOther.sessionKey).isEquals();
-	}
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "date_modified", nullable = true, length = 8)
+    public Date getDateModified() {
+        return dateModified;
+    }
+
+    public void setDateModified(Date dateModified) {
+        this.dateModified = dateModified;
+    }
 
 	@Override
-	public int hashCode() {
-		return new HashCodeBuilder().append(sessionKey).toHashCode();
-	}
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        UserSession other = (UserSession) obj;
+        if (sessionKey == null) {
+            if (other.sessionKey != null)
+                return false;
+        } else if (!sessionKey.equals(other.sessionKey))
+            return false;
+        return true;
+    }
 
 	@Override
-	public String toString() {
-		return new ToStringBuilder(this).append("sessionId", sessionId).append("sessionKey", sessionKey).append("user",
-				user).append("dateCreated", dateCreated).toString();
-	}
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((sessionKey == null) ? 0 : sessionKey.hashCode());
+        return result;
+    }
+
+	@Override
+    public String toString() {
+        return "UserSession [sessionId=" + sessionId + ", sessionKey=" + sessionKey + ", dateCreated=" + dateCreated
+                + ", dateModified=" + dateModified + "]";
+    }
 }

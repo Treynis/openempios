@@ -88,9 +88,30 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             log.error("Failed while initializing the store: " + e, e);
         } finally {
             if (db != null) {
-                db.getRawGraph().close();
+                connectionManager.closeInternal(entityStore, db);
             }
         }
+    }
+
+    public void dropSchema(Entity entity, EntityStore entityStore) {
+        OrientBaseGraph db = null;
+        try {
+            db = connectionManager.connectInitial(entityStore);            
+            if (!isClassDefined(db, entity.getName())) {
+            	log.info("Class to be dropped is not known: " + entity.getName());
+            	return;
+            }
+            removeIndexes(entityStore, entity, db);
+            dropClass(db, entity.getName());
+            dropClass(db, IDENTIFIER_TYPE);
+            dropClass(db, RECORD_LINK_TYPE);
+        } catch (Exception e) {
+            log.error("Failed while initializing the store: " + e, e);
+        } finally {
+            if (db != null) {
+                connectionManager.closeInternal(entityStore, db);
+            }
+        }    	
     }
 
     public boolean isClassDefined(OrientBaseGraph db, String className) {
@@ -141,6 +162,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
                 boolean done = false;
                 int count = 0;
                 while (!done) {
+                    stg.close(true, false);
                     done = stg.getStatus().equals(OStorage.STATUS.CLOSED);
                     log.info("Status of storage " + stg.getClass() + " after close is: " + stg.getStatus());
                     try {
@@ -150,7 +172,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
                     }
                     if (count > 5) {
                         log.info("Storage has not shutdown after " + count + " retries.");
-//                        stg.close(true, true);
+                        stg.close(true, true);
                         done = true;
                     }
                 }
@@ -175,52 +197,6 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         return true;
     }
     
-    private void synchronizeSchema(Entity entity, EntityStore entityStore) {
-        OrientBaseGraph db = null;
-        try { 
-            db = connectionManager.connectInitial(entityStore);
-            String className = entityStore.getEntityName();
-            OClassImpl vertexClass = (OClassImpl) findGraphClass(db, className);
-            if (vertexClass == null) {
-                log.error("Unable to find the class that corresponds to the entity " + entity.getName() + 
-                        " during an update.");
-                return;
-            }
-            
-            Map<String,OPropertyImpl> classPropertiesByName = new HashMap<String,OPropertyImpl>();
-            
-            for (OProperty property : vertexClass.declaredProperties()) {
-                classPropertiesByName.put(property.getName(), (OPropertyImpl) property);
-            }
-            
-            for (EntityAttribute attribute : entity.getAttributes()) {
-                OPropertyImpl property = classPropertiesByName.get(attribute.getName());
-                if (property != null) {
-                    continue;
-                }
-                OType type = getOrientdbType(attribute.getDatatype());
-                vertexClass.addPropertyInternal(attribute.getName(), type, null, null);
-                log.debug("Adding field " + attribute.getName() + " to class " + className);
-                vertexClass.saveInternal();
-
-                if (attribute.getIndexed()) {
-                    refreshSchema(db);
-                    Collection<String> attributes = new ArrayList<String>();
-                    attributes.add(attribute.getName());
-                    String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
-                    createIndex(db, indexNamePrefix, entity.getName(), attributes);
-                }
-            }
-            vertexClass.saveInternal();
-            
-        } catch (Exception e) {
-            log.error("Failed while initializing the store: " + e, e);
-        } finally {
-            if (db != null) {
-                db.getRawGraph().close();
-            }
-        }        
-    }
 
     public void dropClass(OrientBaseGraph db, String className) {
         if (className == null) {
@@ -231,8 +207,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             log.warn("An attempt was made to drop a class that does not exist: " + className);
             return;
         }
-        db.command( new OCommandSQL("drop class " + className) ).execute();
-//        ((OSchemaProxy) db.getMetadata().getSchema()).dropClassInternal(className);
+        db.command( new OCommandSQL("drop class " + className + " unsafe") ).execute();
         log.info("Class " + className + " was dropped.");
     }
     
@@ -254,7 +229,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
                 .createClass(className, baseClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
-        sourceClass.saveInternal();
+        sourceClass.save();
         String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
         for (EntityAttribute attribute : entity.getAttributes()) {
             String fieldName = attribute.getName();
@@ -262,7 +237,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             boolean isCaseInsensitive = (attribute.getCaseInsensitive() == null) ? false : attribute.getCaseInsensitive();
             addAttributeToClass(className, sourceClass, fieldName, type, isCaseInsensitive);
         }
-        sourceClass.saveInternal();
+        sourceClass.save();
         refreshSchema(db);
         for (EntityAttribute attribute : entity.getAttributes()) {
             String fieldName = attribute.getName();
@@ -281,7 +256,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
                 .createClass(className, vertexClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
-        sourceClass.saveInternal();
+        sourceClass.save();
         entityStore.setEntityClass(sourceClass);
 
         for (EntityAttribute attribute : entity.getAttributes()) {
@@ -299,7 +274,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         final OClassImpl idClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
                 .createClass(className, vertexClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + idClass.getDefaultClusterId());
-        idClass.saveInternal();
+        idClass.save();
         entityStore.setIdentifierClass(idClass);
 
         addAttributesToClass(className, idClass, IDENTIFIER_ATTRIBUTES);
@@ -319,7 +294,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         final OClassImpl linkClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
                 .createClass(className, edgeClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + linkClass.getDefaultClusterId());
-        linkClass.saveInternal();
+        linkClass.save();
 
         addAttributesToClass(className, linkClass, LINK_ATTRIBUTES);
 
@@ -329,7 +304,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             sb.append("Class: " + clazz.getName() + "\n");
         }
         log.debug("Before creating the indexes the list of classes is: " + sb.toString());
-        createIndexes(entity, db);
+        createIndexes(entityStore, entity, db);
 
         log.info("Finished initializing graph classes.");
     }
@@ -344,6 +319,10 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
 
     public void createIndexes(Entity entity, OrientBaseGraph db) {
         EntityStore entityStore = getEntityStoreByName(entity.getName());
+        createIndexes(entityStore, entity, db);
+    }
+    
+    public void createIndexes(EntityStore entityStore, Entity entity, OrientBaseGraph db) {
         if (entityStore == null) {
             log.warn("Unable to create indexes because the entity information is not known.");
             return;
@@ -546,6 +525,10 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
 
     public void removeIndexes(Entity entity, OrientBaseGraph db) {
         EntityStore entityStore = getEntityStoreByName(entity.getName());
+        removeIndexes(entityStore, entity, db);
+    }
+
+    public void removeIndexes(EntityStore entityStore, Entity entity, OrientBaseGraph db) {
         if (entityStore == null) {
             log.warn("Unable to remove indexes because the entity information is not known.");
             return;
@@ -594,7 +577,56 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
         	prop.setCollate(new OCaseInsensitiveCollate());
         }
         log.debug("Adding field " + fieldName + " to class " + className);
-        sourceClass.saveInternal();
+        sourceClass.save();
+    }
+    
+    private void synchronizeSchema(Entity entity, EntityStore entityStore) {
+        OrientBaseGraph db = null;
+        try { 
+            db = connectionManager.connectInitial(entityStore);
+            String className = entityStore.getEntityName();
+            OClassImpl vertexClass = (OClassImpl) findGraphClass(db, className);
+            if (vertexClass == null) {
+                log.error("Unable to find the class that corresponds to the entity " + entity.getName() + 
+                        " during an update.");
+                return;
+            }
+            
+            Map<String,OPropertyImpl> classPropertiesByName = new HashMap<String,OPropertyImpl>();
+            
+            for (OProperty property : vertexClass.declaredProperties()) {
+                classPropertiesByName.put(property.getName(), (OPropertyImpl) property);
+            }
+            
+            for (EntityAttribute attribute : entity.getAttributes()) {
+                OPropertyImpl property = classPropertiesByName.get(attribute.getName());
+                if (property != null) {
+                    continue;
+                }
+                
+                String fieldName = attribute.getName();
+                OType type = getOrientdbType(attribute.getDatatype());
+                boolean isCaseInsensitive = (attribute.getCaseInsensitive() == null) ? false : attribute.getCaseInsensitive();
+                addAttributeToClass(className, vertexClass, fieldName, type, isCaseInsensitive);
+                log.debug("Adding field " + attribute.getName() + " to class " + className);
+
+                if (attribute.getIndexed()) {
+                    refreshSchema(db);
+                    Collection<String> attributes = new ArrayList<String>();
+                    attributes.add(attribute.getName());
+                    String indexNamePrefix = INDEX_NAME_PREFIX + entity.getName();
+                    createIndex(db, indexNamePrefix, entity.getName(), attributes);
+                }
+            }
+            vertexClass.save();
+            
+        } catch (Exception e) {
+            log.error("Failed while initializing the store: " + e, e);
+        } finally {
+            if (db != null) {
+                connectionManager.closeInternal(entityStore, db);
+            }
+        }        
     }
 
     private void storeClusterIds(EntityStore entityStore, OrientBaseGraph db) {
@@ -648,7 +680,7 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
     public ConnectionManager getConnectionManager() {
         return connectionManager;
     }
-
+    
     public EntityStore getEntityStoreByName(String entityName) {
         EntityStore store = storeByName.get(entityName);
         if (store != null) {

@@ -54,8 +54,9 @@ public class SchemaManagerRemote extends SchemaManagerAbstract
     public void createDatabase(EntityStore store, OrientBaseGraph db) {
         log.info("Creating a store for entity " + store.getEntityName() + " in location " + store.getStoreName());
         String databaseUrl = store.getStoreUrl();
+        OServerAdmin admin = null;
         try {
-            OServerAdmin admin = new OServerAdmin(databaseUrl);
+            admin = new OServerAdmin(databaseUrl);
             admin.connect(connectionManager.getServerUsername(), connectionManager.getServerPassword());
             if (!admin.existsDatabase(PLOCAL_STORAGE_MODE)) {
                 admin.createDatabase(GRAPH_DATABASE_TYPE, PLOCAL_STORAGE_MODE);
@@ -73,6 +74,42 @@ public class SchemaManagerRemote extends SchemaManagerAbstract
         } catch (IOException e) {
             log.error("Unable to connect to the remote server: " + e, e);
             throw new RuntimeException("Unable to connect to the remote server; ensure that the server is up and running.");
+        } finally {
+        	if (admin != null) {
+        		admin.close();
+        		if (admin.isConnected()) {
+        			admin.close(true);
+        		}
+        	}
         }
     }
+
+    public void dropDatabase(EntityStore store, OrientBaseGraph db) {
+        log.info("Dropping the store for entity " + store.getEntityName() + " in location " + store.getStoreName());
+        String databaseUrl = store.getStoreUrl();
+        OServerAdmin admin = null;
+        try {
+            admin = new OServerAdmin(databaseUrl);
+            admin.connect(connectionManager.getServerUsername(), connectionManager.getServerPassword());
+            if (!admin.existsDatabase(PLOCAL_STORAGE_MODE)) {
+            	log.info("Database to be dropped doesn't exist: " + store.getStoreUrl());
+            	return;
+            }            
+            db.getRawGraph().getMetadata().getSecurity()
+                .dropUser(connectionManager.getUsername());
+            log.debug("Dropped user: " + connectionManager.getUsername());
+            admin.dropDatabase(store.getStoreUrl());
+        } catch (IOException e) {
+            log.error("Unable to connect to the remote server: " + e, e);
+            throw new RuntimeException("Unable to connect to the remote server; ensure that the server is up and running.");
+        } finally {
+        	if (admin != null) {
+        		admin.close();
+        		if (admin.isConnected()) {
+        			admin.close(true);
+        		}
+        	}
+        }
+    }
+
 }

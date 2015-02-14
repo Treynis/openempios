@@ -827,8 +827,10 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         if (config.isLogByWeight() == true && randomValue < config.getLogByWeightFraction() 
                 && pair.getWeight() >= config.getLogWeightLowerBound()
                 && pair.getWeight() <= config.getLogWeightUpperBound()) {
-            log.info("logRecordPair: " + logMatchStatus(pair) + "Weight -> " + pair.getWeight() + " -> "
-                    + pair.getComparisonVector().getBinaryVectorString() + " -> " + getPairValues(config, pair));
+            if (log.isDebugEnabled()) {
+                log.debug("logRecordPair: " + logMatchStatus(pair) + "Weight -> " + pair.getWeight() + " -> "
+                        + pair.getComparisonVector().getBinaryVectorString() + " -> " + getPairValues(config, pair));
+            }
             logRecordPairToDestination(config, pair);
         }
     }

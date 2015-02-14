@@ -634,11 +634,11 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 				" from the beginning using the underlying matching algorithm to do so.");
 		MatchingService matchingService = Context.getMatchingService(entity.getName());
 		matchingService.initializeRepository(entity.getName());
-		linkAllRecordPairs(entity);
+        clearAllLinks(entity);
 	}
 
 	public void linkAllRecordPairs(Entity entity) throws ApplicationException {
-		clearAllLinks(entity);
+        clearAllLinks(entity);
 		MatchingService matchingService = Context.getMatchingService(entity.getName());
 		BlockingService blockingService = Context.getBlockingService(entity.getName());
 		RecordPairSource recordPairSource = blockingService.getRecordPairSource(entity);
@@ -651,11 +651,15 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 			pair = matchingService.match(pair);
 			RecordLink link = ConvertUtil.createRecordLinkFromRecordPair(pair);
 			if  (!(pair.getMatchOutcome() == RecordPair.MATCH_OUTCOME_UNLINKED) && (!mapOfLinks.containsKey(link))) {
-				log.debug("Record link " + link + " does not exist yet so it will be persisted.");
+			    if (log.isDebugEnabled()) {
+			        log.debug("Record link " + link + " does not exist yet so it will be persisted.");
+			    }
 				links.add(link);
 				mapOfLinks.put(link, link);
 			} else {
-				log.debug("Record link " + link + " already exists so it will not be persisted.");
+			    if (log.isDebugEnabled()) {
+			        log.debug("Record link " + link + " already exists so it will not be persisted.");
+			    }
 			}
 
 			if (links.size() == 10000) {

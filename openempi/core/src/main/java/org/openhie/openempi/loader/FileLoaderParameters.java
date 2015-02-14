@@ -26,5 +26,7 @@ public class FileLoaderParameters
     public static final String MAPPING_FILE = "mappingFile";
     public static final String ENTITY_NAME = "entityName";
     public static final String PREVIEW_ONLY = "previewOnly";
-    public static final String IS_MASSIVE_INSERT = "isMassiveInsert";
+    public static final String IS_MASSIVE_INSERT = "isMassiveInsert";    
+	public final static String LOADER_ALIAS = "flexibleDataLoader";
+	public final static String SKIP_HEADER_LINE = "skipHeaderLine";
 }

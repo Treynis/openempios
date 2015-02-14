@@ -381,6 +381,12 @@ public final class ConvertUtil
 		}
 
 		for (EntityAttribute attrib : entityDef.getAttributes()) {
+		    if (attrib.getIsCustom()) {
+		        if (log.isTraceEnabled()) {
+		            log.trace("Skipping custom attribute: " + attrib);
+		        }
+		        continue;
+		    }
 			String key = attrib.getName();
 			String methodName = "get" + Character.toUpperCase(key.charAt(0)) + key.substring(1);
 

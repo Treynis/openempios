@@ -41,11 +41,11 @@
 	</appender>
     
     <logger name="org.springframework">
-        <level value="DEBUG"/>
+        <level value="WARN"/>
     </logger>
     
     <logger name="org.openempi">
-        <level value="TRACE"/>
+        <level value="INFO"/>
     </logger>
 <!-- 
     <logger name="net.sf.ehcache">

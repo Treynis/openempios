@@ -80,11 +80,12 @@ public class FlexibleFileLoader extends AbstractFileLoader
     private Map<Serializable, Set<Long>> cacheOfRecordsLoaded;
     private Entity currentEntity;
     private int recordCounter = 0;
+    private int recordLoadCounter = 0;
     private LinkSource goldStandardLinkSource;
 
     private int numLoaderThreads;
     private int recordChunkSize;
-    
+
     public static final String GENDER = "gender";
     public static final String ETHNIC_GROUP = "ethnicGroup";
     public static final String RACE = "race";
@@ -112,7 +113,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
         taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
         log.debug("Initializing the loader in " + getClass() + " using configuration map: "
                 + getEntityLoaderManager().getPropertyMap());
-        String mappingFilename = getParameterAsString(MAPPING_FILE);
+        String mappingFilename = getParameterAsString(FileLoaderParameters.MAPPING_FILE);
         if (mappingFilename == null || mappingFilename.length() == 0) {
             log.error("Unable to initialize the flexible file loader since a mapping file has not been specified.");
             throw new RuntimeException(
@@ -153,9 +154,9 @@ public class FlexibleFileLoader extends AbstractFileLoader
             Unmarshaller u = jc.createUnmarshaller();
             fileMap = (FileLoaderMap) u.unmarshal(new FileInputStream(file));
             if (fileMap.isHeaderFirstLine() != null && fileMap.isHeaderFirstLine()) {
-                this.setParameter(SKIP_HEADER_LINE, Boolean.TRUE);
+                this.setParameter(FileLoaderParameters.SKIP_HEADER_LINE, Boolean.TRUE);
             }
-            delimiter = fileMap.getDelimeter();
+            delimiter = fileMap.getDelimiter();
             setupTrainingDataExtractor(fileMap.getTrainingDataExtractor());
             log.debug("File will be parsed using the delimeter: " + delimiter);
             delimitingPattern = Pattern.compile(delimiter);
@@ -163,7 +164,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                 FieldType field = fileMap.getFields().getField().get(i);
                 fieldMapByColumnIndex.put(new Integer(i + 1), field);
                 if (field.isOneToMany()) {
-                    log.debug("Field will be decomposed into subfields using delimeter: " + field.getDelimeter());
+                    log.debug("Field will be decomposed into subfields using delimeter: " + field.getDelimiter());
                     for (FieldType subfield : field.getSubfields().getField()) {
                         log.debug("Will import field " + subfield.getFieldName() + " which should appear at column "
                                 + i);
@@ -184,8 +185,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
             return;
         }
         try {
-            trainingDataExtractor = (TrainingDataExtractor) Context.getApplicationContext()
-                    .getBean(trainingDataExtractorName);
+            trainingDataExtractor = (TrainingDataExtractor) Context.getApplicationContext().getBean(
+                    trainingDataExtractorName);
             log.info("Will extract training data links using implementation: " + trainingDataExtractorName);
         } catch (Exception e) {
             log.warn("Unable to find a training data extractor named " + trainingDataExtractor
@@ -195,20 +196,24 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
     public ParameterType[] getParameterTypes() {
         List<ParameterType> types = new ArrayList<ParameterType>();
-        Boolean[] trueOrFalse = {Boolean.TRUE, Boolean.FALSE};
-        types.add(new ParameterType(SKIP_HEADER_LINE, SKIP_HEADER_LINE_DISPLAY, FormEntryDisplayType.CHECK_BOX,
+        Boolean[] trueOrFalse = { Boolean.TRUE, Boolean.FALSE };
+        types.add(new ParameterType(FileLoaderParameters.SKIP_HEADER_LINE, SKIP_HEADER_LINE_DISPLAY,
+                FormEntryDisplayType.CHECK_BOX, trueOrFalse));
+        types.add(new ParameterType(FileLoaderParameters.IS_IMPORT, IS_IMPORT_DISPLAY, FormEntryDisplayType.CHECK_BOX,
                 trueOrFalse));
-        types.add(new ParameterType(IS_IMPORT, IS_IMPORT_DISPLAY, FormEntryDisplayType.CHECK_BOX, trueOrFalse));
-        types.add(new ParameterType(IS_MASSIVE_INSERT, IS_MASSIVE_INSERT_DISPLAY, FormEntryDisplayType.CHECK_BOX, trueOrFalse));
-        types.add(new ParameterType(MAPPING_FILE, MAPPING_FILE_DISPLAY, FormEntryDisplayType.TEXT_FIELD));
-        types.add(new ParameterType(PREVIEW_ONLY, PREVIEW_ONLY_DISPLAY, FormEntryDisplayType.CHECK_BOX, trueOrFalse));
+        types.add(new ParameterType(FileLoaderParameters.IS_MASSIVE_INSERT, IS_MASSIVE_INSERT_DISPLAY,
+                FormEntryDisplayType.CHECK_BOX, trueOrFalse));
+        types.add(new ParameterType(FileLoaderParameters.MAPPING_FILE, MAPPING_FILE_DISPLAY,
+                FormEntryDisplayType.TEXT_FIELD));
+        types.add(new ParameterType(FileLoaderParameters.PREVIEW_ONLY, PREVIEW_ONLY_DISPLAY,
+                FormEntryDisplayType.CHECK_BOX, trueOrFalse));
         return types.toArray(new ParameterType[] {});
     }
 
     @Override
     protected boolean processLine(Entity entity, String line, int lineIndex) {
-        if (line == null || line.length() == 0) {
-            return false;
+        if (line == null || line.trim().length() == 0) {
+            return true;
         }
 
         if (currentEntity == null) {
@@ -280,7 +285,6 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
         public void run() {
             log.debug("Processing record: " + lineRecord);
-            recordCounter++;
             Context.setUserContext(userContext);
             record = processLine(lineRecord, lineIndex);
             if (record == null) {
@@ -309,11 +313,12 @@ public class FlexibleFileLoader extends AbstractFileLoader
             if (line == null || line.length() == 0) {
                 return null;
             }
-            log.debug("Needs to parse the line " + line);
+            recordCounter++;
             String[] tokens = delimitingPattern.split(line);
-            log.debug("Parsed the line into " + tokens.length + " tokens.");
+            if (log.isTraceEnabled()) {
+                log.trace("Parsed the line " + line + " into " + tokens.length + " tokens.");
+            }
             Record record = getEntityRecordFromTokens(tokens);
-            log.debug("Finished parsing the line.");
             return record;
         }
 
@@ -474,7 +479,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                 return null;
             }
             org.openhie.openempi.model.Identifier id = new org.openhie.openempi.model.Identifier();
-            if (field.getSubfields() == null || field.getDelimeter() == null) {
+            if (field.getSubfields() == null || field.getDelimiter() == null) {
                 id.setIdentifier(token);
                 id.setRecord(record);
                 IdentifierDomain idDomain = new IdentifierDomain();
@@ -493,7 +498,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                     FieldType subfield = field.getSubfields().getField().get(i);
                     subfieldMapByColumnIndex.put(new Integer(i + 1), subfield);
                 }
-                Pattern subPattern = Pattern.compile(field.getDelimeter());
+                Pattern subPattern = Pattern.compile(field.getDelimiter());
                 String[] subtokens = subPattern.split(token);
                 for (int i = 0; i < subtokens.length; i++) {
                     String subtoken = subtokens[i];
@@ -523,7 +528,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
             }
             return id;
         }
-        
+
     }
 
     class TaskRecord
@@ -545,7 +550,6 @@ public class FlexibleFileLoader extends AbstractFileLoader
         public void setKey(Serializable key) {
             this.key = key;
         }
-
 
         public Entity getEntity() {
             return entity;
@@ -579,7 +583,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
         }
 
         public void run() {
-          Context.setUserContext(userContext);
+            Context.setUserContext(userContext);
             while (recordsQueue.size() > 0 || !done) {
                 try {
                     int records = recordsQueue.size();
@@ -591,7 +595,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
                         for (int i = 0; i < records; i++) {
                             TaskRecord task = recordsQueue.poll(5000, TimeUnit.MILLISECONDS);
                             if (task == null) {
-                                log.debug("Time-out trying to get an entry from the list. Shutting down thread " + Thread.currentThread().getId());
+                                log.debug("Time-out trying to get an entry from the list. Shutting down thread "
+                                        + Thread.currentThread().getId());
                                 return;
                             }
                             tasks.add(task);
@@ -609,7 +614,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
         public void shutdown() {
             if (tasks.size() > 0) {
-                log.debug("Before shutting down thread " + Thread.currentThread().getId() + " is processing a reminder of " + tasks.size() + " from the list.");
+                log.debug("Before shutting down thread " + Thread.currentThread().getId()
+                        + " is processing a reminder of " + tasks.size() + " from the list.");
                 saveRecordsInTaskList();
             }
         }
@@ -636,7 +642,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
                     link.setLeftRecord(record);
                     link.setRightRecord(rightRecord);
                     link.setLinkSource(goldStandardLinkSource);
-//                    log.info("Creating a link between persons: (" + leftId + "," + rightId + ")");
+                    // log.info("Creating a link between persons: (" + leftId + "," + rightId + ")");
                     log.debug("Link, " + leftId + "," + rightId);
                     try {
                         Context.getRecordManagerService().addRecordLink(link);
@@ -649,8 +655,10 @@ public class FlexibleFileLoader extends AbstractFileLoader
         }
 
         public void saveRecordsInTaskList() {
-            log.debug("With User Context: " + userContext + " in thread " + Thread.currentThread().getId()
-                    + " attempting to load a chunk of " + tasks.size() + " records.");
+            if (log.isDebugEnabled()) {
+                log.debug("With User Context: " + userContext + " in thread " + Thread.currentThread().getId()
+                        + " attempting to load a chunk of " + tasks.size() + " records.");
+            }
             try {
                 if (tasks.size() == 0) {
                     return;
@@ -664,8 +672,12 @@ public class FlexibleFileLoader extends AbstractFileLoader
                     }
                 }
                 entityLoaderManager.addRecords(tasks.get(0).getEntity(), records);
+                recordLoadCounter += records.size();
                 long endTime = new java.util.Date().getTime();
-                log.warn("Persisting a chunk of " + records.size() + " took " + (endTime - startTime) + " msec.");
+                if (recordLoadCounter % 10000 < 10) {
+                    log.info("Persisting (" + records.size() + "/" + recordLoadCounter + "/" + recordCounter + ") in "
+                            + (endTime - startTime) + " msec.");
+                }
             } catch (Exception e) {
                 log.error("Failed while adding a chunk of records to the system. Error: " + e, e);
             } finally {

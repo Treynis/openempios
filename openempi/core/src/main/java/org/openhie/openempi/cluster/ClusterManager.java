@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,30 +46,39 @@ import com.hazelcast.core.IExecutorService;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.IQueue;
 import com.hazelcast.core.Member;
+import com.hazelcast.core.MemberAttributeEvent;
 import com.hazelcast.core.MembershipEvent;
 import com.hazelcast.core.MembershipListener;
 
 public class ClusterManager implements MembershipListener
 {
     private static final String TASK_EXECUTOR = "taskExecutor";
+    //TODO: This should be made configurable in the future.
+    private static final long ENTITY_REGISTRY_LIFETIME_DURATION = 60000;
     private Logger log = Logger.getLogger(getClass());
     private IMap<String,Object> configurationRegistry;
+    private Map<String,Object> localConfigurationRegistry;
     private IQueue<Long> recordIdQueue;
     private HazelcastInstance cluster;
     private IExecutorService clusterExecutor;
-    private List<Member> memberList = new ArrayList<Member>();    
+    private List<Member> memberList = new ArrayList<Member>();
+    private Map<String,EntityRegistryEntry> entityRegistryCache = new HashMap<String,EntityRegistryEntry>();
     private Map<ServiceName,Object> serviceCache;
     private Map<ServiceName,Map<String,Method>> serviceMethodCache;
     private int lastMember = 0;
 
     public void start() {
-        cluster = Hazelcast.newHazelcastInstance(getConfig());
-        cluster.getCluster().addMembershipListener(this);
-        memberList.add(cluster.getCluster().getLocalMember());
-        configurationRegistry = cluster.getMap(Constants.CONFIGURATION_REGISTRY_KEY);
-        recordIdQueue = cluster.getQueue(Constants.RECORD_ID_QUEUE_KEY);
-        clusterExecutor = cluster.getExecutorService(TASK_EXECUTOR);
-        cacheServiceMethods();
+        if (Context.isInCLusterMode()) {
+            cluster = Hazelcast.newHazelcastInstance(getConfig());
+            cluster.getCluster().addMembershipListener(this);
+            memberList.add(cluster.getCluster().getLocalMember());
+            configurationRegistry = cluster.getMap(Constants.CONFIGURATION_REGISTRY_KEY);
+            recordIdQueue = cluster.getQueue(Constants.RECORD_ID_QUEUE_KEY);
+            clusterExecutor = cluster.getExecutorService(TASK_EXECUTOR);
+            cacheServiceMethods();
+        } else {
+            localConfigurationRegistry = new HashMap<String,Object>();
+        }
     }
 
     private Config getConfig() {
@@ -89,29 +99,50 @@ public class ClusterManager implements MembershipListener
     }
 
     public Map<String, Object> getConfigurationRegistry() {
-        return configurationRegistry;
+        if (Context.isInCLusterMode()) {
+            return configurationRegistry;            
+        } else {
+            return localConfigurationRegistry;
+        }
     }
 
     public Object lookupConfigurationEntry(String entityName, String key) {
-        @SuppressWarnings("unchecked")
-        Map<String,Object> entityRegistry = (Map<String, Object>) configurationRegistry.get(entityName);
-        if (entityRegistry == null) {
-            log.warn("There is no configuration registry for entity " + entityName);
-            return  null;
-        }
+        Map<String, Object> entityRegistry = getEntityRegistryFromCache(entityName);
         return entityRegistry.get(key);
     }
 
     public void registerConfigurationeEntry(String entityName, String key, Object entry) {
-        @SuppressWarnings("unchecked")
-        Map<String,Object> entityRegistry = (Map<String, Object>) configurationRegistry.get(entityName);
+        Map<String,Object> entityRegistry = getEntityRegistryFromCache(entityName);
         if (entityRegistry == null) {
             entityRegistry = new HashMap<String,Object>();
         }
         log.info("Registering configuration entry " + entry + " with key " + key +
                 " in the registry for entity: " + entityName);
         entityRegistry.put(key, entry);
-        configurationRegistry.put(entityName, entityRegistry);
+        getConfigurationRegistry().put(entityName, entityRegistry);
+        updateEntityRegistryInCache(entityName, entityRegistry);
+    }
+
+    private Map<String, Object> getEntityRegistryFromCache(String entityName) {
+        EntityRegistryEntry entry = entityRegistryCache.get(entityName);
+        if (entry != null && entry.isRecentEntry()) {
+            if (log.isTraceEnabled()) {
+                log.trace("Found a recently updated entity registry for entity " + entityName);
+            }
+            return entry.getEntityRegistry();
+        }
+        @SuppressWarnings("unchecked")
+        Map<String,Object> entityRegistry = (Map<String, Object>) getConfigurationRegistry().get(entityName);
+        if (entityRegistry == null) {
+            log.warn("There is no configuration registry for entity " + entityName);
+            return  null;
+        }
+        entityRegistryCache.put(entityName, new EntityRegistryEntry(entityRegistry));
+        return entityRegistry;
+    }
+
+    private void updateEntityRegistryInCache(String entityName, Map<String, Object> entityRegistry) {
+        entityRegistryCache.put(entityName, new EntityRegistryEntry(entityRegistry));
     }
 
     public void stop() {
@@ -225,5 +256,33 @@ public class ClusterManager implements MembershipListener
     public void memberRemoved(MembershipEvent event) {
         log.info("A member was removed from the cluster: " + event.getMember());
         //TODO: This needs to be handled properly
+    }
+
+    public void memberAttributeChanged(MemberAttributeEvent event) {
+        log.info("A member attribute was changed in the cluster: " + event);
+        // TODO Auto-generated method stub        
+    }
+    
+    private class EntityRegistryEntry
+    {
+        private Map<String,Object> entityRegistry;
+        private Date lastAccessTime;
+
+        public EntityRegistryEntry(Map<String, Object> entityRegistry) {
+            this.entityRegistry = entityRegistry;
+            this.lastAccessTime = new Date();
+        }
+
+        public boolean isRecentEntry() {
+            Date now = new Date();
+            if (now.getTime() - lastAccessTime.getTime() < ENTITY_REGISTRY_LIFETIME_DURATION) {
+                return true;
+            }
+            return false;
+        }
+
+        public Map<String, Object> getEntityRegistry() {
+            return entityRegistry;
+        }
     }
 }

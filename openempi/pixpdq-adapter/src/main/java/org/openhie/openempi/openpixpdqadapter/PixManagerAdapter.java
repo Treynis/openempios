@@ -39,6 +39,7 @@ import org.openhie.openempi.model.PersonIdentifier;
 public class PixManagerAdapter extends BasePixPdqAdapter implements IPixManagerAdapter
 {
 	protected final Log log = LogFactory.getLog(getClass());
+	private boolean enforceDistinctIdentifiers = true;
 	
 	public PixManagerAdapter() {
 		super();
@@ -50,6 +51,15 @@ public class PixManagerAdapter extends BasePixPdqAdapter implements IPixManagerA
 		Person personAdded;
 		try {
 			SecurityHelper.getSessionKey();
+			if (enforceDistinctIdentifiers) {
+			    for (PersonIdentifier identifier : person.getPersonIdentifiers()) {
+			        List<Person> personsFound = Context.getPersonQueryService().findPersonsById(identifier);
+			        if (personsFound.size() > 0) {
+			            log.info("Request attempted to create record with identifier that is already present in the system: " + identifier);
+			            return patient.getPatientIds();
+			        }
+			    }
+			}
 			personAdded = Context.getPersonManagerService().addPerson(person);
 		} catch (Exception e) {
 			// If the person already exists then ignore the error
@@ -289,4 +299,12 @@ public class PixManagerAdapter extends BasePixPdqAdapter implements IPixManagerA
 		}
 		return false;
 	}
+
+    public boolean isEnforceDistinctIdentifiers() {
+        return enforceDistinctIdentifiers;
+    }
+
+    public void setEnforceDistinctIdentifiers(boolean enforceDistinctIdentifiers) {
+        this.enforceDistinctIdentifiers = enforceDistinctIdentifiers;
+    }
 }

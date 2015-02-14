@@ -110,7 +110,24 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
         return msg;
 	}
 
-    public String createEntityIndexes(EntityWeb entityWeb) {
+	public String clearLoggedLinks(EntityWeb entityWeb) {
+        log.debug("Clearing all logged links for entity: " + entityWeb.getDisplayName());
+        
+        authenticateCaller();
+        org.openhie.openempi.model.Entity entity = ModelTransformer.mapToEntity(entityWeb,
+                org.openhie.openempi.model.Entity.class);
+        String msg = "Succeeded in clearing all logged links for entity " + entityWeb.getDisplayName();
+        try {
+            Context.getAuditEventService().clearLoggedLinks(entity.getEntityVersionId());
+        } catch (Throwable t) {
+            log.error("Failed while trying to clear logged links for entity " +
+                    entityWeb.getDisplayName() + ": " + t, t);
+            msg = t.getMessage();
+        }
+        return msg;
+	}
+
+	public String createEntityIndexes(EntityWeb entityWeb) {
         log.debug("Create all the indexes for entity: " + entityWeb.getDisplayName());
         
         authenticateCaller();

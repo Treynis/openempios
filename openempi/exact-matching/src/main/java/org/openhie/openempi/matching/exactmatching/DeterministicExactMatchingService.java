@@ -221,6 +221,6 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 	}
 
 	public void initializeRepository(String entityName) throws ApplicationException {
-		log.info("The deterministic matching service is initializing the repository for entity " + entityName);
+        log.info("The deterministic matching service finished initializing the repository for entity " + entityName);
 	}
 }

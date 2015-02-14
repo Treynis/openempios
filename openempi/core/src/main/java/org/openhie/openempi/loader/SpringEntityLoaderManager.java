@@ -73,6 +73,12 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
 				isImport = true;
 			}
 			
+			Object skipHeaderLine = properties.get(FileLoaderParameters.SKIP_HEADER_LINE);
+			if (skipHeaderLine != null && skipHeaderLine instanceof Boolean && skipHeaderLine.equals(Boolean.TRUE)) {
+				log.info("WIll skip the header line during import");
+				skipHeaderLine = true;
+			}
+			
 			Object entityName = properties.get(FileLoaderParameters.ENTITY_NAME);
             if (entityName != null  && entityName instanceof String) {
                 log.info("Will be doing an import for entity " + entityName);

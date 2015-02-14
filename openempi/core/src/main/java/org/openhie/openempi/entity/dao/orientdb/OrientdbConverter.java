@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -41,12 +42,13 @@ import org.openhie.openempi.model.User;
 
 import com.orientechnologies.common.collection.OCollection;
 import com.orientechnologies.orient.core.db.record.OIdentifiable;
-import com.orientechnologies.orient.core.id.OClusterPositionLong;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.id.ORecordId;
 import com.orientechnologies.orient.core.record.impl.ODocument;
 import com.tinkerpop.blueprints.Direction;
+import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.blueprints.impls.orient.OrientElementIterable;
 import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 
 public class OrientdbConverter
@@ -63,6 +65,7 @@ public class OrientdbConverter
         }
         return list;
     }
+    
     
     public static List<Record> convertVertexToRecord(RecordCacheManager cache, Entity entity, Collection<Vertex> result) {
         List<Record> list = new ArrayList<Record>(result.size());
@@ -86,24 +89,6 @@ public class OrientdbConverter
         return recordSet;
     }*/
 
-    public static Record convertVertexToRecord(RecordCacheManager cache, Entity entity, Vertex vertex) {
-        Record record = new Record(entity);
-        for (String property : record.getPropertyNames()) {
-            Object value = vertex.getProperty(property);
-            record.set(property, value);
-        }
-        Boolean dirty = vertex.getProperty(Constants.DIRTY_RECORD_PROPERTY);
-        if (dirty == null || dirty.booleanValue() == false) {
-            record.setDirty(false);
-        } else {
-            record.setDirty(true);
-        }
-        extractIdAndCluster(vertex, record);
-        if (vertex.getProperty(Constants.IDENTIFIER_OUT_PROPERTY) != null) {
-            extractIdentifiers(cache, vertex, record);
-        }
-        return record;
-    }
 
     public static List<RecordLink> convertODocumentToRecordLink(RecordCacheManager cache, Entity entity,
             List<ODocument> result) {
@@ -170,6 +155,33 @@ public class OrientdbConverter
         return record;
     }
 
+    public static List<Record> convertVertexToRecord(RecordCacheManager cache, Entity entity, Iterable<Vertex> vertices) {
+        List<Record> links = new ArrayList<Record>();
+        for (Vertex vertex : vertices) {
+            links.add(convertVertexToRecord(cache, entity, vertex));
+        }
+        return links;
+    }
+
+    public static Record convertVertexToRecord(RecordCacheManager cache, Entity entity, Vertex vertex) {
+        Record record = new Record(entity);
+        for (String property : record.getPropertyNames()) {
+            Object value = vertex.getProperty(property);
+            record.set(property, value);
+        }
+        Boolean dirty = vertex.getProperty(Constants.DIRTY_RECORD_PROPERTY);
+        if (dirty == null || dirty.booleanValue() == false) {
+            record.setDirty(false);
+        } else {
+            record.setDirty(true);
+        }
+        extractIdAndCluster(vertex, record);
+        if (vertex.getProperty(Constants.IDENTIFIER_OUT_PROPERTY) != null) {
+            extractIdentifiers(cache, vertex, record);
+        }
+        return record;
+    }
+    
     public static RecordLink convertODocumentToRecordLink(RecordCacheManager cache, Entity entity, ODocument odoc) {
         String recordLinkId = odoc.getIdentity().toString();
         RecordLink link = createRecordLinkFromEdge(cache, odoc, recordLinkId);
@@ -227,12 +239,11 @@ public class OrientdbConverter
         if (orid == null) {
             return null;
         }
-        return orid.getClusterPosition().longValueHigh();
+        return orid.getClusterPosition();
     }
 
     public static ORID getORIDFromRecordId(int clusterId, long recordId) {
-        OClusterPositionLong clusterPosition = new OClusterPositionLong(recordId);
-        ORID orid = new ORecordId(clusterId, clusterPosition);
+        ORID orid = new ORecordId(clusterId, recordId);
         return orid;
     }
 
@@ -245,17 +256,16 @@ public class OrientdbConverter
         return list;
     }
 
-    public static Set<ODocument> extractEntitiesFromIdentifiers(Entity entityDef, Iterable<Vertex> idVertices) {
-        int entityVersionId = entityDef.getEntityVersionId().intValue();
-
-        Set<ODocument> recVertices = new HashSet<ODocument>();
+    public static Set<Vertex> extractRecordsFromIdentifiers(Entity entityDef, Iterable<Vertex> idVertices) {
+        Set<Vertex> recVertices = new HashSet<Vertex>();
         for (Vertex v : idVertices) {
-//            Object obj = v.getProperty(Constants.ENTITY_PROPERTY);
-//            Object obj2 = v.getProperty("in_identifierEdge");
-            ODocument entity = (ODocument) v.getProperty(Constants.ENTITY_PROPERTY);
-            Long id = (Long) entity.field(Constants.ENTITY_VERSION_ID_PROPERTY);
-            if (entity.field(Constants.DATE_VOIDED_PROPERTY) == null && entityVersionId == id.intValue()) {
-                recVertices.add(entity);
+            OrientElementIterable<Edge> edges = v.getProperty("in_identifierEdge");
+            for (Edge edge : edges) {
+                Vertex record = edge.getVertex(Direction.OUT);
+                log.debug("Found record: " + record);
+                if (record.getProperty(Constants.DATE_VOIDED_PROPERTY) == null) { // && entityVersionId == id.intValue()) {
+                    recVertices.add(record);
+                }
             }
         }
         return recVertices;
@@ -345,11 +355,20 @@ public class OrientdbConverter
         return user;
     }
     
+    public static void extractIdAndCluster(Map<String,Object> node, Record record) {
+        record.set(Constants.ORIENTDB_CLUSTER_ID_KEY, node.get(Constants.CLUSTERID_KEY));
+        record.setRecordId((Long) node.get(Constants.CLUSTERPOSITION_KEY));
+        if (log.isTraceEnabled()) {
+            log.trace("Extracted the values " + record.get(Constants.ORIENTDB_CLUSTER_ID_KEY) + " and "
+                    + record.getRecordId() + " from Map " + node.get(Constants.RECORDID_KEY));
+        }
+    }
+
     public static void extractIdAndCluster(Vertex vertex, Record record) {
         OrientVertex oVertex = (OrientVertex) vertex;
         ORecordId orid = (ORecordId) oVertex.getIdentity();
         record.set(Constants.ORIENTDB_CLUSTER_ID_KEY, orid.getClusterId());
-        record.setRecordId(orid.getClusterPosition().longValueHigh());
+        record.setRecordId(orid.getClusterPosition());
         if (log.isTraceEnabled()) {
             log.trace("Extracted the values " + record.get(Constants.ORIENTDB_CLUSTER_ID_KEY) + " and "
                     + record.getRecordId() + " from ODocument " + orid.toString());
@@ -364,8 +383,9 @@ public class OrientdbConverter
         }
         if (obj instanceof OCollection<?>) {
             OCollection<OIdentifiable> col = (OCollection<OIdentifiable>) obj;
-            for (OIdentifiable iobj : col) {
-                idoc.add((ODocument) iobj);
+            for (OIdentifiable eobj : col) {
+                ODocument iobj = ((ODocument) eobj).field("in");
+                idoc.add(iobj);
             }
             return idoc;
         } else if (obj instanceof ODocument) {
@@ -422,13 +442,13 @@ public class OrientdbConverter
     public static Long extractId(Vertex vertex) {
         OrientVertex oVertex = (OrientVertex) vertex;
         ORID orid = oVertex.getIdentity();
-        return orid.getClusterPosition().longValueHigh();
+        return orid.getClusterPosition();
     }
 
     public static void extractIdAndCluster(ODocument odoc, Record record) {
         ORID orid = odoc.getIdentity();
         record.set(Constants.ORIENTDB_CLUSTER_ID_KEY, orid.getClusterId());
-        record.setRecordId(orid.getClusterPosition().longValueHigh());
+        record.setRecordId(orid.getClusterPosition());
         if (log.isTraceEnabled()) {
             log.trace("Extracted the values " + record.get(Constants.ORIENTDB_CLUSTER_ID_KEY) + " and "
                     + record.getRecordId() + " from ODocument " + orid.toString());
@@ -437,12 +457,12 @@ public class OrientdbConverter
     
     private static Long extractIdAndCluster(ODocument odoc) {
         ORID orid = odoc.getIdentity();
-        return orid.getClusterPosition().longValueHigh();
+        return orid.getClusterPosition();
     }
     
     public static Long extractId(ODocument odoc) {
         ORID orid = odoc.getIdentity();
-        return orid.getClusterPosition().longValueHigh();
+        return orid.getClusterPosition();
     }
     
 //    private static void extractIdAndCluster(Vertex vertex, Identifier identifier) {
@@ -453,9 +473,7 @@ public class OrientdbConverter
 
     public static ORID extractOrid(Record record) {
         int clusterId = (Integer) record.get(Constants.ORIENTDB_CLUSTER_ID_KEY);
-        long clusterPosition = record.getRecordId();
-        OClusterPositionLong clusterPos = new OClusterPositionLong(clusterPosition);
-        ORID orid = new ORecordId(clusterId, clusterPos);
+        ORID orid = new ORecordId(clusterId, record.getRecordId());
         return orid;
     }
 

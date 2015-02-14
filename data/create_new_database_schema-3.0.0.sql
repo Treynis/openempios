@@ -3,7 +3,6 @@
 --Database : openempi 3.0.0
 
 
-
 SET SESSION AUTHORIZATION 'openempi';
 SET search_path = public, pg_catalog;
 
@@ -104,6 +103,7 @@ CREATE TABLE public.identifier_domain_attribute (
 CREATE TABLE user_session (
     session_id integer NOT NULL,
     date_created timestamp without time zone NOT NULL,
+    date_modified timestamp without time zone,
     session_key varchar(255),
     user_id bigint NOT NULL
 ) WITHOUT OIDS;
@@ -508,7 +508,7 @@ CREATE TABLE entity
   "name" character varying(64) NOT NULL,
   description character varying(256),
   display_name character varying(64) NOT NULL,
-  synchronous_matching boolean NOT NULL DEFAULT false,
+  synchronous_matching boolean NOT NULL DEFAULT true,
   date_created timestamp without time zone NOT NULL,
   created_by_id integer NOT NULL,
   date_changed timestamp without time zone,
@@ -787,9 +787,6 @@ ALTER TABLE ONLY audit_event
 -- Definition for index fk_audit_event_type_cd (OID = 59469):
 ALTER TABLE ONLY audit_event
     ADD CONSTRAINT fk_audit_event_new_type_cd FOREIGN KEY (audit_event_type_cd) REFERENCES audit_event_type(audit_event_type_cd);
-
-
-INSERT INTO link_source(link_source_id, source_name, source_description) VALUES (4, 'Gold Standard', 'Gold Standard Dataset');
 
 DROP SEQUENCE IF EXISTS message_log_seq;
 DROP SEQUENCE IF EXISTS identifier_event_seq;

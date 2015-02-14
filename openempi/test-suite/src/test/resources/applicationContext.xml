@@ -32,13 +32,21 @@
     <!-- pixManagerAdapter:
         The java adapter class that provides the patient data source for this Pix Manager (required).
         This class must implement org.openhealthtools.openpixpdq.api.IPixManagerAdapter -->
-    <bean id="pixManagerAdapter" class="org.openhie.openempi.openpixpdqadapter.PixManagerAdapter" />  
+    <bean id="pixManagerAdapter" class="org.openhie.openempi.openpixpdqadapter.PixManagerAdapter">
+    	<property name="enforceDistinctIdentifiers" value="true"></property>
+    </bean>  
     
     <!-- PdSupplierAdapter:
       The java adapter class that provides the patient data source for this Patient Demographics Supplier 
       This class must implement org.openhealthtools.openpixpdq.api.IPdSupplierAdapter -->
     <bean id="pdSupplierAdapter" class="org.openhie.openempi.openpixpdqadapter.PdqSupplierAdapter" />  
 
+    <!-- MessageStoreLogger:
+      The java adapter class that provides the implementation of a message store logger 
+      This class must implement org.openhealthtools.openpixpdq.api.IMessageStoreLogger -->
+    <bean id="messageStoreLogger" class="org.openhie.openempi.openpixpdqadapter.MessageStoreLogger"/>
+    
+<!-- 
 	<bean id="pixEvent"	class="com.misys.hieportal.sysmon.JMXEventNotifier" />
 
 	<bean id="exporter"	class="org.springframework.jmx.export.MBeanExporter" lazy-init="false">
@@ -52,5 +60,5 @@
 	<bean id="connectorServer" class="org.springframework.jmx.support.ConnectorServerFactoryBean" depends-on="rmiRegistry">
 		<property name="serviceUrl"	value="service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi" />
 	</bean>
-
+ -->
 </beans>    

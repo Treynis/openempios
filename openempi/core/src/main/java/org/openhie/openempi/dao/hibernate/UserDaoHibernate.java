@@ -29,8 +29,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.openhie.openempi.dao.UserDao;
-import org.openhie.openempi.model.Permission;
-import org.openhie.openempi.model.Role;
 import org.openhie.openempi.model.User;
 import org.openhie.openempi.model.UserFile;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -70,8 +68,8 @@ public class UserDaoHibernate extends GenericDaoHibernate<User, Long> implements
     }
         
     public User getUser(final Long userId) {
-    	return (User) getHibernateTemplate().execute(new HibernateCallback() {
-			public Object doInHibernate(Session session) throws HibernateException, SQLException {
+    	return getHibernateTemplate().execute(new HibernateCallback<User>() {
+			public User doInHibernate(Session session) throws HibernateException, SQLException {
 				User user = (User) session.load(User.class, userId);
 		    	if (user == null) {
 		    		return user;

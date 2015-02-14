@@ -135,6 +135,7 @@ public class ConversionHelper
 	
 	public static Patient getPatient(Person person) {
 		Patient patient = new Patient();
+		patient.setRecordId("" + person.getPersonId());
 		patient.setBirthPlace(person.getBirthPlace());
 		if (person.getBirthOrder() != null)
 			patient.setBirthOrder(person.getBirthOrder());

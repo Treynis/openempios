@@ -38,8 +38,6 @@ public interface SchemaManager
             OType.DATETIME, false);
     static final InternalAttribute DIRTY_RECORD_PROPERTY = new InternalAttribute(Constants.DIRTY_RECORD_PROPERTY,
             OType.BOOLEAN, true);
-    static final InternalAttribute ENTITY_PROPERTY = new InternalAttribute(Constants.ENTITY_PROPERTY,
-            OType.LINK, false);
     static final InternalAttribute ENTITY_VERSION_ID_PROPERTY = new InternalAttribute(
             Constants.ENTITY_VERSION_ID_PROPERTY, OType.LONG, false);
     static final InternalAttribute IDENTIFIER_PROPERTY = new InternalAttribute(Constants.IDENTIFIER_PROPERTY,
@@ -71,7 +69,7 @@ public interface SchemaManager
             };
 
     static final InternalAttribute[] IDENTIFIER_ATTRIBUTES = { IDENTIFIER_PROPERTY,
-            IDENTIFIER_DOMAIN_ID_PROPERTY, ENTITY_PROPERTY, USER_CREATED_BY_PROPERTY, USER_VOIDED_BY_PROPERTY,
+            IDENTIFIER_DOMAIN_ID_PROPERTY, USER_CREATED_BY_PROPERTY, USER_VOIDED_BY_PROPERTY,
             DATE_CREATED_PROPERTY, DATE_VOIDED_PROPERTY };
 
     static final InternalAttribute[] LINK_ATTRIBUTES = { DATE_CREATED_PROPERTY, DATE_REVIEWED_PROPERTY,
@@ -79,7 +77,9 @@ public interface SchemaManager
             USER_CREATED_BY_PROPERTY, USER_REVIEWED_BY_PROPERTY };
     
     public void createDatabase(EntityStore store, OrientBaseGraph db);
-
+    
+    public void dropDatabase(EntityStore store, OrientBaseGraph db);
+    
     public void createIndexes(Entity entity, OrientBaseGraph db);
     
     public ConnectionManager getConnectionManager();
@@ -96,6 +96,8 @@ public interface SchemaManager
 
     public void initializeSchema(Entity entity, EntityStore store);
     
+    public void dropSchema(Entity entity, EntityStore store);
+
     public boolean isInternalAttribute(String fieldName);
     
     public void removeIndexes(Entity entity, OrientBaseGraph db);

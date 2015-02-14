@@ -51,12 +51,12 @@ import com.extjs.gxt.ui.client.widget.Label;
 import com.extjs.gxt.ui.client.widget.LayoutContainer;
 import com.extjs.gxt.ui.client.widget.MessageBox;
 import com.extjs.gxt.ui.client.widget.button.Button;
+import com.extjs.gxt.ui.client.widget.layout.BoxLayout.BoxLayoutPack;
 import com.extjs.gxt.ui.client.widget.layout.FormLayout;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayout;
+import com.extjs.gxt.ui.client.widget.layout.HBoxLayout.HBoxLayoutAlign;
 import com.extjs.gxt.ui.client.widget.layout.HBoxLayoutData;
 import com.extjs.gxt.ui.client.widget.layout.RowLayout;
-import com.extjs.gxt.ui.client.widget.layout.BoxLayout.BoxLayoutPack;
-import com.extjs.gxt.ui.client.widget.layout.HBoxLayout.HBoxLayoutAlign;
 import com.extjs.gxt.ui.client.widget.menu.CheckMenuItem;
 import com.extjs.gxt.ui.client.widget.menu.Menu;
 import com.extjs.gxt.ui.client.widget.menu.MenuBar;
@@ -65,7 +65,6 @@ import com.extjs.gxt.ui.client.widget.menu.MenuItem;
 import com.extjs.gxt.ui.client.widget.toolbar.FillToolItem;
 import com.extjs.gxt.ui.client.widget.toolbar.SeparatorToolItem;
 import com.extjs.gxt.ui.client.widget.toolbar.ToolBar;
-import com.extjs.gxt.ui.client.widget.Info;
 import com.google.gwt.core.client.GWT;
 
 public class MenuToolbarView extends View
@@ -430,6 +429,16 @@ public class MenuToolbarView extends View
                     }
                 });
         adminMenu.add(menuItemDropEntityIndexes);
+        
+        MenuItem menuClearLoggedLinks = new MenuItem("Clear Logged Links",
+                IconHelper.create("images/pictures.png"), new SelectionListener<MenuEvent>()
+                {
+                    @Override
+                    public void componentSelected(MenuEvent ce) {
+                        Dispatcher.get().dispatch(AppEvents.ClearLoggedLinks);
+                    }
+                });
+        adminMenu.add(menuClearLoggedLinks);
         
         CheckMenuItem menuItemInfoPanel = new CheckMenuItem("Information Panel");
         Listener<MenuEvent> menuListener = new Listener<MenuEvent>() {

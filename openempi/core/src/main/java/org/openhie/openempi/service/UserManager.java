@@ -84,6 +84,8 @@ public interface UserManager extends UniversalManager {
      */
     String createSession(User user);
     
+    public void logout(String sessionKey);
+    
     /**
     /**
      * Finds a user by their username.

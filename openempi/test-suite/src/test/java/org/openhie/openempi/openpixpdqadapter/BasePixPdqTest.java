@@ -29,7 +29,6 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.log4j.Logger;
-import org.openhealthtools.openexchange.actorconfig.ActorConfigurationLoader;
 import org.openhealthtools.openexchange.actorconfig.IheConfigurationException;
 import org.openhealthtools.openpixpdq.common.PixPdqConfigurationLoader;
 import org.openhie.openempi.ApplicationException;

@@ -60,6 +60,10 @@
     <servlet-name>initializationService</servlet-name>
     <servlet-class>org.openempi.webapp.server.InitializationServlet</servlet-class>
     <load-on-startup>1</load-on-startup>
+    <init-param>
+    	<param-name>OPENEMPI_UPDATES_SITE</param-name>
+    	<param-value>http://www.openempi.org/openempi-downloads/openempi_updates/</param-value>
+    </init-param>
   </servlet>
   
   <servlet>
@@ -185,7 +189,7 @@
     </init-param>    
     <load-on-startup>15</load-on-startup>
   </servlet>
-  <!--
+<!--  
   <servlet>
     <servlet-name>CXFServlet</servlet-name>
     <display-name>CXF Servlet</display-name>
@@ -196,7 +200,12 @@
     </init-param>
     <load-on-startup>16</load-on-startup> 
   </servlet>
-  -->
+-->
+  <servlet>
+    <servlet-name>fhir</servlet-name>
+    <servlet-class>org.openhie.openempi.openpixpdq.fhir.PdqFhirServer</servlet-class>
+    <load-on-startup>17</load-on-startup> 
+  </servlet>
   <!--   
   <servlet>
     <servlet-name>logging</servlet-name>
@@ -313,7 +322,12 @@
     <servlet-name>CXFServlet</servlet-name>
     <url-pattern>/services/*</url-pattern>
   </servlet-mapping>
-  -->
+-->
+  <servlet-mapping>
+    <servlet-name>fhir</servlet-name>
+    <url-pattern>/fhir/*</url-pattern>
+  </servlet-mapping>
+  
   <session-config>
         <session-timeout>30</session-timeout>
   </session-config>

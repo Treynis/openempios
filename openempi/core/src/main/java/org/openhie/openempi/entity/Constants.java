@@ -27,7 +27,6 @@ public class Constants
 	public final static String DATE_REVIEWED_PROPERTY = "dateReviewed";
 	public final static String DATE_VOIDED_PROPERTY = "dateVoided";
 	public final static String DIRTY_RECORD_PROPERTY = "_dirty";
-	public final static String ENTITY_PROPERTY = "record";
 	public final static String ENTITY_VERSION_ID_PROPERTY = "entityVersionId";
 	public final static String IDENTIFIER_PROPERTY = "identifier";
 	public final static String IDENTIFIERS_PROPERTY = "identifiers";
@@ -40,7 +39,17 @@ public class Constants
 	public final static String LINK_VECTOR_PROPERTY = "vector";
 	public final static String LINK_WEIGHT_PROPERTY = "weight";
 	public final static String ORIENTDB_CLUSTER_ID_KEY = "ORIENTDB_CLUSTER_ID";
+    public final static String RECORD_PROPERTY = "record";
 	public final static String RECORD_ID_PROPERTY = "recordId";
+    /**
+     * When we return arbitrary records from the graph database in the form of a map per record, this
+     * key into the map stores the unique identity for the record regardless of the underlying
+     * store used.
+     */
+    public static final String RECORDID_KEY = "@RECORDIDENTITY";
+    public static final String CLUSTERID_KEY = "@CLUSTERID";
+    public static final String CLUSTERPOSITION_KEY = "@CLUSTERPOSITION";
+    
 	public final static String USER_CHANGED_BY_PROPERTY = "userChangedBy";
 	public final static String USER_CREATED_BY_PROPERTY = "userCreatedBy";
 	public final static String USER_REVIEWED_BY_PROPERTY = "userReviewedBy";

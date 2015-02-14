@@ -39,7 +39,7 @@
 			<xsd:sequence>
 				<xsd:element name="fields" type="fl:FieldsType" minOccurs="1"/>
 			</xsd:sequence>
-			<xsd:attribute name="delimeter" type="xsd:token" />
+			<xsd:attribute name="delimiter" type="xsd:token" />
 			<xsd:attribute name="header-first-line" type="xsd:boolean"/>
 			<xsd:attribute name="training-data-extractor" type="xsd:string"/>
 		<xsd:attribute name="namespace-identifier" type="xsd:string"/>
@@ -68,7 +68,7 @@
 		</xsd:sequence>
 		<xsd:attribute name="datatype" type="fl:datatype"/>
 		<xsd:attribute name="date-format-string" type="xsd:string"/>
-		<xsd:attribute name="delimeter" type="xsd:token"/>
+		<xsd:attribute name="delimiter" type="xsd:token"/>
 		<xsd:attribute name="enclosing-character" type="xsd:string"/>
 		<xsd:attribute name="is-cluster-id" type="xsd:boolean" default="false"/>
 		<xsd:attribute name="is-identifier" type="xsd:boolean" default="false"/>

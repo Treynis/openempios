@@ -43,6 +43,7 @@ import org.openhealthtools.openpixpdq.api.IPdSupplier;
 import org.openhealthtools.openpixpdq.api.IPixManager;
 import org.openhealthtools.openpixpdq.impl.v2.PdSupplier;
 import org.openhealthtools.openpixpdq.impl.v2.PixManager;
+import org.openhie.openempi.openpixpdq.fhir.PdqSupplierFhir;
 import org.openhie.openempi.openpixpdq.v3.impl.PdqSupplierV3;
 import org.openhie.openempi.openpixpdq.v3.impl.PixManagerV3;
 
@@ -124,6 +125,9 @@ public class PixPdqConfigurationLoader extends ActorConfigurationLoader {
 		else if (actor.getType().equalsIgnoreCase(Constants.PD_SUPPLIER_V3)) {
 			log.info("Initialized an actor of type " + actor.getType());
 		}
+		else if (actor.getType().equalsIgnoreCase(Constants.PD_SUPPLIER_FHIR)) {
+			log.info("Initialized an actor of type " + actor.getType());
+		}
 		else if (actor.getType().equalsIgnoreCase(Constants.PIX_CONSUMER_V3)) {
 			log.info("Initialized an actor of type " + actor.getType());
 		}
@@ -132,7 +136,7 @@ public class PixPdqConfigurationLoader extends ActorConfigurationLoader {
 				throw new IheConfigurationException("Actor '" + actorName + "' must specify a valid '" + AUDITTRAIL + "' element");
 		}
 		else {
-			throw new IheConfigurationException("Actor '" + actorName + "' must specify a valid actor type");			
+			throw new IheConfigurationException("Actor '" + actorName + "' must specify a valid actor type; type " + actor.getType() + " is unknown");		
 		}
 		
 		return true;
@@ -203,6 +207,15 @@ public class PixPdqConfigurationLoader extends ActorConfigurationLoader {
                 okay = true;
             }
 		}
+		else if (actor.getType().equalsIgnoreCase(Constants.PD_SUPPLIER_FHIR)) {
+            PdqSupplierFhir pdSup = new PdqSupplierFhir(actor, auditTrail);
+            if (pdSup != null) {
+                pdSup.setMesaLogger(logger);
+                PatientBroker broker = PatientBroker.getInstance();
+                broker.registerPdSupplier(pdSup);
+                okay = true;
+            }
+		}
 		else if (actor.getType().equalsIgnoreCase(Constants.PIX_CONSUMER_V3)) {
 			log.debug("Nothing to do for this one.");
 		}
@@ -255,6 +268,8 @@ public class PixPdqConfigurationLoader extends ActorConfigurationLoader {
             return "OpenPIXPDQ PIX Manager V3";
         } else if (type.equals(Constants.PD_SUPPLIER)) {
             return "OpenPIXPDQ Patient Demographics Supplier";
+        } else if (type.equals(Constants.PD_SUPPLIER_FHIR)) {
+            return "OpenPIXPDQ Patient Demographics Supplier FHIR";
         } else if (type.equals(Constants.PD_SUPPLIER_V3)) {
             return "OpenPIXPDQ Patient Demographics Supplier V3";
         } else if (type.equals(Constants.PIX_CONSUMER_V3)) {

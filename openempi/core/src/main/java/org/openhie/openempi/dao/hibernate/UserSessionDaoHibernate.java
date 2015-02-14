@@ -20,6 +20,7 @@
  */
 package org.openhie.openempi.dao.hibernate;
 
+import java.util.Date;
 import java.util.List;
 
 import org.openhie.openempi.dao.UserSessionDao;
@@ -28,28 +29,71 @@ import org.openhie.openempi.model.UserSession;
 public class UserSessionDaoHibernate extends UniversalDaoHibernate implements UserSessionDao
 {
 	public UserSession findById(Integer sessionId) {
-		log.debug("Locating session by id: " + sessionId);
+	    if (log.isDebugEnabled()) {
+	        log.debug("Locating session by id: " + sessionId);
+	    }
 		UserSession session = (UserSession) getHibernateTemplate().load(UserSession.class, sessionId);
-		log.debug("Found session: " + session);
+        if (log.isDebugEnabled()) {
+            log.debug("Found session: " + session);
+        }
 		return session;
 	}
 
 	@SuppressWarnings("unchecked")
 	public UserSession findBySessionKey(String sessionKey) {
-		log.debug("Locating session by key: " + sessionKey);
-		List<UserSession> list = (List<UserSession>) getHibernateTemplate().find("from UserSession where sessionKey = ?", new String[] { sessionKey });
+        if (log.isDebugEnabled()) {
+            log.debug("Locating session by key: " + sessionKey);
+        }
+		List<UserSession> list = (List<UserSession>) getHibernateTemplate().
+		        find("from UserSession where sessionKey = ?", new Object[] { sessionKey });
 		if (list.size() == 0) {
 			return null;
 		}
 		UserSession session = list.get(0);
-		log.debug("Found session: " + session);
+        if (log.isDebugEnabled()) {
+            log.debug("Found session: " + session);
+        }
 		return session;
 	}
 
+    @SuppressWarnings("unchecked")
+	public List<UserSession> findExpiredSessions(Date cutoff) {
+        if (log.isDebugEnabled()) {
+            log.debug("Locating session that haven't been modified after: " + cutoff);
+        }
+        List<UserSession> list = (List<UserSession>) getHibernateTemplate().
+                find("from UserSession where dateModified < ?", cutoff);
+        if (log.isDebugEnabled()) {
+            log.debug("Found " + list.size() + " sessions that have expired.");
+        }
+        return list;
+	}
+	
 	public void saveUserSession(UserSession session) {
-		log.debug("Saving session record: " + session);
+	    if (log.isDebugEnabled()) {
+	        log.debug("Saving session record: " + session);
+	    }
 		getHibernateTemplate().saveOrUpdate(session);
-		log.debug("Finished saving the session.");
+		if (log.isDebugEnabled()) {
+		    log.debug("Finished saving the session.");
+		}
+	}
+	
+	public void removeUserSession(String sessionKey) {
+	    if (log.isDebugEnabled()) {
+	        log.debug("Removing session with key: " + sessionKey);
+	    }
+	    UserSession session = findBySessionKey(sessionKey);
+	    if (session == null) {
+	        if (log.isDebugEnabled()) {
+	            log.debug("Session couldn't be removed because it does not exist: " + sessionKey);
+	        }
+	        return;
+	    }
+	    getHibernateTemplate().delete(session);
+        if (log.isDebugEnabled()) {
+            log.debug("Finished deleting the session.");
+        }
 	}
 
 	@SuppressWarnings("unchecked")

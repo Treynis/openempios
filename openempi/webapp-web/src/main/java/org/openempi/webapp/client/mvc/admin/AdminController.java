@@ -43,6 +43,7 @@ public class AdminController extends Controller
 		this.registerEventTypes(AppEvents.AssignGlobalIdentifier);
 		this.registerEventTypes(AppEvents.AdminStartPixPdqServer);
 		this.registerEventTypes(AppEvents.AdminStopPixPdqServer);
+        this.registerEventTypes(AppEvents.ClearLoggedLinks);
         this.registerEventTypes(AppEvents.CreateEntityIndexes);
         this.registerEventTypes(AppEvents.DropEntityIndexes);
 		this.registerEventTypes(AppEvents.InitializeRepository);
@@ -160,7 +161,29 @@ public class AdminController extends Controller
                     logInfoMessage(currentEntity.getName(), message, new Date());
                 }
             });             
-		} else if (event.getType() == AppEvents.AdminStopPixPdqServer) {
+        } else if (event.getType() == AppEvents.ClearLoggedLinks) {
+            Info.display("Information", "Initiating the process of clearing all logged links.");
+            final EntityWeb currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
+            logInfoMessage(currentEntity.getName(), "Received request to clear all logged links.", new Date());
+            getAdminService().clearLoggedLinks(currentEntity, new AsyncCallback<String>() {
+                public void onFailure(Throwable caught) {
+
+                    if (caught instanceof AuthenticationException) {
+                        Dispatcher.get().dispatch(AppEvents.Logout);
+                        return;
+                    }
+                    Info.display("Warning", "The logged links were not cleared successfuly.");
+                    logInfoMessage(currentEntity.getName(), "The logged links were note cleared successfuly due to: " +
+                            caught.getMessage(), new Date());
+                    Dispatcher.forwardEvent(AppEvents.Error, caught);
+                }
+
+                public void onSuccess(String message) {
+                    Info.display("Information", "The logged links were cleared successfuly.");
+                    logInfoMessage(currentEntity.getName(), "The logged links were cleared successfuly.", new Date());
+                }
+            });
+        } else if (event.getType() == AppEvents.AdminStopPixPdqServer) {
             final EntityWeb currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
 
 			getAdminService().stopPixPdqServer(new AsyncCallback<String>() {

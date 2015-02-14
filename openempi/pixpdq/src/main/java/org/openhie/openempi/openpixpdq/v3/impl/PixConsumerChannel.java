@@ -24,11 +24,6 @@ import javax.xml.ws.BindingProvider;
 import javax.xml.ws.soap.AddressingFeature;
 import javax.xml.ws.soap.SOAPBinding;
 
-import org.apache.cxf.frontend.ClientProxyFactoryBean;
-import org.apache.cxf.ws.addressing.AddressingBuilder;
-import org.apache.cxf.ws.addressing.AddressingProperties;
-import org.apache.cxf.ws.addressing.AttributedURIType;
-import org.apache.cxf.ws.addressing.WSAddressingFeature;
 import org.hl7.v3.MCCIIN000002UV01;
 import org.hl7.v3.PRPAIN201302UV02;
 import org.openhealthtools.openexchange.actorconfig.net.IConnectionDescription;
@@ -70,7 +65,7 @@ public class PixConsumerChannel extends HL7ChannelV3
 //        setupWSAddressingForCall(bp);        
 		return port;
 	}
-
+/*
 	private void setupWSAddressingForCall(BindingProvider bp) {
 		// get Message Addressing Properties instance
         AddressingBuilder builder = AddressingBuilder.getAddressingBuilder();
@@ -88,5 +83,5 @@ public class PixConsumerChannel extends HL7ChannelV3
 	private void clearWSAddressingAfterCall(PIXConsumerPortType port) {
 		BindingProvider bp = (BindingProvider) port;
 		bp.getRequestContext().remove(org.apache.cxf.ws.addressing.JAXWSAConstants.CLIENT_ADDRESSING_PROPERTIES);
-	}
+	}*/
 }

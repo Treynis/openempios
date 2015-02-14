@@ -205,6 +205,11 @@ public class ConfigurationDataServiceImpl extends AbstractRemoteServiceServlet i
             vectorWeb.setWeight(vector.getWeight());
             vectorConfigs.add(vectorWeb);
         }
+        if (log.isDebugEnabled()) {
+            for (VectorConfigurationWeb entry : vectorConfigs) {
+                log.debug("V(" + entry.getVectorValue() + ")=" + entry.getWeight());
+            }
+        }
         return vectorConfigs;
     }
 

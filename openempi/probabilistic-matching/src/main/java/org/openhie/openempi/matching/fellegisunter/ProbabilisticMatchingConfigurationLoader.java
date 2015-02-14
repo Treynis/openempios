@@ -296,17 +296,19 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		params.setMu(((Float) data.get(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY)).floatValue());
 		
 		// The number of matching fields has changed; they need to regenerate the model
-		if (params.fieldCount != count) {
+		if (params.fieldCount != count || params.getMatchingFieldNames().length != count) {
 		    String[] fieldNames = new String[matchFields.size()];
 		    int i=0;
 		    for (MatchField field : matchFields) {
 		        fieldNames[i] = field.getFieldName();
 		        i++;
 		    }
+		    params.setMatchingFieldNames(fieldNames);
 		    int vectorCount = (int) Math.pow(2,count);
 		    params.setFieldCount(count);
 		    params.setVectorCount(vectorCount);
 		    params.setVectorFrequencies(new int[vectorCount]);
+		    params.setVectorWeights(new double[vectorCount]);
 		}
 
 		saveParametersToFile(configDirectory, entityName, params);

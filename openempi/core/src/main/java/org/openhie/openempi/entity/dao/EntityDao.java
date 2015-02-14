@@ -22,32 +22,41 @@ package org.openhie.openempi.entity.dao;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.entity.RecordCacheManager;
+import org.openhie.openempi.entity.dao.orientdb.EntityStore;
 import org.openhie.openempi.model.DataAccessIntent;
 import org.openhie.openempi.model.Entity;
+import org.openhie.openempi.model.Identifier;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.LinkSource;
-import org.openhie.openempi.model.RecordLink;
-import org.openhie.openempi.model.Identifier;
 import org.openhie.openempi.model.Record;
+import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
-
-import com.orientechnologies.orient.core.record.impl.ODocument;
 
 public interface EntityDao
 {
+    public EntityStore getEntityStoreByName(String entityName);
+    
     public void initializeStore(Entity entity);
-
+    
+    public void initializeStore(Entity entity, String dataDirectory);
+    
     public void shutdownStore(Entity entity);
 
     public List<Record> loadRecords(Entity entity, int firstResult, int maxResults);
 
     public Record loadRecord(Entity entity, Long id);
     
-    public Object loadObject(Entity entity, String recordId);
+    public Map<String,Object> loadObject(Entity entity, String recordId);
+    
+    public List<Long> getRecordIds(Entity entity, int firstResult, int maxResults);
+    
+    public void loadRecords(Entity entity, List<BlockingQueue<Record>> queues, int blockSize);
     
     public List<Long> getAllRecordIds(Entity entity);
 
@@ -86,7 +95,7 @@ public interface EntityDao
 
     public void saveData(Entity entity, String className, Record record);
     
-    public List<ODocument> executeQuery(Entity entity, String query);
+    public List<Map<String,Object>> executeQuery(Entity entity, String query);
 
     public void executeQueryAsync(Entity entity, String query, AsyncQueryCallback callback);
 

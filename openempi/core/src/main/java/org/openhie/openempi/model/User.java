@@ -43,8 +43,6 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 
-import org.apache.commons.lang.builder.ToStringBuilder;
-import org.apache.commons.lang.builder.ToStringStyle;
 import org.springframework.security.GrantedAuthority;
 import org.springframework.security.userdetails.UserDetails;
 
@@ -108,7 +106,6 @@ public class User extends BaseObject implements Serializable, UserDetails
     }
 
     @Column(nullable=false)
-    @XmlElement
     public String getPassword() {
         return password;
     }
@@ -119,7 +116,6 @@ public class User extends BaseObject implements Serializable, UserDetails
     }
 
     @Column(name="password_hint")
-    @XmlElement
     public String getPasswordHint() {
         return passwordHint;
     }
@@ -376,25 +372,16 @@ public class User extends BaseObject implements Serializable, UserDetails
         return (username != null ? username.hashCode() : 0);
     }
 
-    public String toString() {
-        return new ToStringBuilder(this, ToStringStyle.DEFAULT_STYLE)
-                .append("username", this.username)
-                .append("enabled", this.enabled)
-                .append("accountExpired", this.accountExpired)
-                .append("credentialsExpired", this.credentialsExpired)
-                .append("accountLocked", this.accountLocked).toString();
-    }
-    
-    /**
+	public String toString() {
+		return "User [username=" + username + ", firstName=" + firstName + ", lastName=" + lastName + ", enabled="
+				+ enabled + ", accountExpired=" + accountExpired + ", accountLocked=" + accountLocked + "]";
+	}
+
+	/**
      * {@inheritDoc}
      */
     public String toStringLong() {
-        ToStringBuilder sb = new ToStringBuilder(this, ToStringStyle.DEFAULT_STYLE)
-                .append("username", this.username)
-                .append("enabled", this.enabled)
-                .append("accountExpired", this.accountExpired)
-                .append("credentialsExpired", this.credentialsExpired)
-                .append("accountLocked", this.accountLocked);
+        StringBuilder sb = new StringBuilder(toString());
 
         GrantedAuthority[] auths = this.getAuthorities();
         if (auths != null) {

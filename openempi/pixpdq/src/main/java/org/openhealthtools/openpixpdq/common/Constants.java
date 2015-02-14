@@ -31,6 +31,7 @@ public class Constants {
 	public static final String PIX_MANAGER    = "PixManager";
 	public static final String PIX_MANAGER_V3 = "PixManagerV3";
 	public static final String PD_SUPPLIER    = "PdSupplier";
+	public static final String PD_SUPPLIER_FHIR = "PdSupplierFhir";
 	public static final String PD_SUPPLIER_V3 = "PdSupplierV3";
 	public static final String SECURE_NODE    = "SecureNode";
 	public static final String PIX_CONSUMER_V3 = "PixConsumerV3";

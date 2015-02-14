@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Date;
 
+import org.openhie.openempi.entity.ForEachRecordConsumer;
 import org.openhie.openempi.entity.RecordCacheManager;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
 import org.openhie.openempi.entity.RecordQueryService;

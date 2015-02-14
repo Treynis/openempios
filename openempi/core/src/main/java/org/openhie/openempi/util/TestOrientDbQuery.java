@@ -50,13 +50,13 @@ public class TestOrientDbQuery
         for (String[] pair : pairs) {
             System.out.println("Link exists returns: " + alternateLinkExists(database, pair[0], pair[1]));
         }
-        database.getRawGraph().close();
+        database.shutdown();
     }
     
     private static OSQLSynchQuery<ODocument> buildCommand(OrientGraph db, String oneRid) {
         String query = "select from (traverse * from " + oneRid + ") where @class = 'person'";
-        OSQLSynchQuery<ODocument> obj = db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query));
-        System.out.println("Object is of type: " + obj.getClass());
+        OSQLSynchQuery<ODocument> obj = (OSQLSynchQuery<ODocument>) db.getRawGraph().command(new OSQLSynchQuery<ODocument>(query));
+        log.debug("Object is of type: " + obj.getClass());
         return obj;
     }
     

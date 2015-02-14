@@ -20,6 +20,7 @@
  */
 package org.openhie.openempi.dao;
 
+import java.util.Date;
 import java.util.List;
 
 import org.openhie.openempi.model.UserSession;
@@ -32,5 +33,9 @@ public interface UserSessionDao extends UniversalDao
 	
 	public UserSession findById(Integer sessionId);
 	
+	public List<UserSession> findExpiredSessions(Date cutoff);
+	
 	public UserSession findBySessionKey(String sessionKey);
+	
+	public void removeUserSession(String sessionKey);
 }

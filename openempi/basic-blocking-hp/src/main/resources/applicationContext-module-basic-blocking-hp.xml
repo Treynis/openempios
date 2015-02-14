@@ -32,19 +32,11 @@
 	<bean id="blockingServiceHp" class="org.openhie.openempi.blocking.basicblockinghp.BlockingServiceImpl">
 		<property name="blockingDao" ref="blockingHpDao" />
 		<property name="entityDao" ref="entityDao" />
-		<property name="cacheTaskExecutor" ref="cacheTaskExecutor" />
 	</bean>
 
     <bean id="blockingHpDao" class="org.openhie.openempi.blocking.basicblockinghp.dao.orientdb.BlockingDaoOrientdb">
     	<property name="entityDao" ref="entityDao" />
     </bean>
-
-	<bean id="cacheTaskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
-		<property name="corePoolSize" value="2" />
-		<property name="maxPoolSize" value="2" />
-		<property name="queueCapacity" value="1" />
-		<property name="rejectedExecutionHandler" ref="generalCallerRunsPolicy"/>
-	</bean>
 
 	<bean id="generalCallerRunsPolicy" class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy" /> 
      

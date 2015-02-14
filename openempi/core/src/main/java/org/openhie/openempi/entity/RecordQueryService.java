@@ -70,7 +70,7 @@ public interface RecordQueryService
     RecordLink loadRecordLink(Entity entity, String recordLinkId);
 
     int getNotificationCount(User user);
-
+    
     @Transactional(propagation = Propagation.REQUIRED, readOnly = false)
     List<IdentifierUpdateEvent> retrieveNotifications(int startIndex, int maxEvents, Boolean removeRecords, User eventRecipient);
 

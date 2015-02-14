@@ -20,31 +20,23 @@
  */
 package org.openhie.openempi.openpixpdq.v3.impl;
 
-import static org.apache.cxf.ws.addressing.JAXWSAConstants.CLIENT_ADDRESSING_PROPERTIES_OUTBOUND;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.soap.SOAPMessage;
-
 import org.apache.cxf.binding.soap.Soap12;
 import org.apache.cxf.binding.soap.SoapMessage;
 import org.apache.cxf.binding.soap.interceptor.AbstractSoapInterceptor;
-import org.apache.cxf.binding.soap.interceptor.SoapOutInterceptor;
 import org.apache.cxf.binding.soap.interceptor.SoapOutInterceptor.SoapOutEndingInterceptor;
 import org.apache.cxf.binding.soap.model.SoapOperationInfo;
 import org.apache.cxf.endpoint.Endpoint;
 import org.apache.cxf.helpers.CastUtils;
-import org.apache.cxf.interceptor.BareOutInterceptor;
 import org.apache.cxf.interceptor.Fault;
 import org.apache.cxf.message.Exchange;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.Phase;
 import org.apache.cxf.service.model.BindingOperationInfo;
 import org.apache.cxf.service.model.OperationInfo;
-import org.apache.cxf.ws.addressing.AddressingProperties;
-import org.apache.cxf.ws.addressing.ContextUtils;
 
 public class CustomHeaderFixerInterceptor extends AbstractSoapInterceptor {
 
@@ -55,8 +47,10 @@ public class CustomHeaderFixerInterceptor extends AbstractSoapInterceptor {
 
     public void handleMessage(SoapMessage message) throws Fault {
         if (message.getVersion() instanceof Soap12) {
-            AddressingProperties maps = ContextUtils.retrieveMAPs(message, false, true, false);
-            Map<String, List<String>> headers = CastUtils.cast((Map)message.get(Message.PROTOCOL_HEADERS));
+//            AddressingProperties maps = ContextUtils.retrieveMAPs(message, false, true, false);
+            @SuppressWarnings("unchecked")
+			Map<String, List<String>> headers = CastUtils.cast((Map<String, List<String>>) 
+            		message.get(Message.PROTOCOL_HEADERS));
             if (headers != null) {
                 List<String> sa = headers.get("SOAPAction");
                 if (sa != null && sa.size() > 0) {

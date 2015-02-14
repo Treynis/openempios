@@ -85,6 +85,8 @@ public interface AuditEventService
 	public List<MessageLogEntry> filterMessageLogEntries(Date startDate, Date endDate, List<Integer> messageType, int firstResult, int maxResults);
 	
 	// Link logs
+	public void clearLoggedLinks(int entityVersionId);
+	
     public int getLoggedLinksCount(int entityVersionId, int vectorValue);
     
     public List<LoggedLink> getLoggedLinks(final int entityVersionId, final int vectorValue, final int start, final int maxResults);

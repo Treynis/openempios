@@ -32,7 +32,5 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry combineaccessrules="false" kind="src" path="/openempi-configuration"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/openempi-core"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

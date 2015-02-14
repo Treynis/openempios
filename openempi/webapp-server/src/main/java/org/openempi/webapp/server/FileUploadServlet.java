@@ -154,7 +154,6 @@ public class FileUploadServlet extends HttpServlet
 			throw new IOException("File name is not valid.");
 		}
 
-		// TODO: Once user management is plugged in this won't be needed here
 		checkLoggedInUser();
 
 		UserFile userFile = new UserFile(name, absolutePath, isEntity);

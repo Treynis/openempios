@@ -27,6 +27,7 @@ public class AdminConfiguration
 	private String configFileDirectory;
 	private boolean autoStartPIXPDQ;
 	private String dataDirectory;
+	private int sessionDuration;
 	private List<UpdateNotificationRegistrationEntry> updateNotificationRegistrationEntries;
 
 	public AdminConfiguration() {
@@ -56,6 +57,14 @@ public class AdminConfiguration
 	public void setDataDirectory(String dataDirectory) {
 		this.dataDirectory = dataDirectory;
 	}
+
+    public int getSessionDuration() {
+        return sessionDuration;
+    }
+
+    public void setSessionDuration(int sessionDuration) {
+        this.sessionDuration = sessionDuration;
+    }
 
     public List<UpdateNotificationRegistrationEntry> getUpdateNotificationRegistrationEntries() {
         return updateNotificationRegistrationEntries;

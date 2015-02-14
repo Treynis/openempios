@@ -23,6 +23,7 @@ package org.openhie.openempi.entity.dao.orientdb;
 import org.openhie.openempi.entity.Constants;
 
 import com.orientechnologies.orient.core.db.ODatabase;
+import com.orientechnologies.orient.core.metadata.security.OUser;
 import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 
 public class SchemaManagerLocal extends SchemaManagerAbstract
@@ -50,21 +51,22 @@ public class SchemaManagerLocal extends SchemaManagerAbstract
 
     public void createDatabase(EntityStore store, OrientBaseGraph db) {
         log.info("Creating a store for entity " + store.getEntityName() + " in location " + store.getStoreName());
-//        String databaseUrl = store.getStoreUrl();
-
-//        ODatabaseDocumentTx db = (ODatabaseDocumentTx) Orient.instance().getDatabaseFactory()
-//                .createDatabase(GRAPH_DATABASE_TYPE, databaseUrl);
-//        if (!db.exists()) {
-//            db.create();
-//        }
-//        if (db.isClosed()) {
-//            db.open("admin", "admin");
-//        }
-        db.getRawGraph().getMetadata().getSecurity()
-                .createUser(connectionManager.getUsername(), connectionManager.getPassword(),
-                        new String[] { "admin" });
-        log.debug("Created user: " + connectionManager.getUsername());
+        OUser user = db.getRawGraph().getMetadata().getSecurity().getUser(connectionManager.getUsername());
+        if (user == null) {
+	        db.getRawGraph().getMetadata().getSecurity()
+	                .createUser(connectionManager.getUsername(), connectionManager.getPassword(),
+	                        new String[] { "admin" });
+	        log.debug("Created user: " + connectionManager.getUsername());
+        }
         Object props = db.getRawGraph().get(ODatabase.ATTRIBUTES.CUSTOM);
         log.debug("Database custom attributes " + props + " of type " + props.getClass());
+    }
+    
+    public void dropDatabase(EntityStore store, OrientBaseGraph db) {
+        log.info("Dropping a store for entity " + store.getEntityName() + " in location " + store.getStoreName());
+        db.getRawGraph().getMetadata().getSecurity()
+                .dropUser(connectionManager.getUsername());
+        log.debug("Dropped user: " + connectionManager.getUsername());
+        db.drop();
     }
 }

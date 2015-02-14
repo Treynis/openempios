@@ -21,7 +21,6 @@
 package org.openhie.openempi.blocking.basicblockinghp;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,6 @@ import org.openhie.openempi.model.RecordPair;
 import org.openhie.openempi.notification.EventObservable;
 import org.openhie.openempi.notification.ObservationEventType;
 import org.openhie.openempi.util.ConvertUtil;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver implements BlockingService, Observer
 {
@@ -57,7 +55,6 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	private Map<String,BlockingConfiguration> configByEntity = new HashMap<String,BlockingConfiguration>();
 	private Map<String,BlockingServiceCache> cacheByEntity = new HashMap<String,BlockingServiceCache>();
 	private List<Entity> entities;
-	private ThreadPoolTaskExecutor cacheTaskExecutor;
 
 	public void startup() throws InitializationException {
 		log.info("Starting the Traditional Blocking Service");
@@ -71,7 +68,6 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 			BlockingServiceCache blockingServiceCache = new BlockingServiceCache(entity);
 			blockingServiceCache.setBlockingDao(blockingDao);
 			blockingServiceCache.setEntityDao(entityDao);
-			blockingServiceCache.setCacheTaskExecutor(cacheTaskExecutor);
 			blockingServiceCache.setMaximumBlockSize(config.getMaximumBlockSize());
 			blockingServiceCache.init(config.getBlockingRounds(), false);
 			log.info("Initialized cache for entity " + entity.getName());
@@ -255,14 +251,6 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	public void setBlockingDao(BlockingDao blockingDao) {
 		this.blockingDao = blockingDao;
 	}
-
-    public void setCacheTaskExecutor(ThreadPoolTaskExecutor cacheTaskExecutor) {
-        this.cacheTaskExecutor = cacheTaskExecutor;
-    }
-
-    public ThreadPoolTaskExecutor getCacheTaskExecutor() {
-        return cacheTaskExecutor;
-    }
 
     public EntityDao getEntityDao() {
         return entityDao;

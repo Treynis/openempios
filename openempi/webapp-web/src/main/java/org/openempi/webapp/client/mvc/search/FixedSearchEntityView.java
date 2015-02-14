@@ -458,7 +458,7 @@ public class FixedSearchEntityView extends BaseSearchEntityView
         buttonPanel.setStyleAttribute("paddingRight", "10px");
         buttonPanel.setButtonAlign(HorizontalAlignment.CENTER);
 
-        searchButton = new Button("Search Entity", IconHelper.create("images/search_icon_16x16.png"),
+        searchButton = new Button("Search", IconHelper.create("images/search_icon_16x16.png"),
                 new SelectionListener<ButtonEvent>()
                 {
 
@@ -477,7 +477,7 @@ public class FixedSearchEntityView extends BaseSearchEntityView
 
                         if (isAllNullValueFromGUI(attributeFieldMap)) {
                             Info.display("Warning: ",
-                                        "You must enter at least a search field before pressing the Search Entity button.");
+                                        "You must enter a value for at least one search field before pressing the Search button.");
                             return;
                         }
 

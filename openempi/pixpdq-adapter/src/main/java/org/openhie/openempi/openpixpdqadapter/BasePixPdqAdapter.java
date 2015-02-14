@@ -56,7 +56,7 @@ public class BasePixPdqAdapter
 		
 
 		IdentifierDomainService identifierDomainService = Context.getIdentifierDomainService();
-		if( identifierDomainService == null ) {
+		if (identifierDomainService == null) {
 			return idSet;
 		}
 		

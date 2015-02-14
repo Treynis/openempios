@@ -50,7 +50,7 @@ public class TestOrientDbCreateClassAndIndex extends TestCase
         final OClassImpl sourceClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
                 .createClass(className, vertexClass, clusterIds);
         log.info("Class " + className + " has been assigned cluster " + sourceClass.getDefaultClusterId());
-        sourceClass.saveInternal();
+        sourceClass.save();
 
         String[] attributes = { "givenName", "familyName", "middleName" };
         for (String fieldName : attributes) {
@@ -63,7 +63,7 @@ public class TestOrientDbCreateClassAndIndex extends TestCase
             prop = (OPropertyImpl) sourceClass.createProperty(fieldName, type);
             log.debug("Adding field " + fieldName + " to class " + className);
             prop.setCollate(new OCaseInsensitiveCollate());
-            sourceClass.saveInternal();
+            sourceClass.save();
         }
         
         db.getRawGraph().getStorage().reload();

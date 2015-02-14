@@ -133,6 +133,7 @@
 			<xs:element name="file-repository-directory" type="xs:string"/>
 			<xs:element name="autostart-pixpdq" type="xs:boolean" default="false"/>
 			<xs:element name="data-directory" type="xs:string" default="data"/>
+			<xs:element name="session-duration" type="xs:int" default="1800"/>
 			<xs:element name="update-notification-entries" type="mpi:update-notification-entries" minOccurs="0"/>			
 		</xs:sequence>
 	</xs:complexType>

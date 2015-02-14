@@ -41,7 +41,6 @@ public interface AuditEventDao extends UniversalDao
 
 	int getAuditEventCount(Date startDate, Date endDate, List<Integer> auditEventTypeCodes);
 
-
 	// Audit event entry
 	int getAuditEventEntryCount(Date startDate, Date endDate, List<Integer> auditEventTypeCodes);
 
@@ -52,6 +51,8 @@ public interface AuditEventDao extends UniversalDao
 	        int firstResult, int maxResults);
 
 	// link logs
+	void clearLoggedLinks(int entityVersionId);
+	
     LoggedLink getLoggedLink(Integer loggedLinkId);
 
     int getLoggedLinksCount(int entityVersionId, int vectorValue);
