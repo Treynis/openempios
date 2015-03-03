@@ -84,19 +84,22 @@
                 <em:comparator-function>
                     <function-name>Levenshtein</function-name>
                 </em:comparator-function>
-                <em:match-threshold>0.8</em:match-threshold>
+                <em:match-threshold>0.85</em:match-threshold>
             </em:match-field>
-                </em:match-fields>
-            </em:match-rule>
-            <em:match-rule>
-                <em:match-fields>
-                    <em:match-field>
-                        <em:field-name>familyName</em:field-name>
-                        <em:comparator-function>
-                            <function-name>JaroWinklerV2</function-name>
-                        </em:comparator-function>
-                        <em:match-threshold>0.89</em:match-threshold>
-                    </em:match-field>
+            <em:match-field>
+                <em:field-name>city</em:field-name>
+                <em:comparator-function>
+                    <function-name>Levenshtein</function-name>
+                </em:comparator-function>
+                <em:match-threshold>0.85</em:match-threshold>
+            </em:match-field>
+            <em:match-field>
+                <em:field-name>postalCode</em:field-name>
+                <em:comparator-function>
+                    <function-name>Levenshtein</function-name>
+                </em:comparator-function>
+                <em:match-threshold>0.85</em:match-threshold>
+            </em:match-field>
                 </em:match-fields>
             </em:match-rule>
         </em:match-rules>
