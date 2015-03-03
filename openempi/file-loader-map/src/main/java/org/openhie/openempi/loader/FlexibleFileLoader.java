@@ -584,7 +584,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
         public void run() {
             Context.setUserContext(userContext);
-            while (recordsQueue.size() > 0 || !done) {
+            int attempts = 0;
+            while (!done) {
                 try {
                     int records = recordsQueue.size();
                     if (records > 0) {
@@ -600,6 +601,15 @@ public class FlexibleFileLoader extends AbstractFileLoader
                                 return;
                             }
                             tasks.add(task);
+                        }
+                    } else {
+                        try {
+                            Thread.sleep(1000);
+                            attempts++;
+                            if (attempts > 10) {
+                                setDone(true);
+                            }
+                        } catch (InterruptedException e) {
                         }
                     }
                 } catch (InterruptedException e) {
@@ -656,8 +666,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
         public void saveRecordsInTaskList() {
             if (log.isDebugEnabled()) {
-                log.debug("With User Context: " + userContext + " in thread " + Thread.currentThread().getId()
-                        + " attempting to load a chunk of " + tasks.size() + " records.");
+                log.debug("With User Context: " + userContext + 
+                        " attempting to load a chunk of " + tasks.size() + " records.");
             }
             try {
                 if (tasks.size() == 0) {

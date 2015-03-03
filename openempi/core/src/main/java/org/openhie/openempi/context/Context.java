@@ -51,7 +51,9 @@ import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.entity.RecordQueryService;
 import org.openhie.openempi.jobqueue.JobQueueService;
+import org.openhie.openempi.loader.FileLoader;
 import org.openhie.openempi.loader.FileLoaderConfigurationService;
+import org.openhie.openempi.loader.FileLoaderFactory;
 import org.openhie.openempi.matching.MatchingLifecycleObserver;
 import org.openhie.openempi.matching.MatchingService;
 import org.openhie.openempi.matching.ShallowMatchingService;
@@ -161,6 +163,7 @@ public class Context implements ApplicationContextAware
 
     public static void shutdown() {
         stopScheduledTasks();
+        stopFileLoaders();
         for (MatchingService service : matchingServiceList) {
             stopMatchingService(service);
         }
@@ -176,7 +179,12 @@ public class Context implements ApplicationContextAware
 		isInitialized = false;		
 	}
 	
-	public static void shutdownAll() {
+	private static void stopFileLoaders() {
+	    FileLoader fileLoader = FileLoaderFactory.getFileLoader(getApplicationContext(), Constants.FLEXIBLE_FILE_LOADER);
+	    fileLoader.shutdown();
+    }
+
+    public static void shutdownAll() {
         for (MatchingService service : matchingServiceList) {
             stopMatchingService(service);
         }        

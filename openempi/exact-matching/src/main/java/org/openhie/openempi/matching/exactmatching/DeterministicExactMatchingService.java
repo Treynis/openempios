@@ -138,27 +138,33 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
             throw new RuntimeException("No match rules have been configured for entity " + entityName);
         }
         
+        boolean ruleMatch = true;
 		for (MatchRule rule : rules) {
 	        List<MatchField> matchFieldList = rule.getFields();
     		for (MatchField matchField : matchFieldList) {
     			boolean fieldsMatch = isExactMatch(matchField, recordPair.getLeftRecord(), recordPair.getRightRecord());
     			if (log.isTraceEnabled()) {
-    				log.debug("Comparison of records on field " + matchField + " returned " + fieldsMatch);
+    				log.trace("Comparison of records on field " + matchField + " returned " + fieldsMatch);
     			}
     			if (!fieldsMatch) {
-    				recordPair.setWeight(0D);
-    				recordPair.setLinkSource(new LinkSource(getMatchingServiceId()));
-    				recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
-    				break;
+    			    ruleMatch = false;
+    			    break;
     			}
     		}
-			log.debug("Record pair should create a link: " + recordPair + " based on rule " + rule);
-			recordPair.setWeight(1.0);
-			recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
-			recordPair.setVector((int) Math.pow(2.0, matchFieldList.size()) - 1);
-			return recordPair;	
+    		if (ruleMatch) {
+    		    if (log.isDebugEnabled()) {
+    		        log.debug("Record pair should create a link: " + recordPair + " based on rule " + rule);
+    		    }
+                recordPair.setWeight(1.0);
+                recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
+                recordPair.setVector((int) Math.pow(2.0, matchFieldList.size()) - 1);
+                return recordPair;  
+    		}
+    		ruleMatch = true;
     	}
-		log.debug("Record pair should not create a link: " + recordPair);
+		if (log.isTraceEnabled()) {
+		    log.trace("Record pair should not create a link: " + recordPair);
+		}
 		recordPair.setWeight(0.0);
 		recordPair.setMatchOutcome(RecordPair.MATCH_OUTCOME_UNLINKED);
 		// TODO: We need to fix this; it should calculate the vector even if it is not a match
@@ -180,12 +186,12 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 		}
 		String functionName = matchField.getComparatorFunction().getFunctionName();
 		double distance = comparisonService.score(functionName, lVal, rVal);
-		if (log.isTraceEnabled()) {
-			log.debug("Distance between values " + lVal + " and " + rVal + " computed using comparison function " + 
-					functionName + " was found to be " + distance + " as compared to threshold " + 
-					matchField.getMatchThreshold());
-		}
 		if (distance > matchField.getMatchThreshold()) {
+	        if (log.isTraceEnabled()) {
+	            log.trace("Distance between values " + lVal + " and " + rVal + " computed using comparison function " + 
+	                    functionName + " was found to be " + distance + " as compared to threshold " + 
+	                    matchField.getMatchThreshold());
+	        }
 			return true;
 		}
 		return false;

@@ -28,8 +28,8 @@
 
 	<bean id="flexibleDataLoader" class="org.openhie.openempi.loader.FlexibleFileLoader">
 		<property name="taskExecutor" ref="taskExecutorFileLoaderMap" />
-		<property name="numLoaderThreads" value="2" />
-		<property name="recordChunkSize" value="100" />
+		<property name="numLoaderThreads" value="1" />
+		<property name="recordChunkSize" value="1000" />
 	</bean>
 
 	<bean id="taskExecutorFileLoaderMap" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
