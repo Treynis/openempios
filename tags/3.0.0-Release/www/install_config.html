@@ -1,0 +1,75 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+	
+<center> 			
+	<h1>Software Installation and Configuration</h1> 		
+</center>
+
+<div class="h2"> 			
+	<a name="about"></a>
+	<h2>Installation and Configuration of OpenEMPI 1.0</h2>
+
+	<div style="padding: 3px">
+	<p>
+	Here we present instructions on how to install OpenEMPI 1.0 using the binary distribution that is available
+	from the <a href="/releases.html">releases</a> page. The first step is to extract the contents of the archive. The
+	archive can be extracted anywhere but for the rest of these instructions we will refer to that location as
+	HOME.
+	</p>
+	
+	<h3>Run Postgres Admin</h3>
+	<p>
+	If this is the first time that you are installing OpenEMPI on your system and have not created the database instance
+	yet, this will be your first step. The Postgres 8.3 installation includes an administrative application called pgAdmin
+	that should be located at d:\servers\postgres-8.3\bin\pgAdmin3.exe. Running the executable will bring up the GUI
+	that allows you to connect to the database server. In order to connect to the server you will need to use the password
+	that you assigned the postgres user when you installed the database server. 
+	</p>
+	
+	<p>
+	<img height="658" width="1139" title="PostgreSQL Admin Window" alt=" " src="/cn-project-pages/images/pgAdmin_III-2009-login.png" />
+	</p>
+	
+	<h3>Create Database User Role</h3>
+	<p>
+	Before you create a schema for the new database instance, you need to create a user role. From the tree
+	control on the left right click on "Login Roles" and select "New Login Role" from the menu. Create a new role
+	named openempi and ensure the screen has the following information filled in.
+	</p>
+
+	<p>
+	<img height="496" width="333" title="Login Role for openempi" alt=" " src="/cn-project-pages/images/Login_Role_openempi.png" />
+	</p>
+	
+	<h3>Create Database Instance</h3>
+	<p>
+	To create a database instance for openempi right click on the Databases icon and select the "New Database.." link from the
+	menu. In the dialog that comes up set the name of the new database to openempi and from the Owner drop down select
+	openempi as the owner of the database. Now that the schema is in place, you need to add the database objects for
+	openempi. In the Postgres Admin application select Tools->Query Tool from the menu. From the Query Tool select the File->Open
+	menu option to open the sql script that resides in the dist/conf directory of the OpenEMPI 1.0 distribution. The name
+	of the file is ICS_schema_create-postgres.sql. After loading the file execute the script which should successfully create
+	all the database objects that are needed for OpenEMPI.
+	</p>
+
+	<p>
+	<img height="651" width="922" title="SQL Tool" alt=" " src="/cn-project-pages/images/query-tool.png" />
+	</p>
+	
+	<h3>Deploy J2EE Application</h3>
+	<p>
+	Now that the database is configured you can deploy the application to the application server. This is as simple as copying the
+	ear file from the HOME directory where OpenEMPI was extracted as dist/openempi.ear to the application servers deployment directory
+	which is at d:\servers\jboss-4.2.3\server\default\deploy. Before starting the server you also need a few more configuration steps
+	for the application. You must first create a data source that associates the logical data source name to the physical data source
+	that refers to the database instance you created in the previous steps. To do this simply create a file called postgres-ds.xml
+	in the application servers deployment directory. The contents of this file are shown <a href="postgres-ds.xml">here</a>. 
+	If during the database server installation you selected a port other than the default of 5432, you need to make the appropriate
+	change in the postgres-ds.xml file.
+	</p>
+	
+	The last thing that you need to do is copy the two OpenEMPI files ICS.properties and IcsSql.xml from the HOME/dist/conf directory to the
+	root directory of your application server (by default d:\servers\jboss-4.2.3). You should now be able to start the server and the OpenEMPI
+	application should be deployed correctly. 
+	</p>
+ 	</div>
+</div> 

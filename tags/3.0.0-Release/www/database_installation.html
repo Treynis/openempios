@@ -1,0 +1,64 @@
+ <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />	
+	
+<center> 			
+	<h1> Postgres Database Server Installation</h1> 		
+</center>
+
+<div class="h2"> 			
+	<a name="about"></a> 			
+	<h2>Postgres Database Server Installation Instructions</h2>
+
+	<div style="padding: 3px">
+	<p>
+	Currently OpenEMPI is only supported on the Postgres Database. Although 
+	internally the software has been developed without any dependencies on a particular database, 
+	we have not tested OpenEMPI under other database servers. If there is an interest to have it support
+	other databases, please raise an issue in the Project Tracker or better yet, implement the support
+	and contribute it to the community.
+	</p>
+	<p>
+   	The PostgreSQL <a href="http://www.enterprisedb.com/products/pgdownload.do#windows">site</a> has detailed
+   	installation instructions for the database but we provide some basic installation instructions here to get
+   	you started. Refer to the PostgreSQL site or post a message in the 
+   	<a href="https://openhie.projects.openhealthtools.org/ds/postMessage.do?dsForumId=208">Users forum</a> 
+   	if you run into problems.
+   	</p>
+   	<p>
+   	The latest version of PostgreSQL that has been tested is 8.3.7. After you download the one-click
+   	distribution, run the executable, which will bring up the setup window shown below.
+   	</p>
+	<p>
+	<img height="430" width="556" title="PostgreSQL Setup Window" alt=" " src="/cn-project-pages/images/postgresqlsetup.png" />
+	</p>
+	<p>
+	After pressing the next button, you are given the option of selecting the installation directory for
+	Postgres. You can install it anywhere but for the rest of these instructions we will assume that you
+	selected the default directory of d:\servers\postgres-8.3. Pressing the next button takes you to the
+	next screen which allows you to select the directory under which to store data. The default directory
+	is fine as a subdirectory of the root directory for Postgres. The next page allows you to select a
+	password for the database superuser posgres account. If the postgres service account already exists
+	on your system because of a previous installation of postgres, you must use that existing account's
+	password to continue. If the postgres service account does not exist prior to the installation of
+	Postgres, the installer may complain about you entering an invalid password for the service account.
+	You can get around this issue by first creating the Windows User account postgres, assigning it a
+	password and then running the Postgres installation again.
+	</p>
+	<p>
+	<img alt="Password Selection Window" title="Password Selection Window" src="/cn-project-pages/images/Setup-2009.05.23-10.26.54.png" />
+	</p>
+	<p>
+	The next page allows you to set the port on which postgres listens for requests on. Unless you already
+	have another application using that port, you can use the default of 5432. The last and final wizard
+	screen allows you to select the locale to be used by the database cluster. Pressing Next will take you
+	to the final screen before installation actually begins.
+	</p>
+	<p>
+	<img title="Installation Go Screen" alt="Installation Go Screen" src="/cn-project-pages/images/Setup-2009.05.23-10.48.13.png" />
+	</p>
+	<p>
+	This completes the installation of the database server software. <a href="https://openhie.projects.openhealthtools.org/servlets/ProjectProcess?pageID=if5D0X">Back
+	</a>to the installation instructions summary page.
+	</p>
+ 	</div>
+</div> 		 		
+              
