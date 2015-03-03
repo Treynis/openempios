@@ -62,7 +62,7 @@ public class ForEachRecordConsumerImpl implements ForEachRecordConsumer
 		}
 		
 		try {
-			producerThread.join();
+			producerThread.join(60000);
 			System.out.println("Producer finished its work.");
 			latch.await();
 			System.out.println("All consumers finished their work.");

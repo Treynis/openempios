@@ -502,7 +502,7 @@ public class EntityDaoOrientdb implements EntityDao
         try {
             db = connect(entityStore);
             @SuppressWarnings("unchecked")
-            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OSQLSynchQuery<ODocument>(query));
+            Iterable<Vertex> result = (Iterable<Vertex>) db.command(new OCommandSQL(query)).execute();
             return OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, result);
         } catch (Exception e) {
             log.error("Failed while trying to query the system using entity: " + entityStore.getEntityName()
@@ -1232,7 +1232,7 @@ public class EntityDaoOrientdb implements EntityDao
         Iterable<Edge> edges = vertex.getEdges(Direction.OUT, Constants.IDENTIFIER_EDGE_TYPE);
         Set<OrientVertex> oldIds = new HashSet<OrientVertex>();
         for (Edge edge : edges) {
-            log.warn("Found edge: " + (OrientEdge) edge);
+//            log.warn("Found edge: " + (OrientEdge) edge);
             OrientEdge theEdge = (OrientEdge) edge;
             oldIds.add(theEdge.getVertex(Direction.IN));
         }

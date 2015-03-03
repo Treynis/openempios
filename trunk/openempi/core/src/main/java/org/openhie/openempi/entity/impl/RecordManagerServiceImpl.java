@@ -708,36 +708,33 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         IdentifierDomain domain = getPersistedIdentifierDomain(globalIdentifier.getIdentifierDomain());
         boolean done = false;
         java.util.Map<Long,Long> idsToProcess = new java.util.HashMap<Long,Long>();
-        int start = 0;
         int maxCount = RECORD_BLOCK_SIZE;
         while (!done) {
-            log.warn("Assigning global ids for block of size " + maxCount + " starting at index " + start);
-            List<Record> recordBlock = getEntityDao().findRecordsWithoutIdentifierInDomain(entity, domain, false, start, maxCount);
+            List<Record> recordBlock = getEntityDao().findRecordsWithoutIdentifierInDomain(entity, domain, false, 0, maxCount);
             if (recordBlock.size() == 0) {
                 done = true;
                 continue;
             }
+            log.warn("Assigning global ids to block of size " + recordBlock.size());
             for (Record record : recordBlock) {
                 assignGlobalIdentifier(domain, entity, record, idsToProcess, false);
             }
-            start += recordBlock.size();
             if (recordBlock.size() <  RECORD_BLOCK_SIZE) {
                 done = true;
             }
         }
         
-        start = 0;
+        done = false;
         while (!done) {
-            log.warn("Assigning global ids with links for block of size " + maxCount + " starting at index " + start);
-            List<Record> recordBlock = getEntityDao().findRecordsWithoutIdentifierInDomain(entity, domain, true, start, maxCount);
+            List<Record> recordBlock = getEntityDao().findRecordsWithoutIdentifierInDomain(entity, domain, true, 0, maxCount);
             if (recordBlock.size() == 0) {
                 done = true;
                 continue;
             }
+            log.warn("Assigning global ids to block with links of size " + recordBlock.size());
             for (Record record : recordBlock) {
                 assignGlobalIdentifier(domain, entity, record, idsToProcess, true);
             }
-            start += recordBlock.size();
         }
         return true;
     }
@@ -752,6 +749,7 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         if (log.isDebugEnabled()) {
             log.debug("Assigning global identifier to record " + record.getRecordId());
         }
+        log.debug("Assigning global identifier to record " + record.getRecordId());
         Identifier globalIdentifier=null;
         if (!hasLinks) {
             globalIdentifier = generateGlobalIdentifier(domain, record);

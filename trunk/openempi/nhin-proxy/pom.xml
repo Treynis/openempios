@@ -99,7 +99,7 @@
             	</executions>
             </plugin>
         </plugins>
-        <finalName>openempi-nhin-proxy-${release.version}</finalName>
+        <finalName>openempi-entity-nhin-proxy-${release.version}</finalName>
     </build>
     <profiles>
         <profile>
