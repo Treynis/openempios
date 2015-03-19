@@ -19,6 +19,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-export OPENEMPI_HOME=/sysnet/projects/openempi-development-entity/openempi
+export OPENEMPI_HOME=/sysnet/projects/openempi-os-entity/openempi
 export CATALINA_OPTS="-Xms128m -Xmx2048m -XX:MaxPermSize=512m -Dopenempi.home=$OPENEMPI_HOME"
 
