@@ -270,15 +270,19 @@ public class PersonManagerServiceAdapter extends BaseServiceImpl implements Pers
 	}
 
 	public PersonLink linkPersons(PersonLink personLink) throws ApplicationException {
-        int personLinkId = personLink.getPersonLinkId();
-        int left = personLinkId >> 16; 
-        int right = personLinkId & 0xFF;      
-        RecordLink recordLink = new RecordLink("#"+Integer.toString(left)+":"+Integer.toString(right));
-        recordLink = recordQueryService.loadRecordLink(getEntity(), recordLink.getRecordLinkId());
-        recordLink.setState(RecordLinkState.MATCH);        
-        
-        recordLink = recordManagerService.updateRecordLink(recordLink);
-        
+	    RecordLink recordLink = null;
+	    if (personLink.getPersonLinkId() == null) {
+	        recordLink = ConvertUtil.getRecordLinkFromPersonLink(getEntity(), personLink);
+	        recordManagerService.addRecordLink(recordLink);
+	    } else {
+            int personLinkId = personLink.getPersonLinkId();
+            int left = personLinkId >> 16; 
+            int right = personLinkId & 0xFF;      
+            recordLink = new RecordLink("#"+Integer.toString(left)+":"+Integer.toString(right));
+            recordLink = recordQueryService.loadRecordLink(getEntity(), recordLink.getRecordLinkId());
+            recordLink.setState(RecordLinkState.MATCH);            
+            recordLink = recordManagerService.updateRecordLink(recordLink);
+	    }
         return ConvertUtil.getPersonLinkFromRecordLink(personDao, recordLink);       
 	}
 
@@ -438,8 +442,8 @@ public class PersonManagerServiceAdapter extends BaseServiceImpl implements Pers
         
         IdentifierDomainAttribute attribute = identifierDomainDao.addIdentifierDomainAttribute(identifierDomain, attributeName, attributeValue);
         
-        Context.getAuditEventService().saveAuditEvent(AuditEventType.ADD_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE, "Added attribute " + attributeName + 
-                " to identifier domain with ID " + identifierDomain.getIdentifierDomainId());
+        Context.getAuditEventService().saveAuditEventEntry(AuditEventType.ADD_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE, "Added attribute " + attributeName + 
+                " to identifier domain with ID " + identifierDomain.getIdentifierDomainId(), getEntity().getName());
         
         return attribute;
 	}
@@ -450,8 +454,10 @@ public class PersonManagerServiceAdapter extends BaseServiceImpl implements Pers
         
         identifierDomainDao.updateIdentifierDomainAttribute(identifierDomainAttribute);
         
-        Context.getAuditEventService().saveAuditEvent(AuditEventType.UPDATE_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE, "Updated attribute " + identifierDomainAttribute.getAttributeName() + 
-                " of identifier domain with ID " + identifierDomainAttribute.getIdentifierDomainId());
+        Context.getAuditEventService().saveAuditEventEntry(AuditEventType.UPDATE_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE, 
+                "Updated attribute " + identifierDomainAttribute.getAttributeName() + 
+                " of identifier domain with ID " + identifierDomainAttribute.getIdentifierDomainId(),
+                getEntity().getName());
 	}
 
 	public void removeIdentifierDomainAttribute(IdentifierDomainAttribute identifierDomainAttribute) {
@@ -459,8 +465,10 @@ public class PersonManagerServiceAdapter extends BaseServiceImpl implements Pers
         validationService.validate(identifierDomainAttribute);
         
         identifierDomainDao.removeIdentifierDomainAttribute(identifierDomainAttribute);
-        Context.getAuditEventService().saveAuditEvent(AuditEventType.DELETE_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE, "Deleted attribute " + identifierDomainAttribute.getAttributeName() + 
-                " of identifier domain with ID " + identifierDomainAttribute.getIdentifierDomainId());		
+        Context.getAuditEventService().saveAuditEventEntry(AuditEventType.DELETE_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE,
+                "Deleted attribute " + identifierDomainAttribute.getAttributeName() + 
+                " of identifier domain with ID " + identifierDomainAttribute.getIdentifierDomainId(),
+                getEntity().getName());
 	}
 
 	public void linkAllRecordPairs() throws ApplicationException {

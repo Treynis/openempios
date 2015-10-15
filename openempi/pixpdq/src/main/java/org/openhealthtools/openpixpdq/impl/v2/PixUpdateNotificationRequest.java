@@ -252,22 +252,18 @@ class PixUpdateNotificationRequest implements IPixUpdateNotificationRequest {
 	            	message.getERR();
 	            	ca.uhn.hl7v2.model.v25.segment.ERR err =message.getERR();
                     if (err != null) {
-	                  // Message = err.getMessage().get;
-	                   try {
-	                       ELD eld = err.getErrorCodeAndLocation(0);
-	                       if (eld != null) {
-	                           CE ce = eld.getCodeIdentifyingError();
-	                           if (ce != null) {
-	                               ST errorcode = ce.getIdentifier();
-	                               if (errorcode != null) {
-	                                   error = "(" + errorcode.getValue() + ") " + HL7v231.getErrorString(errorcode.getValue());
-	                               }
-	                               ST text = ce.getText();
-	                               if (text != null) error = error + "-" + text.getValue();
-	                           }
-	                       }
-	                   } catch (HL7Exception e) { //do nothing if we cannot get anything from ERR.
-	                   }
+                       ELD eld = err.getErrorCodeAndLocation(0);
+                       if (eld != null) {
+                           CE ce = eld.getCodeIdentifyingError();
+                           if (ce != null) {
+                               ST errorcode = ce.getIdentifier();
+                               if (errorcode != null) {
+                                   error = "(" + errorcode.getValue() + ") " + HL7v231.getErrorString(errorcode.getValue());
+                               }
+                               ST text = ce.getText();
+                               if (text != null) error = error + "-" + text.getValue();
+                           }
+                       }
 	               }
 	            }
 	            if (error == null) error ="Unspecified error";

@@ -68,7 +68,7 @@ public class PdqMesa11350TestCase extends AbstractPdqTest
 	public void testPdqWithGender() {
 		try {
 			String message = "MSH|^~\\&|MESA_PD_CONSUMER|MESA_DEPARTMENT|MESA_PD_SUPPLIER|XYZ_HOSPITAL|||QBP^Q22|11311110|P|2.5||||||||\r" +
-			  "QPD|IHE PDQ Query|QRY11311110|@PID.5.1^Moorxe~@PID.8^F\r" +
+			  "QPD|IHE PDQ Query|QRY11311110|@PID.5.1^MOHR~@PID.8^F\r" +
 			  "RCP|I|10^RD|||||";
 
 			Message response = sendMessage(message);

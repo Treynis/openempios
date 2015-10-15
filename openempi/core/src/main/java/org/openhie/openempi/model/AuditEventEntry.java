@@ -50,7 +50,8 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "audit_event")
 @GenericGenerator(name = "audit_event_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "audit_event_seq"),
-        @Parameter(name = "increment_size", value = "10"),        
+        @Parameter(name = "increment_size", value = "1000"),
+//        @Parameter(name = "force_table_use", value = "true"),
         @Parameter(name = "optimizer", value = "hilo")})
 public class AuditEventEntry extends BaseObject implements Serializable
 {

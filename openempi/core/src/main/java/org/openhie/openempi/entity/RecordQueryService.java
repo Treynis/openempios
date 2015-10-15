@@ -47,6 +47,8 @@ public interface RecordQueryService
 
     List<Record> findRecordsByIdentifier(Entity entity, Identifier identifier, int firstResult, int maxResults);
 
+    List<Record> findRecordsByBlocking(Entity entity, Record record);
+    
     Long getRecordCount(Entity entity, Identifier identifier);
 
     Record loadRecordById(Entity entity, Long recordId);

@@ -51,6 +51,7 @@ public class FileImportJobTypeHandler extends AbstractJobTypeHandler
             FileLoaderResults results = fileLoader.loadFile(getJobEntry().getEntity(), fileName, loaderName);
             updateJobEntry(fileName, results);
             updateUserFileEntry(userFileId, results);
+            fileLoader.shutdownLoader();
         } catch (Exception e) {
             log.warn("Failed while trying to load a file: " + e, e);
             FileLoaderResults results = new FileLoaderResults();

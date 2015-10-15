@@ -260,9 +260,21 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 	        return;
 	    }
 	    if (matchFields.size() != currentMatchFields.size()) {
+	        resetConfigurationFileSettings(entityName, data, matchFields);
 	        VectorConfigurationHelper.loadVectorConfiguration(data, matchFields.size());
 	    }
 	}
+
+    private void resetConfigurationFileSettings(String entityName, Map<String, Object> data,
+            List<MatchField> matchFields) {
+        FellegiSunterParameters params = new FellegiSunterParameters(matchFields.size());
+        loadDefaultValues(params);
+        String configurationDirectory = (String) data.get(ProbabilisticMatchingConstants.CONFIGURATION_DIRECTORY_REGISTRY_KEY);
+        if (configurationDirectory == null || configurationDirectory.length() == 0) {
+            configurationDirectory = ".";
+        }
+        FellegiSunterConfigurationManager.saveParameters(configurationDirectory, entityName, params);
+    }
 
 	private void saveAdvancedParameters(String configDirectory, String entityName, Map<String, Object> data, List<MatchField> matchFields) {
 		if (configDirectory == null || configDirectory.length() == 0) {
@@ -277,6 +289,7 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		double[] uValues = (double[]) data.get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_U_VALUES_KEY);
 		validateValueCount(count, uValues.length, "The number of u-values is " + mValues.length + " instead of " + count);
 		params.setUValues(uValues);
+		VectorConfigurationHelper.calculateAllVectorWeights(params);
 		params.setPValue(((Double) data.get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_P_VALUE_KEY)).doubleValue());
 		params.setMInitialValue(((Double) data
 				.get(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_INITIAL_M_VALUE_KEY)).doubleValue());
@@ -296,7 +309,8 @@ public class ProbabilisticMatchingConfigurationLoader implements ConfigurationLo
 		params.setMu(((Float) data.get(ProbabilisticMatchingConstants.FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY)).floatValue());
 		
 		// The number of matching fields has changed; they need to regenerate the model
-		if (params.fieldCount != count || params.getMatchingFieldNames().length != count) {
+		if (params.fieldCount != count || params.getMatchingFieldNames() == null || 
+		        params.getMatchingFieldNames().length != count) {
 		    String[] fieldNames = new String[matchFields.size()];
 		    int i=0;
 		    for (MatchField field : matchFields) {

@@ -57,6 +57,20 @@ public class UserSessionDaoHibernate extends UniversalDaoHibernate implements Us
 	}
 
     @SuppressWarnings("unchecked")
+    @Override
+    public List<UserSession> findByUser(Long userId) {
+        if (log.isDebugEnabled()) {
+            log.debug("Locating sessions by userId: " + userId);
+        }
+        List<UserSession> list = (List<UserSession>) getHibernateTemplate().
+                find("from UserSession where user.id= ?", userId);
+        if (log.isDebugEnabled()) {
+            log.debug("Found " + list.size() + " sessions for user with id: " + userId);
+        }
+        return list;
+    }
+
+    @SuppressWarnings("unchecked")
 	public List<UserSession> findExpiredSessions(Date cutoff) {
         if (log.isDebugEnabled()) {
             log.debug("Locating session that haven't been modified after: " + cutoff);

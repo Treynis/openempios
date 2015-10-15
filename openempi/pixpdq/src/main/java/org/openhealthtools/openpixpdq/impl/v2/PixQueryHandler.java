@@ -61,6 +61,8 @@ import ca.uhn.hl7v2.model.v25.segment.PID;
 import ca.uhn.hl7v2.model.v25.segment.QPD;
 import ca.uhn.hl7v2.parser.EncodingCharacters;
 import ca.uhn.hl7v2.parser.PipeParser;
+import ca.uhn.hl7v2.protocol.ReceivingApplication;
+import ca.uhn.hl7v2.protocol.ReceivingApplicationException;
 import ca.uhn.hl7v2.util.Terser;
 
 
@@ -69,11 +71,11 @@ import ca.uhn.hl7v2.util.Terser;
  * handles the PIX Query transaction of the PIX profile.  
  * The supported message type includes QBP^Q23.
  * 
- * @author Wenzhi Li 
+
  * @version 1.0 Oct 22, 2008
  * 
  */
-class PixQueryHandler extends BaseHandler implements Application {
+class PixQueryHandler extends BaseHandler implements ReceivingApplication {
 
     private static Logger log = Logger.getLogger(PixQueryHandler.class);
 	
@@ -113,7 +115,7 @@ class PixQueryHandler extends BaseHandler implements Application {
      * 
      * @param msgIn the incoming message
      */
-    public Message processMessage(Message msgIn) throws ApplicationException, HL7Exception {
+    public Message processMessage(Message msgIn, Map<String, Object> theMetadata) throws ReceivingApplicationException, HL7Exception {
 
           //String encodedMessage = new PipeParser().encode(msgIn);
           //log.info("Received message:\n" + encodedMessage + "\n\n");
@@ -130,13 +132,13 @@ class PixQueryHandler extends BaseHandler implements Application {
 	            QBP_Q21 message = (QBP_Q21)msgIn;
 	            retMessage = processQuery( message );
 	        } else {
-	           throw new ApplicationException( "Unexpected PIX Query to PIX Manager server. Valid message is QBP^Q23.");
+	           throw new ReceivingApplicationException( "Unexpected PIX Query to PIX Manager server. Valid message is QBP^Q23.");
 	        } 
 		} catch (PixPdqException e) {
 			if (store !=null) { 
 				store.setErrorMessage( e.getMessage() );
 			}
-			throw new ApplicationException(ExceptionUtil.strip(e.getMessage()), e);		
+			throw new ReceivingApplicationException(ExceptionUtil.strip(e.getMessage()), e);		
 			
 		} catch (HL7Exception e) {
 			if (store !=null) {

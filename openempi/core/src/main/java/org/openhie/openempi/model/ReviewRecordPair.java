@@ -66,6 +66,7 @@ public class ReviewRecordPair extends BaseObject implements java.io.Serializable
 	private User userReviewedBy;
 	private Date dateReviewed;
 	private Double weight;
+	private Integer vector;
 	private LinkSource linkSource;
 	private Boolean recordsMatch;
 
@@ -181,7 +182,16 @@ public class ReviewRecordPair extends BaseObject implements java.io.Serializable
 	public void setWeight(Double weight) {
 		this.weight = weight;
 	}
-	
+
+	@XmlElement
+    public Integer getVector() {
+        return this.vector;
+    }
+    
+    public void setVector(Integer vector) {
+        this.vector = vector;
+    }
+    
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "link_source_id", nullable = false)
 	@XmlElement

@@ -34,7 +34,7 @@ public class NotificationEventWeb extends BaseModelData
 	
 	private final static String EVENT_TYPE_NAME = "eventTypeName";
 	private final static String MESSAGE_ID = "messageId";
-	private final static String PERSON_IDENTIFIER = "personIdentifier";
+	private final static String IDENTIFIER = "identifier";
 	private final static String TIMESTAMP = "timestamp";
 	
 	private static java.util.HashMap<String,String> eventTypeNameDisplayMap = new java.util.HashMap<String, String>();
@@ -66,12 +66,12 @@ public class NotificationEventWeb extends BaseModelData
 		set(MESSAGE_ID, messageId);
 	}
 	
-	public String getPersonIdentifier() {
-		return get(PERSON_IDENTIFIER);
+	public String getIdentifier() {
+		return get(IDENTIFIER);
 	}
 	
-	public void setPersonIdentifier(String personIdentifier) {
-		set(PERSON_IDENTIFIER, personIdentifier);
+	public void setIdentifier(String identifier) {
+		set(IDENTIFIER, identifier);
 	}
 
 	public Date getTimestamp() {

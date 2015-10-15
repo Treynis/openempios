@@ -169,6 +169,7 @@ public class OrientdbConverter
             Object value = vertex.getProperty(property);
             record.set(property, value);
         }
+        addInternalAttributes(cache, vertex, record);
         Boolean dirty = vertex.getProperty(Constants.DIRTY_RECORD_PROPERTY);
         if (dirty == null || dirty.booleanValue() == false) {
             record.setDirty(false);
@@ -182,6 +183,21 @@ public class OrientdbConverter
         return record;
     }
     
+    private static void addInternalAttributes(RecordCacheManager cache, Vertex vertex, Record record) {
+        record.set(Constants.DATE_CREATED_PROPERTY, vertex.getProperty(Constants.DATE_CREATED_PROPERTY));
+        record.set(Constants.DATE_CHANGED_PROPERTY, vertex.getProperty(Constants.DATE_CHANGED_PROPERTY));
+        record.set(Constants.DATE_VOIDED_PROPERTY, vertex.getProperty(Constants.DATE_VOIDED_PROPERTY));
+//TODO: Encapsulating user objects into the record is not recommended since web services
+//       interface may have trouble serializing them and the UI certainly doesn't know how to handle them
+//
+//        record.set(Constants.USER_CREATED_BY_PROPERTY,
+//                lookupUserById(cache, vertex, Constants.USER_CREATED_BY_PROPERTY));
+//        record.set(Constants.USER_CHANGED_BY_PROPERTY,
+//                lookupUserById(cache, vertex, Constants.USER_CHANGED_BY_PROPERTY));
+//        record.set(Constants.USER_VOIDED_BY_PROPERTY,
+//                lookupUserById(cache, vertex, Constants.USER_VOIDED_BY_PROPERTY));
+    }
+
     public static RecordLink convertODocumentToRecordLink(RecordCacheManager cache, Entity entity, ODocument odoc) {
         String recordLinkId = odoc.getIdentity().toString();
         RecordLink link = createRecordLinkFromEdge(cache, odoc, recordLinkId);

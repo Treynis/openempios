@@ -22,7 +22,6 @@ package org.openhie.openempi.cluster;
 
 import java.io.Serializable;
 
-import org.apache.log4j.Logger;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.context.UserContext;
 
@@ -30,7 +29,7 @@ import org.openhie.openempi.context.UserContext;
 public class CommandRequest implements Serializable
 {
     private static final long serialVersionUID = 2925735103911208737L;
-    private final Logger log = Logger.getLogger(getClass());
+
     private ServiceName serviceName;
     private String requestName;
     private boolean hasResponse;
@@ -50,7 +49,6 @@ public class CommandRequest implements Serializable
         }
         this.hasFailed = false;
         this.userContext = Context.getUserContext();
-        log.warn("Saved the user context : " + userContext);
     }
 
     public ServiceName getServiceName() {

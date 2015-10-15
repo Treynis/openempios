@@ -50,7 +50,6 @@ import org.apache.cxf.service.model.EndpointInfo;
 import org.apache.cxf.service.model.InterfaceInfo;
 import org.apache.cxf.service.model.MessageInfo;
 import org.apache.cxf.ws.addressing.ContextUtils;
-import org.jfree.util.Log;
 import org.openhealthtools.openpixpdq.api.IMessageStoreLogger;
 import org.openhealthtools.openpixpdq.api.MessageStore;
 import org.openhealthtools.openpixpdq.common.PixPdqFactory;
@@ -59,9 +58,11 @@ import org.openhealthtools.openpixpdq.common.PixPdqFactory;
  * A simple logging handler which outputs the bytes of the message to the
  * Logger.
  */
-public abstract class AbstractLoggingInterceptor extends AbstractPhaseInterceptor<Message> {
-    
-	private IMessageStoreLogger messageLogger;
+public abstract class AbstractLoggingInterceptor extends AbstractPhaseInterceptor<Message>
+{
+    private static final Logger LOG = LogUtils.getLogger(AbstractLoggingInterceptor.class);
+
+    private IMessageStoreLogger messageLogger;
     protected static final String BINARY_CONTENT_MESSAGE = "--- Binary Content ---";
     private static final List<String> BINARY_CONTENT_MEDIA_TYPES;
     protected static final String PIXPDQ_MESSAGE_STORE = "MessageStore";
@@ -302,7 +303,7 @@ public abstract class AbstractLoggingInterceptor extends AbstractPhaseIntercepto
     	try {
     		logger.saveLog(messageStore);
     	} catch (Exception e) {
-    		Log.warn("Unable to log the message in the message store: " + e, e);
+    		LOG.log(Level.WARNING, "Unable to log the message in the message store: " + e, e);
     	}
     }
     

@@ -58,7 +58,7 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	public void testUpdatePerson() {
     	List<Person> persons = null;
        	Person person = new Person();
-       	person.setGivenName("Odysseas");
+       	person.setGivenName("Master");
        	
     	persons = getWebResource().path("person-query-resource")
         			.path("findPersonsByAttributes")
@@ -118,7 +118,8 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	public void testDeletePerson() {
     	List<Person> persons = null;
        	Person person = new Person();
-       	person.setGivenName("Odysseas");
+       	person.setGivenName("Master");
+       	person.setFamilyName("Index");
        	
     	persons = getWebResource().path("person-query-resource")
         			.path("findPersonsByAttributes")
@@ -132,15 +133,14 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     	}
        	
        	person = persons.get(0);            	
-    	PersonIdentifier personIdentifier = person.getPersonIdentifiers().iterator().next();; 
 
      	// remove person completely
         ClientResponse response = getWebResource().path("person-manager-resource")
-        .path("removePersonById")
-        .queryParam("personId", person.getPersonId().toString())
-        .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        .accept(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+            .path("removePersonById")
+            .queryParam("personId", person.getPersonId().toString())
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
 
         if (response.getStatus() != Status.OK.getStatusCode()) {
             assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NOT_FOUND.getStatusCode());
@@ -152,10 +152,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 		Person person = buildTestPerson("111-22-3333");
 		
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("importPerson")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, person);
+    		.path("importPerson")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, person);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.CONFLICT.getStatusCode());
@@ -165,7 +165,8 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	public void testDeletePersonById() {
     	List<Person> persons = null;
        	Person person = new Person();
-       	person.setGivenName("Odysseas");
+       	person.setGivenName("Master");
+       	person.setFamilyName("Index");
        	
     	persons = getWebResource().path("person-query-resource")
         			.path("findPersonsByAttributes")
@@ -181,10 +182,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
        	person = persons.get(0);            	
        	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("deletePersonById")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, person);
+    		.path("deletePersonById")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, person);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NOT_FOUND.getStatusCode());
@@ -197,10 +198,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 						identifierDomain.setIdentifierDomainName("TEMP-TEST"); 
 						
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("addIdentifierDomain")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, identifierDomain);
+    		.path("addIdentifierDomain")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, identifierDomain);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.CONFLICT.getStatusCode());
@@ -230,10 +231,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     	identifierDomain.setIdentifierDomainName("TEMP1-TEST");
     	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("updateIdentifierDomain")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, identifierDomain);
+    		.path("updateIdentifierDomain")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, identifierDomain);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -241,12 +242,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	}
 	
 	public void testDeleteIdentifierDomain() {
-    	List<IdentifierDomain> domains = 
-    			getWebResource().path("person-query-resource")
-    				.path("getIdentifierDomains")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<IdentifierDomain>>(){});
+    	List<IdentifierDomain> domains = getWebResource().path("person-query-resource")
+			.path("getIdentifierDomains")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<IdentifierDomain>>(){});
     	assertTrue("Failed to retrieve domains list.",
     			domains != null && domains.size() > 0);
     	
@@ -260,13 +260,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     		return;
     	}
 			
-    	identifierDomain.setIdentifierDomainName("TEMP1");
-    	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("deleteIdentifierDomain")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, identifierDomain);
+    		.path("deleteIdentifierDomain")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, identifierDomain);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -274,12 +272,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	}
 	
 	public void testAddIdentifierDomainAttribute() {
-      	List<IdentifierDomain> domains = 
-    			getWebResource().path("person-query-resource")
-    				.path("getIdentifierDomains")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<IdentifierDomain>>(){});
+      	List<IdentifierDomain> domains = getWebResource().path("person-query-resource")
+			.path("getIdentifierDomains")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<IdentifierDomain>>(){});
     	assertTrue("Failed to retrieve domains list.", domains != null && domains.size() > 0);
 
        	IdentifierDomain id = null;
@@ -296,10 +293,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     	IdentifierDomainAttributeRequest identifierDomainAttributeRequest = new IdentifierDomainAttributeRequest(id, "IHENA", "200");	
     	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("addIdentifierDomainAttribute")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, identifierDomainAttributeRequest);
+    		.path("addIdentifierDomainAttribute")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, identifierDomainAttributeRequest);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, false);
@@ -307,12 +304,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	}
 	
 	public void testUpdateIdentifierDomainAttribute() {
-       	List<IdentifierDomain> domains = 
-    			getWebResource().path("person-query-resource")
-    				.path("getIdentifierDomains")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<IdentifierDomain>>(){});
+       	List<IdentifierDomain> domains = getWebResource().path("person-query-resource")
+			.path("getIdentifierDomains")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<IdentifierDomain>>(){});
     	assertTrue("Failed to retrieve domains list.", domains != null && domains.size() > 0);
 
        	IdentifierDomain id = null;
@@ -327,12 +323,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     
     	IdentifierDomainAttributeRequest identifierDomainAttributeRequest= new IdentifierDomainAttributeRequest(id, "IHENA");
     	
-    	IdentifierDomainAttribute dentifierDomainAttribute = 
-    			getWebResource().path("person-query-resource")
-        			.path("getIdentifierDomainAttribute")
-        			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        			.accept(MediaType.APPLICATION_JSON)
-        			.post(IdentifierDomainAttribute.class, identifierDomainAttributeRequest);
+    	IdentifierDomainAttribute dentifierDomainAttribute = getWebResource().path("person-query-resource")
+			.path("getIdentifierDomainAttribute")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.post(IdentifierDomainAttribute.class, identifierDomainAttributeRequest);
     	
     	if(dentifierDomainAttribute == null) {
     		return;
@@ -341,10 +336,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     	dentifierDomainAttribute.setAttributeName("IHENA1");
     	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("updateIdentifierDomainAttribute")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, dentifierDomainAttribute);
+    		.path("updateIdentifierDomainAttribute")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, dentifierDomainAttribute);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, false);
@@ -352,12 +347,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	}
 	
 	public void testRemoveIdentifierDomainAttribute() {
-       	List<IdentifierDomain> domains = 
-    			getWebResource().path("person-query-resource")
-    				.path("getIdentifierDomains")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<IdentifierDomain>>(){});
+       	List<IdentifierDomain> domains = getWebResource().path("person-query-resource")
+			.path("getIdentifierDomains")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<IdentifierDomain>>(){});
     	assertTrue("Failed to retrieve domains list.", domains != null && domains.size() > 0);
 
        	IdentifierDomain id = null;
@@ -372,23 +366,21 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     
     	IdentifierDomainAttributeRequest identifierDomainAttributeRequest= new IdentifierDomainAttributeRequest(id, "IHENA1");
     	
-    	IdentifierDomainAttribute dentifierDomainAttribute = 
-    			getWebResource().path("person-query-resource")
-        			.path("getIdentifierDomainAttribute")
-        			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        			.accept(MediaType.APPLICATION_JSON)
-        			.post(IdentifierDomainAttribute.class, identifierDomainAttributeRequest);
+    	IdentifierDomainAttribute dentifierDomainAttribute = getWebResource().path("person-query-resource")
+			.path("getIdentifierDomainAttribute")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.post(IdentifierDomainAttribute.class, identifierDomainAttributeRequest);
     	
-    	if(dentifierDomainAttribute == null) {
+    	if (dentifierDomainAttribute == null) {
     		return;
     	}
     	
-    	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("removeIdentifierDomainAttribute")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, dentifierDomainAttribute);
+    		.path("removeIdentifierDomainAttribute")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, dentifierDomainAttribute);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, false);
@@ -424,12 +416,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	}
 		
 	public void testDeleteReviewRecordPair() {
-    	List<ReviewRecordPair> reviewRecordPairs = 
-    			getWebResource().path("person-query-resource")
-    				.path("loadAllUnreviewedPersonLinks")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<ReviewRecordPair>>(){});
+    	List<ReviewRecordPair> reviewRecordPairs = getWebResource().path("person-query-resource")
+			.path("loadAllUnreviewedPersonLinks")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<ReviewRecordPair>>(){});
     	assertTrue("Failed to retrieve ReviewRecordPairs list.", reviewRecordPairs != null && reviewRecordPairs.size() > 0);
     	
     	ReviewRecordPair reviewRecordPairFound = null;
@@ -444,10 +435,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 		}
 		
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("deleteReviewRecordPair")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, reviewRecordPairFound);
+    		.path("deleteReviewRecordPair")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, reviewRecordPairFound);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, false);
@@ -490,12 +481,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	public void testMatchReviewRecordPairLink() {
        	
        	// link ReviewRecordPair
-		List<ReviewRecordPair> reviewRecordPairs = 
-				getWebResource().path("person-query-resource")
-					.path("loadAllUnreviewedPersonLinks")
-					.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-					.accept(MediaType.APPLICATION_JSON)
-					.get(new GenericType<List<ReviewRecordPair>>(){});
+		List<ReviewRecordPair> reviewRecordPairs = getWebResource().path("person-query-resource")
+			.path("loadAllUnreviewedPersonLinks")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<ReviewRecordPair>>(){});
 		assertTrue("Failed to retrieve ReviewRecordPairs list.", reviewRecordPairs != null && reviewRecordPairs.size() > 0);
 		
 		ReviewRecordPair reviewRecordPairFound = null;
@@ -513,10 +503,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 		reviewRecordPairFound.setRecordsMatch(true);
 		
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("matchReviewRecordPair")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, reviewRecordPairFound);
+    		.path("matchReviewRecordPair")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, reviewRecordPairFound);
 	
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -559,12 +549,11 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	public void testMatchReviewRecordPairUnlink() {
        	
        	// link ReviewRecordPair
-		List<ReviewRecordPair> reviewRecordPairs = 
-				getWebResource().path("person-query-resource")
-					.path("loadAllUnreviewedPersonLinks")
-					.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-					.accept(MediaType.APPLICATION_JSON)
-					.get(new GenericType<List<ReviewRecordPair>>(){});
+		List<ReviewRecordPair> reviewRecordPairs = getWebResource().path("person-query-resource")
+			.path("loadAllUnreviewedPersonLinks")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_JSON)
+			.get(new GenericType<List<ReviewRecordPair>>(){});
 		assertTrue("Failed to retrieve ReviewRecordPairs list.", reviewRecordPairs != null && reviewRecordPairs.size() > 0);
 		
 		ReviewRecordPair reviewRecordPairFound = null;
@@ -573,7 +562,7 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 				reviewRecordPairFound = pair;
 		}
 	
-		if(reviewRecordPairFound == null ) {
+		if (reviewRecordPairFound == null ) {
 		   assertNotNull("Unable to retrieve reviewRecordPair: " + reviewRecordPairFound);   	
 		   return;
 		}
@@ -582,10 +571,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 		reviewRecordPairFound.setRecordsMatch(false);
 		
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("matchReviewRecordPair")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, reviewRecordPairFound);
+    		.path("matchReviewRecordPair")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, reviewRecordPairFound);
 	
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -625,10 +614,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
        	MergePersonsRequest mergePersonsRequest = new MergePersonsRequest(personIdentifierRetired, personIdentifierSurviving);
        	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("mergePersons")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, mergePersonsRequest);
+    		.path("mergePersons")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, mergePersonsRequest);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NOT_FOUND.getStatusCode());
@@ -638,13 +627,13 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 		deleteTestPerson(personSurviving);
 	}
 
-	public void testLinkPersons() {
-		if( !addNewTestPerson("999-99-9999",  "PersonTestLeft4") ) {
+	public void testLinkUnlinkPersons() {
+		if (!addNewTestPerson("999-99-9999",  "PersonTestLeft4")) {
 			assertNotNull("Unable to add a new test person", null);   	
 			return;
 		}
 
-		if( !addNewTestPerson("999-88-7777",  "PersonTestRight4") ) {
+		if (!addNewTestPerson("999-88-7777",  "PersonTestRight4")) {
 			assertNotNull("Unable to add a new test person", null);   
 			return;
 		}
@@ -660,46 +649,44 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
       	personLink.setPersonRight(personRight);
       	personLink.setDateCreated(new java.util.Date());
       	personLink.setUserCreatedBy(Context.getUserContext().getUser());
-      	personLink.setLinkSource(new LinkSource(2));
+      	personLink.setLinkSource(new LinkSource(1));
       	personLink.setWeight(1.0);
 		
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("linkPersons")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, personLink);
+    		.path("linkPersons")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, personLink);
 	
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
+			return;
 		}
-	}	
-
-	public void testUnlinkPersons() {
 		
       	Person person = findTestPerson("PersonTestLeft4");            
-       	if( person == null ) {
+       	if (person == null) {
 			assertNotNull("Unable to find test person", null);  
        		return;
        	} 	
        	
        	List<PersonLink> personLinks = getWebResource().path("person-query-resource")
-        			.path("getPersonLinks")
-        			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        			.accept(MediaType.APPLICATION_XML)
-        			.post(new GenericType<List<PersonLink>>(){}, person);
+			.path("getPersonLinks")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_XML)
+			.post(new GenericType<List<PersonLink>>(){}, person);
        	
-       	if( personLinks == null ) {
+       	if (personLinks == null || personLinks.size() == 0) {
 			assertNotNull("Unable to find person links", null);  
        		return;       		
        	}
  
-       	PersonLink personLink = personLinks.get(0);
+       	personLink = personLinks.get(0);
 
-		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("unlinkPersons")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, personLink);
+		response = getWebResource().path("person-manager-resource")
+    		.path("unlinkPersons")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, personLink);
 	
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -732,10 +719,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 		recordPair.setWeight(1.0);
 		
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("addReviewRecordPair")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, recordPair);
+    		.path("addReviewRecordPair")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, recordPair);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			// assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -749,10 +736,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
        	person.setGivenName(givenName);
        	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("addPerson")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, person);
+    		.path("addPerson")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, person);
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			// assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NOT_MODIFIED.getStatusCode());
 			return false;
@@ -767,10 +754,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
        	person.setGivenName(givenName);
        	
     	persons = getWebResource().path("person-query-resource")
-        			.path("findPersonsByAttributes")
-        			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        			.accept(MediaType.APPLICATION_XML)
-        			.post(new GenericType<List<Person>>(){}, person);
+			.path("findPersonsByAttributes")
+			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+			.accept(MediaType.APPLICATION_XML)
+			.post(new GenericType<List<Person>>(){}, person);
  
        	if (persons.size() == 0) {
     		return null;
@@ -784,10 +771,10 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
     	PersonIdentifier personIdentifier = person.getPersonIdentifiers().iterator().next(); 
     	
 		ClientResponse response = getWebResource().path("person-manager-resource")
-		.path("deletePerson")
-		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-		.accept(MediaType.APPLICATION_JSON)
-		.put(ClientResponse.class, personIdentifier);
+    		.path("deletePerson")
+    		.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+    		.accept(MediaType.APPLICATION_JSON)
+    		.put(ClientResponse.class, personIdentifier);
 
 		if (response.getStatus() != Status.OK.getStatusCode()) {
 			return false;

@@ -179,7 +179,10 @@ public class PersonQueryServiceAdapter extends BaseServiceImpl implements Person
 	public List<Person> loadPersons(List<Integer> personIds) {
 		List<Person> persons = new ArrayList<Person>();
 		for (Integer personId : personIds) {
-			persons.add(loadPerson(personId));
+			Person person = loadPerson(personId);
+			if (person != null) {
+				persons.add(person);
+			}
 		}
 		return persons;
 	}
@@ -407,9 +410,29 @@ public class PersonQueryServiceAdapter extends BaseServiceImpl implements Person
 	}
 	   
 	public List<Person> findMatchingPersonsByAttributes(Person person) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+        ValidationService validationService = Context.getValidationService();
+        validationService.validate(person);
+        
+        if( getEntity() != null && person != null ) {           
+            // convert Person to Record
+            Record theRecord = ConvertUtil.getRecordFromPersonForSearch(getEntity(), person);
+            if (theRecord == null) {
+                return null;
+            }
+            
+            //TODO: This needs to be fixed.
+            List<Record> records = recordQueryService.findRecordsByAttributes(getEntity(), theRecord);          
+            List<Person> persons = new java.util.ArrayList<Person>();
+            for (Record record : records) {
+                // convert Record to Person
+                Person personInstance = ConvertUtil.getPersonFromRecord(personDao, record);
+                persons.add(personInstance);
+            }               
+            return persons;
+        }       
+        return null;
+    }
+	
 
     public List<Person> getSingleBestRecords(List<Integer> personIds) {
         // TODO Auto-generated method stub

@@ -35,58 +35,62 @@ import javax.ws.rs.core.Response;
 import org.openempi.webservices.restful.model.IdentifierDomainAttributeRequest;
 import org.openempi.webservices.restful.model.PersonPagedRequest;
 import org.openempi.webservices.restful.model.StringList;
+import org.openhie.openempi.cluster.ServiceName;
 import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
 import org.openhie.openempi.model.Person;
-import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.PersonIdentifier;
+import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.Race;
 import org.openhie.openempi.model.ReviewRecordPair;
-import org.openhie.openempi.service.IdentifierDomainService;
-import org.openhie.openempi.service.PersonQueryService;
+import org.openhie.openempi.service.PersonQueryResourceService;
+import org.openhie.openempi.service.ResourceServiceFactory;
 
 @Path("/person-query-resource")
 public class PersonQueryResource
 {
+    private PersonQueryResourceService service;
+    
+    public PersonQueryResource() {
+        service = (PersonQueryResourceService)
+                ResourceServiceFactory.createResourceService(ServiceName.PERSON_QUERY_RESOURCE_SERVICE,
+                        PersonQueryResourceService.class);
+    }
+    
 	@GET
 	@Path("/findGenderByCode")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Gender findGenderByCode(@QueryParam("genderCode") String genderCode) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findGenderByCode(genderCode);
+		return service.findGenderByCode(genderCode);
 	}
 
 	@GET
 	@Path("/findGenderByName")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Gender findGenderByName(@QueryParam("genderName") String genderName) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findGenderByName(genderName);
+		return service.findGenderByName(genderName);
 	}
 	
 	@GET
 	@Path("/findRaceByCode")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Race findRaceByCode(@QueryParam("raceCode") String raceCode) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findRaceByCode(raceCode);
+		return service.findRaceByCode(raceCode);
 	}
 
 	@GET
 	@Path("/findRaceByName")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Race findRaceByName(@QueryParam("raceName") String raceName) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findRaceByName(raceName);
+		return service.findRaceByName(raceName);
 	}
 	
 	@GET
 	@Path("/getIdentifierDomainTypeCodes")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public StringList getIdentifierDomainTypeCodes() {
-		IdentifierDomainService identifierDomainService = getIdentifierDomainService();
-		List<String> typeCodes = identifierDomainService.getIdentifierDomainTypeCodes();
+		List<String> typeCodes = service.getIdentifierDomainTypeCodes();
 		return new StringList(typeCodes);
 	}
  
@@ -95,17 +99,14 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public IdentifierDomain findIdentifierDomain(IdentifierDomain identifierDomain) {
-		IdentifierDomainService identifierDomainService = getIdentifierDomainService();
-		identifierDomain = identifierDomainService.findIdentifierDomain(identifierDomain);
-		return identifierDomain;
+		return service.findIdentifierDomain(identifierDomain);
 	}	
 
 	@GET
 	@Path("/getIdentifierDomains")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<IdentifierDomain> getIdentifierDomains() {
-		IdentifierDomainService identifierDomainService = getIdentifierDomainService();
-		return identifierDomainService.getIdentifierDomains();
+		return service.getIdentifierDomains();
 	}
 	
 	@POST
@@ -113,8 +114,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<IdentifierDomainAttribute> getIdentifierDomainAttributes(IdentifierDomain identifierDomain) {
-		IdentifierDomainService identifierDomainService = getIdentifierDomainService();
-		return identifierDomainService.getIdentifierDomainAttributes(identifierDomain);
+		return service.getIdentifierDomainAttributes(identifierDomain);
 	}	
 	
 	@POST
@@ -122,8 +122,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public IdentifierDomainAttribute getIdentifierDomainAttribute(IdentifierDomainAttributeRequest identifierDomainAttributeRequest) {
-		IdentifierDomainService identifierDomainService = getIdentifierDomainService();
-		return identifierDomainService.getIdentifierDomainAttribute(identifierDomainAttributeRequest.getIdentifierDomain(),
+		return service.getIdentifierDomainAttribute(identifierDomainAttributeRequest.getIdentifierDomain(),
 				identifierDomainAttributeRequest.getAttributeName());
 	}	
 
@@ -131,8 +130,7 @@ public class PersonQueryResource
 	@Path("/getPersonModelAllAttributeNames")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public StringList getPersonModelAllAttributeNames() {
-		PersonQueryService personQueryService = getPersonQueryService(); 
-		List<String> personAllAttributes = personQueryService.getPersonModelAllAttributeNames();
+		List<String> personAllAttributes = service.getPersonModelAllAttributeNames();
 		return new StringList(personAllAttributes);
 	}
 	
@@ -140,8 +138,7 @@ public class PersonQueryResource
 	@Path("/getPersonModelAttributeNames")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public StringList getPersonModelAttributeNames() {
-		PersonQueryService personQueryService = getPersonQueryService(); 
-		List<String> personAttributes = personQueryService.getPersonModelAttributeNames();
+		List<String> personAttributes = service.getPersonModelAttributeNames();
 		return new StringList(personAttributes);
 	}
 	
@@ -149,8 +146,7 @@ public class PersonQueryResource
 	@Path("/getPersonModelCustomAttributeNames")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public StringList getPersonModelCustomAttributeNames() {
-		PersonQueryService personQueryService = getPersonQueryService(); 
-		List<String> personCustomAttributes = personQueryService.getPersonModelCustomAttributeNames();
+		List<String> personCustomAttributes = service.getPersonModelCustomAttributeNames();
 		return new StringList(personCustomAttributes);
 	}
 	
@@ -159,8 +155,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Person findPersonById(PersonIdentifier identifier) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findPersonById(identifier);
+		return service.findPersonById(identifier);
 	}
 
 	@POST
@@ -168,8 +163,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public PersonIdentifier getGlobalIdentifierById(PersonIdentifier identifier) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		PersonIdentifier globalIdentifier = personQueryService.getGlobalIdentifierById(identifier);
+		PersonIdentifier globalIdentifier = service.getGlobalIdentifierById(identifier);
 		if( globalIdentifier == null )		
 			throw new WebApplicationException(Response.Status.NOT_FOUND);
 		else
@@ -180,16 +174,14 @@ public class PersonQueryResource
 	@Path("/getSingleBestRecord")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Person getSingleBestRecord(@QueryParam("personId") Integer personId) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.getSingleBestRecord(personId);
+		return service.getSingleBestRecord(personId);
 	}
 	
 	@GET
 	@Path("/getSingleBestRecords")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> getSingleBestRecords(@QueryParam("personId") List<Integer> personIds) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.getSingleBestRecords(personIds);
+		return service.getSingleBestRecords(personIds);
 	}
 	
 	@POST
@@ -197,8 +189,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> findLinkedPersons(PersonIdentifier identifier) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findLinkedPersons(identifier);
+		return service.findLinkedPersons(identifier);
 	}
 
 	@POST
@@ -206,15 +197,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<PersonLink> getPersonLinks(Person person) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		List<PersonLink> links = personQueryService.getPersonLinks(person);
-		for (PersonLink link : links) {
-			Person leftPerson = personQueryService.loadPerson(link.getPersonLeft().getPersonId());
-			Person rightPerson = personQueryService.loadPerson(link.getPersonRight().getPersonId());
-			link.setPersonLeft(leftPerson);
-			link.setPersonRight(rightPerson);
-		}
-		return links; 
+		return service.getPersonLinks(person); 
 	}
 	
 	// search 
@@ -223,8 +206,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> findPersonsByAttributes(Person person) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findPersonsByAttributes(person);
+		return service.findPersonsByAttributes(person);
 	}
 	
 	@POST
@@ -232,8 +214,7 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> findPersonsByAttributesPaged(PersonPagedRequest request) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findPersonsByAttributesPaged(request.getPerson(),
+		return service.findPersonsByAttributesPaged(request.getPerson(),
 				request.getFirstResult(), request.getMaxResults());
 	}
 	
@@ -243,63 +224,49 @@ public class PersonQueryResource
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> findMatchingPersonsByAttributes(Person person) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.findMatchingPersonsByAttributes(person);
+		return service.findMatchingPersonsByAttributes(person);
 	}
 	
 	@GET
 	@Path("/loadPerson")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Person loadPerson(@QueryParam("personId") Integer personId) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.loadPerson(personId);
+		return service.loadPerson(personId);
 	}
 	
 	@GET
 	@Path("/loadAllPersonsPaged")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> loadAllPersonsPaged(@QueryParam("firstRecord") Integer firstRecord, @QueryParam("maxRecords") Integer maxRecords) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.loadAllPersonsPaged(firstRecord,maxRecords);
+		return service.loadAllPersonsPaged(firstRecord, maxRecords);
 	}
 	
 	@GET
 	@Path("/loadPersons")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<Person> loadPersons(@QueryParam("personId") List<Integer> personIds) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.loadPersons(personIds);
+		List<Person> persons = service.loadPersons(personIds);
+		return persons;
 	}
 	
 	@GET
 	@Path("/loadAllUnreviewedPersonLinks")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<ReviewRecordPair> loadAllUnreviewedPersonLinks() {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.loadAllUnreviewedPersonLinks();
+		return service.loadAllUnreviewedPersonLinks();
 	}
 	
 	@GET
 	@Path("/loadUnreviewedPersonLinks")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public List<ReviewRecordPair> loadUnreviewedPersonLinks( @QueryParam("maxRecords") Integer maxRecords) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.loadUnreviewedPersonLinks(maxRecords);
+		return service.loadUnreviewedPersonLinks(maxRecords);
 	}
 	
 	@GET
 	@Path("/loadReviewRecordPair")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public ReviewRecordPair loadReviewRecordPair(@QueryParam("personLinkReviewId") Integer personLinkReviewId) {
-		PersonQueryService personQueryService = getPersonQueryService();
-		return personQueryService.loadReviewRecordPair(personLinkReviewId);
-	}
-	
-	private PersonQueryService getPersonQueryService() {
-		return org.openhie.openempi.context.Context.getPersonQueryService();
-	}
-	
-	private IdentifierDomainService getIdentifierDomainService() {
-		return org.openhie.openempi.context.Context.getIdentifierDomainService();
+		return service.loadReviewRecordPair(personLinkReviewId);
 	}
 }

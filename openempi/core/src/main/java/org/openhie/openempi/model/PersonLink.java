@@ -66,6 +66,7 @@ public class PersonLink extends BaseObject implements java.io.Serializable
 	private User userCreatedBy;
 	private Date dateCreated;
 	private Double weight;
+	private Integer vector;
 	private LinkSource linkSource;
 	private Integer clusterId;
 
@@ -170,6 +171,15 @@ public class PersonLink extends BaseObject implements java.io.Serializable
 	public void setClusterId(Integer clusterId) {
 		this.clusterId = clusterId;
 	}
+
+    @XmlElement
+    public Integer getVector() {
+        return vector;
+    }
+
+    public void setVector(Integer vector) {
+        this.vector = vector;
+    }	    
 
 	@Override
 	public boolean equals(final Object other) {

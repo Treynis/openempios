@@ -29,7 +29,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.model.Entity;
-import org.openhie.openempi.profiling.DataProfilerLoader;
 import org.openhie.openempi.util.BaseSpringApp;
 
 public class FileLoaderManager extends BaseSpringApp
@@ -63,19 +62,9 @@ public class FileLoaderManager extends BaseSpringApp
 		 loader.setLoaderAlias(loaderAlias);
 		 loader.setEntityLoaderManager(entityLoaderMgr);
 		 loader.init();
-		 return loader.parseFile(entity, file);
-	}
-	
-	public String dataProfile(Entity entity, String filename, Integer userFileId) {
-		 File file = new File(filename);
-		 log.debug("Loading file " + file.getAbsolutePath());
-		 if (!file.isFile() || !file.canRead()) {
-			 log.error("Input file is not available.");
-			 throw new RuntimeException("Input file " + filename + " is not readable.");
-		 }
-		
-		 DataProfilerLoader dataProfilerLoader = new DataProfilerLoader();			
-		 return dataProfilerLoader.parseFile(entity, file, userFileId);
+		 FileLoaderResults results = loader.parseFile(entity, file);
+		 loader.isDone();
+		 return results;
 	}
 	
 	public static void main(String[] args) {
@@ -118,7 +107,7 @@ public class FileLoaderManager extends BaseSpringApp
 
 		BufferedReader bufRead = new BufferedReader(new InputStreamReader(System.in)) ;
 		try {
-		    System.out.println("Press a character to get started.");
+		    System.out.println("Press <Enter> to get started.");
 		    bufRead.readLine();
 		}
 		catch (IOException err) {
@@ -136,7 +125,7 @@ public class FileLoaderManager extends BaseSpringApp
 			}
 			fileLoaderManager.loadFile(entities.get(0), filename, loaderAlias);
 	        try {
-	            System.out.println("Press a character to shutdown.");
+	            System.out.println("Press <Enter> to shutdown.");
 	            bufRead.readLine();
 	        }
 	        catch (IOException err) {
@@ -151,13 +140,17 @@ public class FileLoaderManager extends BaseSpringApp
 		}
 	}
 	
+	public void shutdownLoader() {
+        if (loader != null) {
+            loader.shutdown();
+        }
+        if (entityLoaderMgr != null) {
+            entityLoaderMgr.shutdownConnection();
+        }
+	}
+
 	public void shutdown() {
-	    if (loader != null) {
-	        loader.shutdown();
-	    }
-	    if (entityLoaderMgr != null) {
-	        entityLoaderMgr.shutdownConnection();
-	    }
+	    shutdownLoader();
 		Context.shutdown();
 	}
 

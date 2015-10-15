@@ -22,9 +22,12 @@ package org.openhie.openempi.loader;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,6 +60,10 @@ public abstract class AbstractFileLoader implements FileLoader
         log.info("Initializing the file loader.");
 	}
 
+	public boolean isDone() {
+	    return true;
+	}
+	
 	public void shutdown() {
 	}
 
@@ -142,7 +149,7 @@ public abstract class AbstractFileLoader implements FileLoader
 		BufferedReader reader = null;
 		FileLoaderResults results = new FileLoaderResults();
 		try {
-			reader = new BufferedReader(new FileReader(file));
+			reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), getCharacterSetEncoding()));
 		} catch (FileNotFoundException e) {
 			log.error("Unable to read the input file. Error: " + e);
 			throw new RuntimeException("Unable to read the input file.");
@@ -190,7 +197,11 @@ public abstract class AbstractFileLoader implements FileLoader
         return results;
 	}
 
-	public String getloaderAlias() {
+	protected Charset getCharacterSetEncoding() {
+        return Charset.defaultCharset();
+    }
+
+    public String getloaderAlias() {
 		return this.loaderAlias;
 	}
 

@@ -27,7 +27,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.Constants;
 import org.openhie.openempi.InitializationException;
+import org.openhie.openempi.configuration.ComparatorFunction;
 import org.openhie.openempi.configuration.ConfigurationRegistry;
 import org.openhie.openempi.configuration.MatchField;
 import org.openhie.openempi.configuration.MatchRule;
@@ -96,13 +98,21 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 
 	        for (MatchRule rule : rules) {
 	            List<MatchField> matchFieldList = rule.getFields();
+	            boolean overallMatch = true;
 	            for (MatchField matchField : matchFieldList) {
-	                boolean fieldsMatch = isExactMatch(matchField, entry.getLeftRecord(), entry.getRightRecord());
-	                log.debug("Comparison of records on field " + matchField + " returned " + fieldsMatch);
-    				if (!fieldsMatch) {
+	                boolean fieldMatch = isExactMatch(matchField, entry.getLeftRecord(), entry.getRightRecord());
+	                if (log.isDebugEnabled()) {
+	                    log.debug("Comparison of records on field " + matchField + " returned " + fieldMatch);
+	                }
+	                overallMatch &= fieldMatch;
+    				if (!fieldMatch) {
     				    break;
     				}
-                    log.debug("Adding to matches entry: " + entry);
+	            }
+	            if (overallMatch) {
+	                if (log.isDebugEnabled()) {
+	                    log.debug("Matched records using rule " + rule.toStringShort() + " adding to matches entry: " + entry);
+	                }
                     entry.setWeight(1.0);
                     entry.setMatchOutcome(RecordPair.MATCH_OUTCOME_LINKED);
                     entry.setLinkSource(new LinkSource(getMatchingServiceId()));
@@ -175,18 +185,12 @@ public class DeterministicExactMatchingService extends AbstractMatchingLifecycle
 	private boolean isExactMatch(MatchField matchField, Record left, Record right) {
 		String lVal = left.getAsString(matchField.getFieldName());
 		String rVal = right.getAsString(matchField.getFieldName());
-		if (lVal == null) {
-			if (rVal == null) {
-				return true;
-			}
-			return false;
-		}
 		if (matchField.getComparatorFunction() == null) {
-			return lVal.equals(rVal);
+		    matchField.setComparatorFunction(new ComparatorFunction(Constants.EXACT_COMPARATOR_FUNCTION));
 		}
 		String functionName = matchField.getComparatorFunction().getFunctionName();
 		double distance = comparisonService.score(functionName, lVal, rVal);
-		if (distance > matchField.getMatchThreshold()) {
+		if (distance >= matchField.getMatchThreshold()) {
 	        if (log.isTraceEnabled()) {
 	            log.trace("Distance between values " + lVal + " and " + rVal + " computed using comparison function " + 
 	                    functionName + " was found to be " + distance + " as compared to threshold " + 

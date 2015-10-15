@@ -34,6 +34,7 @@ import org.openhie.openempi.context.Context;
 
 public class FellegiSunterConfigurationManager
 {
+    private static final Double MIN_MARGINAL_VALUE = 0.0000001;
 	private static final String FELLEGI_SUNTER_CONFIG_FILE_NAME = "FellegiSunterConfiguration.ser";
 	protected static final Log log = LogFactory.getLog(FellegiSunterConfigurationManager.class);
 
@@ -142,9 +143,56 @@ public class FellegiSunterConfigurationManager
 	public static void main(String[] args) {
 		String openEmpiHome = getOpenempiHome();
 		FellegiSunterParameters params = FellegiSunterConfigurationManager.loadParameters(openEmpiHome + "/conf", "person");
+		for (int i=0; i < params.getVectorCount(); i++) {
+		    calculateVectorWeight(i, params);
+		}
 		FellegiSunterConfigurationManager.printConfigurationParameters(params);
 	}
+	
+    private static void calculateVectorWeight(int vectorValue, FellegiSunterParameters fellegiSunterParams) {
+        int bitPositions = fellegiSunterParams.getFieldCount();
+        double weight = 0;
+        for (int i = 0; i < bitPositions; i++) {
+            int bitPosValue = getBitValueAtPosition(vectorValue, i);
+            if (bitPosValue == 1) {
+                Double numerator = fellegiSunterParams.getMValue(i);
+                Double denominator = fellegiSunterParams.getUValue(i);
+                numerator = adjustMinimumValue(numerator);
+                denominator = adjustMinimumValue(denominator);
+                weight += Math.log(numerator / denominator) / Math.log(2.0);
+            } else {
+                Double numerator = (1.0 - fellegiSunterParams.getMValue(i));
+                Double denominator = (1.0 - fellegiSunterParams.getUValue(i));
+                numerator = adjustMinimumValue(numerator);
+                denominator = adjustMinimumValue(denominator);
+                weight += Math.log(numerator / denominator) / Math.log(2.0);
+            }
+            fellegiSunterParams.setVectorWeight(vectorValue, weight);
+            if (log.isTraceEnabled()) {
+                log.trace("Set the weight of vector " + vectorValue + " to " + weight);
+            }
+        }
+    }
 
+    private static int getBitValueAtPosition(int value, int pos) {
+        int mask = 1;
+        for (int i = 1; i <= pos; i++) {
+            mask = mask << 1;
+        }
+        int valueAtPosition = mask & value;
+        if (valueAtPosition > 0) {
+            valueAtPosition = 1;
+        }
+        return valueAtPosition;
+    }
+    
+    private static Double adjustMinimumValue(Double numerator) {
+        if (numerator.doubleValue() < MIN_MARGINAL_VALUE.doubleValue()) {
+            numerator = MIN_MARGINAL_VALUE;
+        }
+        return numerator;
+    }
+    
 	private static String getOpenempiHome() {
 		String home = System.getenv("OPENEMPI_HOME");
 		if (home != null && home.length() > 0) {

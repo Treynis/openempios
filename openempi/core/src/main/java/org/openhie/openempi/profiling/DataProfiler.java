@@ -99,6 +99,10 @@ public class DataProfiler extends BaseServiceImpl implements Runnable, Parameter
 			int totalRecordCount = 0;
 			long startTime = getTimestamp();
 			List<AttributeMetadata> attribMetadata = getRecordDataSource().getAttributeMetadata();
+			if (!isValidMetadata(attribMetadata)) {
+				log.info("Data profile will not be performed because metadata for the data source is invalid .");
+				throw new RuntimeException("Invalid metadata for the data source.");
+			}
 			buildMetadataMapAndNameList(attribMetadata);
 			do {
 				java.util.List<String> attributesToBeProcessed = null;
@@ -134,7 +138,27 @@ public class DataProfiler extends BaseServiceImpl implements Runnable, Parameter
 		} catch (Throwable e) {
 			recordDataSource.close("Failed");
 			log.warn("Failed while generating the data profiling data: " + e, e);
+			throw new RuntimeException(e.getMessage());
 		}
+	}
+
+	/**
+	 * If the list of metadata is empty or all fields have unknown data type then the metadata is
+	 * considered to be invalid.
+	 * 
+	 * @param attribMetadata
+	 * @return
+	 */
+	private boolean isValidMetadata(List<AttributeMetadata> attribMetadata) {
+		if (attribMetadata.isEmpty()) {
+			return false;
+		}
+		for (AttributeMetadata meta : attribMetadata) {
+			if (meta.getDatatype() >= 0) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private Object getEntity() {

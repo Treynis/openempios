@@ -32,27 +32,34 @@ import javax.ws.rs.core.Response;
 import org.openempi.webservices.restful.model.IdentifierDomainAttributeRequest;
 import org.openempi.webservices.restful.model.MergePersonsRequest;
 import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.cluster.ServiceName;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
 import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.PersonIdentifier;
 import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.ReviewRecordPair;
-import org.openhie.openempi.service.IdentifierDomainService;
-import org.openhie.openempi.service.PersonManagerService;
+import org.openhie.openempi.service.PersonManagerResourceService;
+import org.openhie.openempi.service.ResourceServiceFactory;
 
 
 @Path("/person-manager-resource")
 public class PersonManagerResource
 {
+    private PersonManagerResourceService service;
+    
+    public PersonManagerResource() {
+        service = (PersonManagerResourceService)
+                ResourceServiceFactory.createResourceService(ServiceName.PERSON_MANAGER_RESOURCE_SERVICE,
+                        PersonManagerResourceService.class);
+    }
+    
 	@PUT
 	@Path("/addPerson")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Person addPerson(Person person) {
-		PersonManagerService manager = getPersonManagerService();
-		setPersonReferencesOnPersonIdentifier(person);
 		try {
-			person = manager.addPerson(person);
+			person = service.addPerson(person);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.CONFLICT);
 		}
@@ -63,10 +70,8 @@ public class PersonManagerResource
 	@Path("/updatePerson")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void updatePerson(Person person) {
-		setPersonReferencesOnPersonIdentifier(person);
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.updatePerson(person);
+		    service.updatePerson(person);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.NOT_MODIFIED);
 		}
@@ -76,10 +81,8 @@ public class PersonManagerResource
 	@Path("/updatePersonById")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Person updatePersonById(Person person) {
-		PersonManagerService manager = getPersonManagerService();
-		setPersonReferencesOnPersonIdentifier(person);
 		try {
-			person = manager.updatePersonById(person);
+			person = service.updatePersonById(person);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.NOT_MODIFIED);
 		}
@@ -90,9 +93,8 @@ public class PersonManagerResource
 	@Path("/deletePerson")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void deletePerson(PersonIdentifier personIdentifier) {
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.deletePerson(personIdentifier);
+		    service.deletePerson(personIdentifier);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.NOT_FOUND);
 		}
@@ -102,9 +104,8 @@ public class PersonManagerResource
     @Path("/removePersonById")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
     public void removePersonById(@QueryParam("personId") Integer personId) {
-        PersonManagerService manager = getPersonManagerService();
         try {
-            manager.removePerson(personId);
+            service.removePersonById(personId);
         } catch (ApplicationException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
@@ -114,9 +115,8 @@ public class PersonManagerResource
 	@Path("/mergePersons")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void mergePersons(MergePersonsRequest mergePersonsRequest) {
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.mergePersons(mergePersonsRequest.getRetiredIdentifier(), mergePersonsRequest.getSurvivingIdentifer());
+		    service.mergePersons(mergePersonsRequest.getRetiredIdentifier(), mergePersonsRequest.getSurvivingIdentifer());
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.NOT_FOUND);
 		}
@@ -126,10 +126,8 @@ public class PersonManagerResource
 	@Path("/deletePersonById")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void deletePersonById(Person person) {
-		setPersonReferencesOnPersonIdentifier(person);
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.deletePersonById(person);
+		    service.deletePersonById(person);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.NOT_FOUND);
 		}
@@ -139,10 +137,8 @@ public class PersonManagerResource
 	@Path("/importPerson")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public Person importPerson(Person person) {
-		PersonManagerService manager = getPersonManagerService();
-		setPersonReferencesOnPersonIdentifier(person);
 		try {
-			person = manager.importPerson(person);
+			person = service.importPerson(person);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.CONFLICT);
 		}
@@ -153,9 +149,8 @@ public class PersonManagerResource
 	@Path("/addIdentifierDomain")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public IdentifierDomain addIdentifierDomain(IdentifierDomain identifierDomain) {
-		IdentifierDomainService manager = getIdentifierDomainService();
 		try {
-			identifierDomain = manager.addIdentifierDomain(identifierDomain);
+			identifierDomain = service.addIdentifierDomain(identifierDomain);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.CONFLICT);
 		}
@@ -166,9 +161,8 @@ public class PersonManagerResource
 	@Path("/updateIdentifierDomain")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public IdentifierDomain updateIdentifierDomain(IdentifierDomain identifierDomain) {
-		IdentifierDomainService manager = getIdentifierDomainService();
 		try {
-			identifierDomain = manager.updateIdentifierDomain(identifierDomain);
+			identifierDomain = service.updateIdentifierDomain(identifierDomain);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.BAD_REQUEST);
 		}
@@ -179,9 +173,8 @@ public class PersonManagerResource
 	@Path("/deleteIdentifierDomain")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void deleteIdentifierDomain(IdentifierDomain identifierDomain) {
-		IdentifierDomainService manager = getIdentifierDomainService();
 		try {
-			manager.deleteIdentifierDomain(identifierDomain);
+		    service.deleteIdentifierDomain(identifierDomain);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.BAD_REQUEST);
 		}
@@ -191,21 +184,18 @@ public class PersonManagerResource
 	@Path("/obtainUniqueIdentifierDomain")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public IdentifierDomain obtainUniqueIdentifierDomain(String universalIdentifierTypeCode) {
-		IdentifierDomainService manager = getIdentifierDomainService();
-		return manager.obtainUniqueIdentifierDomain(universalIdentifierTypeCode);
+		return service.obtainUniqueIdentifierDomain(universalIdentifierTypeCode);
 	}
 	
 	@PUT
 	@Path("/addIdentifierDomainAttribute")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
-	public IdentifierDomainAttribute addIdentifierDomainAttribute(IdentifierDomainAttributeRequest identifierDomainAttributeRequest ) {
-		IdentifierDomainService manager = getIdentifierDomainService();
-		IdentifierDomainAttribute identifierDomainAttribute = null;
-		
-		identifierDomainAttribute = manager.addIdentifierDomainAttribute(identifierDomainAttributeRequest.getIdentifierDomain(), 
-																		identifierDomainAttributeRequest.getAttributeName(), 
-																		identifierDomainAttributeRequest.getAttributeValue());
-
+	public IdentifierDomainAttribute addIdentifierDomainAttribute(
+	        IdentifierDomainAttributeRequest identifierDomainAttributeRequest ) {
+	    IdentifierDomainAttribute identifierDomainAttribute = 
+		        service.addIdentifierDomainAttribute(identifierDomainAttributeRequest.getIdentifierDomain(),
+		                identifierDomainAttributeRequest.getAttributeName(),
+		                identifierDomainAttributeRequest.getAttributeValue());
 		return identifierDomainAttribute;
 	}
 
@@ -213,27 +203,22 @@ public class PersonManagerResource
 	@Path("/updateIdentifierDomainAttribute")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void updateIdentifierDomainAttribute(IdentifierDomainAttribute identifierDomainAttribute) {
-		IdentifierDomainService manager = getIdentifierDomainService();
-		
-		manager.updateIdentifierDomainAttribute(identifierDomainAttribute);
+		service.updateIdentifierDomainAttribute(identifierDomainAttribute);
 	}
 	
 	@PUT
 	@Path("/removeIdentifierDomainAttribute")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void removeIdentifierDomainAttribute(IdentifierDomainAttribute identifierDomainAttribute) {
-		IdentifierDomainService manager = getIdentifierDomainService();
-		
-		manager.removeIdentifierDomainAttribute(identifierDomainAttribute);
+		service.removeIdentifierDomainAttribute(identifierDomainAttribute);
 	}
 	
 	@PUT
 	@Path("/addReviewRecordPair")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void addReviewRecordPair(ReviewRecordPair recordPair) {
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.addReviewRecordPair(recordPair);
+		    service.addReviewRecordPair(recordPair);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.BAD_REQUEST);
 		}
@@ -243,9 +228,8 @@ public class PersonManagerResource
 	@Path("/matchReviewRecordPair")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void matchReviewRecordPair(ReviewRecordPair recordPair) {
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.matchReviewRecordPair(recordPair);
+		    service.matchReviewRecordPair(recordPair);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.BAD_REQUEST);
 		}
@@ -255,9 +239,7 @@ public class PersonManagerResource
 	@Path("/deleteReviewRecordPair")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void deleteReviewRecordPair(ReviewRecordPair recordPair) {
-		PersonManagerService manager = getPersonManagerService();
-		
-		manager.deleteReviewRecordPair(recordPair);
+		service.deleteReviewRecordPair(recordPair);
 	}
 
 	// This method deletes all the review record pair entries from the repository
@@ -265,18 +247,15 @@ public class PersonManagerResource
 	@Path("/deleteReviewRecordPairs")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void deleteReviewRecordPairs() {
-		PersonManagerService manager = getPersonManagerService();
-		
-		manager.deleteReviewRecordPairs();
+		service.deleteReviewRecordPairs();
 	}
 	
 	@PUT
 	@Path("/linkPersons")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void linkPersons(PersonLink personLink) {
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.linkPersons(personLink);
+		    service.linkPersons(personLink);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.BAD_REQUEST);
 		}
@@ -286,33 +265,10 @@ public class PersonManagerResource
 	@Path("/unlinkPersons")
 	@Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
 	public void unlinkPersons(PersonLink personLink) {
-		PersonManagerService manager = getPersonManagerService();
 		try {
-			manager.unlinkPersons(personLink);
+		    service.unlinkPersons(personLink);
 		} catch (ApplicationException e) {
 			throw new WebApplicationException(Response.Status.BAD_REQUEST);
 		}
-	}
-	
-	/**
-	 * During marshalling/unmarshalling the reference from PersonIdentifier to Person is lost since
-	 * otherwise a cycle is created in the serialization graph that Jaxb doesn't know how to deal with
-	 * We need to fix the reference here before we go any deeper.
-	 * @param person
-	 */
-	private void setPersonReferencesOnPersonIdentifier(Person person) {
-		if (person != null && person.getPersonIdentifiers() != null) {
-			for (PersonIdentifier pi : person.getPersonIdentifiers()) {
-				pi.setPerson(person);
-			}
-		}
-	}
-	
-	private PersonManagerService getPersonManagerService() {
-		return org.openhie.openempi.context.Context.getPersonManagerService();
-	}
-	
-	private IdentifierDomainService getIdentifierDomainService() {
-		return org.openhie.openempi.context.Context.getIdentifierDomainService();
 	}
 }

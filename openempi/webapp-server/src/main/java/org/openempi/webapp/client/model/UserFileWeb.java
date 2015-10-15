@@ -21,7 +21,6 @@
 package org.openempi.webapp.client.model;
 
 import java.util.HashMap;
-import java.util.Map;
 
 import com.extjs.gxt.ui.client.data.BaseModelData;
 

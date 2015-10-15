@@ -30,10 +30,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class RecordLink
 {
     private Integer entityId;
-    private Long recordLinkId;
+    private String recordLinkId;
     private Record leftRecord;
     private Record rightRecord;
     private Double weight;
+    private Integer vector;
+    private String source;
     private String state;
 
     public RecordLink() {
@@ -48,17 +50,17 @@ public class RecordLink
         this.entityId = entityId;
     }
     
-    public RecordLink(Integer entityId, Long recordLinkId) {
+    public RecordLink(Integer entityId, String recordLinkId) {
         this.entityId = entityId;
         this.recordLinkId = recordLinkId;
     }
 
     @XmlElement
-    public Long getRecordLinkId() {
+    public String getRecordLinkId() {
         return recordLinkId;
     }
 
-    public void setRecordLinkId(Long recordLinkId) {
+    public void setRecordLinkId(String recordLinkId) {
         this.recordLinkId = recordLinkId;
     }
 
@@ -97,4 +99,22 @@ public class RecordLink
     public void setState(String state) {
         this.state = state;
     }
+
+    @XmlElement
+	public Integer getVector() {
+		return vector;
+	}
+
+	public void setVector(Integer vector) {
+		this.vector = vector;
+	}
+
+    @XmlElement
+	public String getSource() {
+		return source;
+	}
+
+	public void setSource(String source) {
+		this.source = source;
+	}
 }

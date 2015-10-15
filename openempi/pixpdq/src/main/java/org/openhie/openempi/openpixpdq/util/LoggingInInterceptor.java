@@ -44,7 +44,6 @@ import org.apache.cxf.phase.Phase;
 import org.apache.cxf.service.model.BindingOperationInfo;
 import org.apache.cxf.service.model.MessageInfo;
 import org.apache.cxf.ws.addressing.ContextUtils;
-import org.jfree.util.Log;
 import org.openhealthtools.openpixpdq.api.MessageStore;
 
 
@@ -212,14 +211,14 @@ public class LoggingInInterceptor extends AbstractLoggingInterceptor {
     	Object headers = message.get(Message.PROTOCOL_HEADERS);
         if (headers != null && (headers instanceof Map)) {
         	Map<String,Object> headerMap = (Map<String,Object>) headers;
-            Log.debug("Headers are: " + headers);
+            LOG.log(Level.FINER, "Headers are: " + headers);
             String contentTypeKey = hasContentTypeKey(headerMap.keySet());
             if (contentTypeKey != null) {
 	            Object contentType = headerMap.get(contentTypeKey);
-	            Log.debug("Content type is " + contentType);
+	            LOG.log(Level.FINER, "Content type is " + contentType);
 	            List<String> types = (List<String>) contentType;
 	            for (String type : types) {
-	            	if (type.indexOf("action") >= 0) {
+	            	if (type != null && type.indexOf("action") >= 0) {
 	            		String actionPortion = type.substring(type.indexOf("action"));
 	            		String[] parts = actionPortion.split("\"");
 	            		return parts[1];

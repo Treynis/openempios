@@ -46,6 +46,7 @@
         <mapping class="org.openhie.openempi.model.IdentifierUpdateEntry"/>
         <mapping class="org.openhie.openempi.model.IdentifierUpdateEvent"/>
         <mapping class="org.openhie.openempi.model.IdentifierDomain"/>
+        <mapping class="org.openhie.openempi.model.IdentifierDomainAttribute"/>
         <mapping class="org.openhie.openempi.model.JobType"/>
         <mapping class="org.openhie.openempi.model.JobStatus"/>
         <mapping class="org.openhie.openempi.model.JobEntry"/>

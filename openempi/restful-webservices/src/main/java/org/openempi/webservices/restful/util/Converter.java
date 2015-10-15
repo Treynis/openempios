@@ -127,12 +127,16 @@ public class Converter
         String recordLinkId = result[1];
 
         restRecLink.setEntityId(entityId);
-        restRecLink.setRecordLinkId(Long.parseLong(recordLinkId));
+        restRecLink.setRecordLinkId(recordLinkId);
 
         restRecLink.setLeftRecord(convertRecordToRestfulRecord(recordLink.getLeftRecord()));
         restRecLink.setRightRecord(convertRecordToRestfulRecord(recordLink.getRightRecord()));
         restRecLink.setState(recordLink.getState().getState());
         restRecLink.setWeight(recordLink.getWeight());
+        restRecLink.setVector(recordLink.getVector());
+        if (recordLink.getLinkSource() != null) {
+        	restRecLink.setSource(recordLink.getLinkSource().getSourceName());
+        }
 
         return restRecLink;
     }
@@ -153,6 +157,10 @@ public class Converter
 
         recordLink.setState(RecordLinkState.fromString(restRecordLink.getState()));
         recordLink.setWeight(restRecordLink.getWeight());
+        recordLink.setVector(restRecordLink.getVector());
+        if (restRecordLink.getVector() == null) {
+            recordLink.setVector(0);
+        }
 
         return recordLink;
     }

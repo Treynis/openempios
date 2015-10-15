@@ -186,5 +186,10 @@ public final class Constants
     public final static String FALSE_VALUE = "false";
 	public final static String TRUE_VALUE = "true";
 
+	public static final String CLUSTER_MANAGER = "clusterManager";
+
     public static final String FLEXIBLE_FILE_LOADER = "flexibleDataLoader";
+    
+    public static final String EXACT_COMPARATOR_FUNCTION = "Exact";
+
 }

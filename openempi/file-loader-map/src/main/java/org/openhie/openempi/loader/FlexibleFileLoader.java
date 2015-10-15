@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -33,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -63,13 +63,11 @@ import org.openhie.openempi.model.ParameterType;
 import org.openhie.openempi.model.Race;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.model.RecordLink;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 public class FlexibleFileLoader extends AbstractFileLoader
 {
     public static final String DEFAULT_DATE_FORMAT = "yyyyMMdd";
 
-    private ThreadPoolTaskExecutor taskExecutor;
     private FileLoaderMap fileMap;
     private Map<Integer, FieldType> fieldMapByColumnIndex = new HashMap<Integer, FieldType>();
     private Map<String, Method> methodByFieldName = new HashMap<String, Method>();
@@ -97,6 +95,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
     private Map<String, String> referenceTypeMap = new HashMap<String, String>();
     private List<RecordLoaderTask> loaderThreads = new ArrayList<RecordLoaderTask>();
     private List<Future<Object>> futures = new ArrayList<Future<Object>>();
+    private Charset characterSetEncoding;
 
     public FlexibleFileLoader() {
         goldStandardLinkSource = new LinkSource();
@@ -110,7 +109,6 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
     @Override
     public void init() {
-        taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
         log.debug("Initializing the loader in " + getClass() + " using configuration map: "
                 + getEntityLoaderManager().getPropertyMap());
         String mappingFilename = getParameterAsString(FileLoaderParameters.MAPPING_FILE);
@@ -140,11 +138,14 @@ public class FlexibleFileLoader extends AbstractFileLoader
         if (trainingDataExtractor != null) {
             cacheOfRecordsLoaded = new HashMap<Serializable, Set<Long>>();
         }
+//        launchLoaderThreads();
+    }
 
+    private void launchLoaderThreads() {
         for (int i = 0; i < getNumLoaderThreads(); i++) {
             RecordLoaderTask loaderThread = new RecordLoaderTask(getEntityLoaderManager(), Context.getUserContext());
             loaderThreads.add(loaderThread);
-            futures.add(taskExecutor.getThreadPoolExecutor().submit(loaderThread, new Object()));
+            futures.add(Context.scheduleRunnable(loaderThread));
         }
     }
 
@@ -160,6 +161,8 @@ public class FlexibleFileLoader extends AbstractFileLoader
             setupTrainingDataExtractor(fileMap.getTrainingDataExtractor());
             log.debug("File will be parsed using the delimeter: " + delimiter);
             delimitingPattern = Pattern.compile(delimiter);
+            
+            characterSetEncoding = parseCharacterSet(fileMap);
             for (int i = 0; i < fileMap.getFields().getField().size(); i++) {
                 FieldType field = fileMap.getFields().getField().get(i);
                 fieldMapByColumnIndex.put(new Integer(i + 1), field);
@@ -178,6 +181,23 @@ public class FlexibleFileLoader extends AbstractFileLoader
             log.error("Unable to initialize the flexible file loader; the mapping file is not valid: " + e, e);
             throw new RuntimeException("Unable to initialize the flexible file loader; the mapping file is not valid.");
         }
+    }
+
+    private Charset parseCharacterSet(FileLoaderMap model) {
+        Charset charset = Charset.defaultCharset();
+        String charSetName = model.getCharacterSetEncoding();
+        if (charSetName == null) {
+            log.debug("Using the default character set encoding of '" + charset.name() + "'");
+            return charset;
+        }
+        Charset charsetForName = Charset.forName(charSetName);
+        if (charsetForName == null) {
+            log.debug("Character set encoding specified '" + charSetName + "' was invalid.");
+            throw new RuntimeException("Invalid character set encoding specified.");
+        }
+        charset = charsetForName;
+        log.debug("Using the specified character set encoding of '" + charset.name() + "'");
+        return charset;
     }
 
     private void setupTrainingDataExtractor(String trainingDataExtractorName) {
@@ -212,6 +232,9 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
     @Override
     protected boolean processLine(Entity entity, String line, int lineIndex) {
+        if (loaderThreads.size() == 0) {
+            launchLoaderThreads();
+        }
         if (line == null || line.trim().length() == 0) {
             return true;
         }
@@ -222,23 +245,39 @@ public class FlexibleFileLoader extends AbstractFileLoader
 
         // Create task
         RecordParseTask parser = new RecordParseTask(entity, line, lineIndex, Context.getUserContext());
-        Future<Object> future = taskExecutor.getThreadPoolExecutor().submit(parser, new Object());
-        try {
-            future.get();
-            return true;
-        } catch (InterruptedException e) {
-            log.warn("Failed while processing the following line from position " + lineIndex
-                    + " in the file.\nError message: " + e + "\n" + line, e);
-            return false;
-        } catch (ExecutionException e) {
-            return false;
-        } catch (Throwable e) {
-            log.warn("Failed while processing the following line from position " + lineIndex
-                    + " in the file.\nError message: " + e + "\n" + line, e);
-            return false;
-        }
+        parser.processLineAndAddToQueue(line, lineIndex);
+        return true;
+//        Future<Object> future = taskExecutor.getThreadPoolExecutor().submit(parser, new Object());
+//        try {
+//            future.get();
+//            return true;
+//        } catch (InterruptedException e) {
+//            log.warn("Failed while processing the following line from position " + lineIndex
+//                    + " in the file.\nError message: " + e + "\n" + line, e);
+//            return false;
+//        } catch (ExecutionException e) {
+//            return false;
+//        } catch (Throwable e) {
+//            log.warn("Failed while processing the following line from position " + lineIndex
+//                    + " in the file.\nError message: " + e + "\n" + line, e);
+//            return false;
+//        }
     }
 
+    public boolean isDone() {
+        for (Future<Object> future : futures) {
+            try {
+                if (!future.isDone()) {
+                    future.get();
+                }
+                log.info("Completed the loader task: " + future);
+            } catch (Exception e) {
+                log.warn("Failed while waiting for loader to finish: " + e, e);
+            }
+        }
+        return true;
+    }
+    
     @Override
     public void shutdown() {
         log.debug("Shutting down the executor after having processed a total of " + recordCounter + " records.");
@@ -246,7 +285,6 @@ public class FlexibleFileLoader extends AbstractFileLoader
             loader.setDone(true);
             loader.shutdown();
         }
-        taskExecutor.shutdown();
         for (Future<Object> future : futures) {
             try {
                 log.debug("Waiting for the thread to shutdown: " + future.toString());
@@ -258,14 +296,13 @@ public class FlexibleFileLoader extends AbstractFileLoader
                 log.warn("Failed while waiting for the loader thread to complete: " + e, e);
             }
         }
+        loaderThreads.clear();
+        futures.clear();
     }
 
-    public void setTaskExecutor(ThreadPoolTaskExecutor taskExecutor) {
-        this.taskExecutor = taskExecutor;
-    }
-
-    public ThreadPoolTaskExecutor getTaskExecutor() {
-        return taskExecutor;
+    @Override
+    protected Charset getCharacterSetEncoding() {
+        return characterSetEncoding;
     }
 
     private class RecordParseTask implements Runnable
@@ -286,6 +323,10 @@ public class FlexibleFileLoader extends AbstractFileLoader
         public void run() {
             log.debug("Processing record: " + lineRecord);
             Context.setUserContext(userContext);
+            processLineAndAddToQueue(lineRecord, lineIndex);
+        }
+
+        public void processLineAndAddToQueue(String lineRecord, int lineIndex) {
             record = processLine(lineRecord, lineIndex);
             if (record == null) {
                 log.warn("Unable to process record at line: " + lineIndex);
@@ -317,6 +358,12 @@ public class FlexibleFileLoader extends AbstractFileLoader
             String[] tokens = delimitingPattern.split(line);
             if (log.isTraceEnabled()) {
                 log.trace("Parsed the line " + line + " into " + tokens.length + " tokens.");
+            }
+            if (tokens.length != fieldMapByColumnIndex.keySet().size()) {
+                log.warn("Record field count of " + tokens.length + 
+                        " doesn't match mapping document field count of " + fieldMapByColumnIndex.keySet().size() +
+                        ", record: " + line);
+                return null;
             }
             Record record = getEntityRecordFromTokens(tokens);
             return record;
@@ -583,6 +630,7 @@ public class FlexibleFileLoader extends AbstractFileLoader
         }
 
         public void run() {
+            log.info("Loading record as: " + Thread.currentThread().getName());
             Context.setUserContext(userContext);
             int attempts = 0;
             while (!done) {
