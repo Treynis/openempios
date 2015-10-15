@@ -126,15 +126,14 @@ public class BlockingServiceCache
                                 .generateBlockingKeyValue(blockingRoundClass.getBlockingRound().getFields(), record);
                         addRecordToBlock(record, blockingRoundClass, blockingKeyValue);            
                         if (count % 10000 == 0) {
-                            System.out.println("Consumer " + Thread.currentThread().getName() + " processed " + count + " records.");
+                            log.info("Consumer " + Thread.currentThread().getName() + " processed " + count + " records.");
                         }
                     } else {
                         done = true;
                     }
                 }
             } catch (InterruptedException e) {
-                System.out.println("Finished the while loop.");
-                e.printStackTrace();
+                log.warn("Generation of blocking indexes was interrupted: " + e, e);
             } finally {
                 getLatch().countDown();
             }
@@ -493,7 +492,8 @@ public class BlockingServiceCache
                     try {
                         blockRecord = getBlockingDao().loadBlockData(getEntity(), roundClass, blockingKeyValue);
                         if (blockRecord == null) {
-                            log.warn("Received a request to delete a record from the index that is not in the index: " + record.getRecordId());
+                            log.warn("Received a request to delete a record from the index of block " + 
+                            		blockingKeyValue + " that is not in the index: " + record.getRecordId());
                             return;
                         }
                         Set<Long> rids = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);

@@ -95,9 +95,6 @@ import org.openhie.openempi.model.User;
 /**
  * Utility class to convert one object to another.
  *
- * @author <a href="mailto:matt@raibledesigns.com">Matt Raible</a>
- * Extended by <a href="mailto:odysseas@sysnetint.com">Odysseas Pentakalos</a>
- * to support conversion between POJO trees and Hashmap of properties.
  */
 public final class ConvertUtil
 {
@@ -497,8 +494,16 @@ public final class ConvertUtil
 		}
 
 		// Attributes
+		Entity entity = record.getEntity();
 		Set<String> propertyNames = record.getPropertyNames();
 		for (String property : propertyNames) {
+	        EntityAttribute attrib = entity.findAttributeByName(property);
+	        if (attrib != null && attrib.getIsCustom()) {
+	            if (log.isTraceEnabled()) {
+	                log.trace("Skipping custom field " + property);
+	            }
+	            continue;
+	        }
 			if (property.equals("gender")) {
 				Object code = record.get(property);
 				if (code != null) {
@@ -517,6 +522,18 @@ public final class ConvertUtil
 					}
 					person.setRace(race);
 				}
+            } else if (property.equals("nationality")) {
+                Object code = record.get(property);
+                if (code != null) {
+                    Nationality nationality = personDao.findNationalityByCode(code.toString());
+                    if (nationality == null) {
+                        nationality = personDao.findNationalityByName(code.toString());
+                    }
+                    person.setNationality(nationality);
+                }
+			} else if (property.equals(org.openhie.openempi.entity.Constants.ORIENTDB_CLUSTER_ID_KEY)) {
+			    // This property is not intended to propagate above the persistence layer
+			    continue;
 			} else {
 				Object value = record.get(property);
 				if (value != null) {
@@ -525,15 +542,29 @@ public final class ConvertUtil
 			}
 		}
 
+		addInternalPersonAttributes(record, person);
+		
 		// Person identifiers
 		for (Identifier identifier : record.getIdentifiers()) {
 			PersonIdentifier personIdentifier = buildIdentifier(person, identifier);
+			addInternalIdentifierAttributes(identifier, personIdentifier);
 			person.addPersonIdentifier(personIdentifier);
 		}
 		return person;
 	}
 
-	public static PersonIdentifier buildIdentifier(Person person, Identifier identifier) {
+	private static void addInternalIdentifierAttributes(Identifier identifier, PersonIdentifier personIdentifier) {
+        personIdentifier.setDateCreated(identifier.getDateCreated());
+        personIdentifier.setDateVoided(identifier.getDateVoided());
+    }
+
+    private static void addInternalPersonAttributes(Record record, Person person) {
+	    person.setDateCreated((Date) record.get(org.openhie.openempi.entity.Constants.DATE_CREATED_PROPERTY));
+        person.setDateChanged((Date) record.get(org.openhie.openempi.entity.Constants.DATE_CHANGED_PROPERTY));
+        person.setDateVoided((Date) record.get(org.openhie.openempi.entity.Constants.DATE_VOIDED_PROPERTY));
+    }
+
+    public static PersonIdentifier buildIdentifier(Person person, Identifier identifier) {
 		if (identifier == null) {
 			return null;
 		}
@@ -652,6 +683,10 @@ public final class ConvertUtil
             recordLink.setDateReviewed(recordPair.getDateReviewed());
             recordLink.setLinkSource(recordPair.getLinkSource());
             recordLink.setWeight(recordPair.getWeight());
+            recordLink.setVector(recordPair.getVector());
+            if (recordPair.getVector() == null) {
+                recordLink.setVector(0);
+            }
 
             recordLink.setUserCreatedBy(recordPair.getUserCreatedBy());
             recordLink.setUserReviewedBy(recordPair.getUserReviewedBy());
@@ -730,8 +765,15 @@ public final class ConvertUtil
 
             recordLink.setLinkSource(personLink.getLinkSource());
             recordLink.setWeight(personLink.getWeight());
+            recordLink.setVector(personLink.getVector());
+            if (personLink.getVector() == null) {
+                recordLink.setVector(0);
+            }
 
             User user = personLink.getUserCreatedBy();
+            if (user == null) {
+                user = Context.getUserContext().getUser();
+            }
             recordLink.setUserCreatedBy(user);
             recordLink.setUserReviewedBy(user);
             return recordLink;
@@ -769,8 +811,10 @@ public final class ConvertUtil
 		try {
 			method.invoke(entityInstance, value);
 		} catch (Exception e) {
-			log.warn("Unable to set the value of attribute " + fieldName + " to a value " + value + 
+		    if (log.isDebugEnabled()) {
+		        log.debug("Unable to set the value of attribute " + fieldName + " to a value " + value + 
 					" of type " + value.getClass());
+		    }
 		}
 	}
 
@@ -785,7 +829,7 @@ public final class ConvertUtil
 			method = theClass.getDeclaredMethod(methodName, paramClass);
 			methodByFieldName.put(fieldName, method);
 		} catch (Exception e) {
-			log.warn("Unable to field entity method for setting field " + fieldName + " to a value of type " + paramClass);
+			log.warn("Unable to find entity method for setting field " + fieldName + " to a value of type " + paramClass);
 			return null;
 		}
 		return method;

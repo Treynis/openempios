@@ -22,15 +22,19 @@ package org.openhie.openempi.openpixpdqadapter;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
 import org.apache.log4j.Logger;
 import org.openhealthtools.openexchange.actorconfig.IheConfigurationException;
 import org.openhealthtools.openpixpdq.common.PixPdqConfigurationLoader;
+import org.openhealthtools.openpixpdq.impl.v2.MessageValidation;
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.model.Person;
@@ -40,7 +44,9 @@ import org.openhie.openempi.service.PersonQueryService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
+import ca.uhn.hl7v2.DefaultHapiContext;
 import ca.uhn.hl7v2.HL7Exception;
+import ca.uhn.hl7v2.HapiContext;
 import ca.uhn.hl7v2.app.Connection;
 import ca.uhn.hl7v2.app.ConnectionHub;
 import ca.uhn.hl7v2.app.Initiator;
@@ -51,17 +57,20 @@ import ca.uhn.hl7v2.parser.PipeParser;
 
 public abstract class BasePixPdqTest extends TestCase
 {
-	public enum Profile {
+    private final static String PIX_MANAGER_PORT_PROPERTY = "pix-manager-port";
+    private final static String PDQ_SUPPLIER_PORT_PROPERTY = "pdq-supplier-port";
+
+    public enum Profile {
 		PIX, PDQ
 	};
 	protected Logger log = Logger.getLogger(BasePixPdqTest.class);
 	protected String hostname = "localhost";
 	protected int port = 3600;
 	protected static boolean initialized = false;
+	protected int pixManagerPort;
+	protected int pdqSupplierPort;
+	protected HapiContext ctx;
 	
-	private PixPdqConfigurationLoader loader;
-	private PersonManagerService personManager;
-	private PersonQueryService personQuery;
 	private Connection pdqConnection;
 	private Connection pixConnection;
 	private Connection defaultConnection;
@@ -69,31 +78,37 @@ public abstract class BasePixPdqTest extends TestCase
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
-		Context.startup();
-		Context.authenticate("admin", "admin");
-		if (!initialized) {
-			String configFilename = Context.getOpenEmpiHome() + "/conf/IheActors.xml";
-			File configFile = new File(configFilename);
-			loader = PixPdqConfigurationLoader.getInstance();
-			String[] propertyFiles = { "openpixpdq.properties" };
-			loader.loadProperties(propertyFiles);
-			loader.loadConfiguration(configFile.getAbsolutePath(), true);
-			initialized = true;
+		Properties prop = new Properties();
+		String propFileName = "pixpdqtest.properties";
+		InputStream inputStream = getClass().getClassLoader().getResourceAsStream(propFileName);
+		
+		if (inputStream == null) {
+		    log.error("Unable to find the configuration file: "  + propFileName);
+		    throw new RuntimeException("Configuration file for tests is missing: " + propFileName);
+		}
+		prop.load(inputStream);
+		
+		try {
+    		pixManagerPort = Integer.parseInt(prop.getProperty(PIX_MANAGER_PORT_PROPERTY));
+    		pdqSupplierPort = Integer.parseInt(prop.getProperty(PDQ_SUPPLIER_PORT_PROPERTY));
+		} catch (Exception e) {
+            log.error("Configuration parameters are missing or invalid: "  + e, e);
+            throw new RuntimeException("Configuration parameters are missing or invalid: " + e.getMessage());		    
 		}
 		
-		personManager = Context.getPersonManagerService();
-		personQuery = Context.getPersonQueryService();
-		
-		// The connection hub connects to listening servers
-		ConnectionHub connectionHub = ConnectionHub.getInstance();
+        // The connection hub connects to listening servers
+        ctx = new DefaultHapiContext();
+        ctx.setValidationContext(new MessageValidation());
+        MinLowerLayerProtocol mllp = new MinLowerLayerProtocol(true);
+        ctx.setLowerLayerProtocol(mllp);
 
 		// A connection object represents a socket attached to an HL7 server
 		if (supportsPdqProfile()) {
-			pdqConnection = connectionHub.attach(getHostname(Profile.PDQ), getPort(Profile.PDQ), new PipeParser(), MinLowerLayerProtocol.class);
+		    pdqConnection = ctx.newClient("localhost", pdqSupplierPort, false);
 			defaultConnection = pdqConnection;
 		}
 		if (supportsPixProfile()) {
-			pixConnection = connectionHub.attach(getHostname(Profile.PIX), getPort(Profile.PIX), new PipeParser(), MinLowerLayerProtocol.class);
+			pixConnection = ctx.newClient("localhost", pixManagerPort, false);
 			defaultConnection = pixConnection;
 		}
 	}
@@ -101,14 +116,14 @@ public abstract class BasePixPdqTest extends TestCase
 	public Message sendMessage(Connection connection, String message) {
 		log.debug("Sending message to " + connection.toString() + ":\n"
 				+ message);
-		Parser parser = new PipeParser();
+		Parser parser = ctx.getPipeParser();
 		Message adt;
 		try {
 			adt = parser.parse(message);
 
 			// The initiator is used to transmit unsolicited messages
 			Initiator initiator = connection.getInitiator();
-			initiator.setTimeoutMillis(360000);
+			initiator.setTimeout(360, TimeUnit.SECONDS);
 
 			Message response = initiator.sendAndReceive(adt);
 
@@ -126,14 +141,14 @@ public abstract class BasePixPdqTest extends TestCase
 	public Message sendMessage(String message) {
 		log.debug("Sending message to " + hostname + " aBasePixPdqTestt port " + port + ":\n"
 				+ message);
-		Parser parser = new PipeParser();
+		Parser parser = ctx.getPipeParser();
 		Message adt;
 		try {
 			adt = parser.parse(message);
 
 			// The initiator is used to transmit unsolicited messages
 			Initiator initiator = defaultConnection.getInitiator();
-			initiator.setTimeoutMillis(360000);
+            initiator.setTimeout(360, TimeUnit.SECONDS);
 
 			Message response = initiator.sendAndReceive(adt);
 
@@ -174,23 +189,15 @@ public abstract class BasePixPdqTest extends TestCase
 	
 	@Override
 	protected void tearDown() throws Exception {
-		super.tearDown();
-		Context.shutdown();
-		// Close the connection
-//		connection.close();
-//		loader.resetAllBrokers();
-//		try {
-//			Thread.sleep(10000);
-//		} catch (InterruptedException e) {
-//		}
-	}
-
-	public PersonQueryService getPersonQueryService() {
-		return personQuery;
-	}
-	
-	public PersonManagerService getPersonManagerService() {
-		return personManager;
+	    if (pdqConnection != null) {
+	        pdqConnection.close();
+	    }
+        if (pixConnection != null) {
+            pixConnection.close();
+        }
+        if (ctx != null) {
+            ctx.close();
+        }
 	}
 	
 	protected String getResponseString(Message response) throws HL7Exception {
@@ -199,17 +206,7 @@ public abstract class BasePixPdqTest extends TestCase
 	}
 
 	protected void deletePerson(Person person) throws ApplicationException {
-		List<Person> persons = getPersonQueryService().findPersonsByAttributes(person);
-		Map<PersonIdentifier,PersonIdentifier> idsDeleted=new HashMap<PersonIdentifier,PersonIdentifier>();
-		for (Person personFound : persons) {
-			PersonIdentifier id = personFound.getPersonIdentifiers().iterator().next();
-			if (id.getDateVoided() == null && idsDeleted.get(id) == null) {
-				getPersonManagerService().deletePerson(id);
-				for (PersonIdentifier idDeleted : personFound.getPersonIdentifiers()) {
-					idsDeleted.put(idDeleted, idDeleted);
-				}
-			}
-		}
+	    //TODO: Need to add support for deleting patient records after the test is done
 	}
 
 	/**

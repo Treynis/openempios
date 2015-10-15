@@ -45,6 +45,8 @@ public class ConnectionManager
     private String serverUsername;
     private String serverPassword;
     private String storageMode;
+    private String server;
+    private String port;
     
     public ConnectionManager() {
     }
@@ -178,6 +180,22 @@ public class ConnectionManager
 
     public void setStorageMode(String storageMode) {
         this.storageMode = storageMode;
+    }
+
+    public String getServer() {
+        return server;
+    }
+
+    public void setServer(String server) {
+        this.server = server;
+    }
+
+    public String getPort() {
+        return port;
+    }
+
+    public void setPort(String port) {
+        this.port = port;
     }
 /*    
     public static void main(String[] args) {

@@ -74,6 +74,8 @@
 		<property name="serverPassword" value="${orientdb.serverPassword}" />
 		<property name="minPoolConnections" value="${orientdb.minPoolConnections}" />
 		<property name="maxPoolConnections" value="${orientdb.maxPoolConnections}" />
+		<property name="server" value="${orientdb.server}" />
+		<property name="port" value="${orientdb.port}" />
     </bean>
 
 	<bean id="recordProducer"

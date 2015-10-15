@@ -65,8 +65,9 @@ import com.tinkerpop.blueprints.impls.orient.OrientVertex;
 public class EntityDaoOrientdb implements EntityDao
 {
     private Logger log = Logger.getLogger(getClass());
-    private final static String RECORD_LINK_TYPE = "recordLink";
-    private final static String IDENTIFIER_TYPE = "identifier";
+    private static final String RECORD_LINK_TYPE = "recordLink";
+    private static final String IDENTIFIER_TYPE = "identifier";
+    private static final int MAX_RETRY_ATTEMPTS = 5;
     private static ThreadLocal<DataAccessIntent> currentIntent = new ThreadLocal<DataAccessIntent>();
     private static ConnectionManager connectionManager;
     private static SchemaManager schemaManager;
@@ -117,10 +118,10 @@ public class EntityDaoOrientdb implements EntityDao
                 Vertex vertex = saveRecordAndIdentifiers(entity, record, db);
                 savedVertices.add(vertex);
             }
+            db.commit();
             for (Vertex vertex : savedVertices) {
                 saved.add(OrientdbConverter.convertVertexToRecord(getEntityCacheManager(), entity, vertex));
             }
-            db.commit();
             return saved;
         } catch (Exception e) {
             log.error("Failed while trying to save a set of records of entity: " + entityStore.getEntityName()
@@ -390,27 +391,73 @@ public class EntityDaoOrientdb implements EntityDao
                 for (String property : record.getPropertyNames()) {
                     props.put(property, record.get(property));
                 }
-                OrientVertex vertex = (OrientVertex) db.addVertex(className, props);
-                vertex.getBaseClassName();
-            } else {
-                ORID orid = extractORID(entityStore, record);
-                Object obj = db.getRawGraph().load(orid);
-                if (obj == null) {
-                    if (log.isDebugEnabled()) { 
-                        log.debug("Attempted to update an object " + record + " that is not known in the database.");
+                int attempts = 0;
+                boolean done = false;
+                OrientVertex vertex = null;
+                while (!done) {
+                    try {
+                        attempts++;
+                        vertex = (OrientVertex) db.addVertex(className, props);
+                        vertex.getBaseClassName();
+                        db.commit();
+                        done = true;
+                        if (attempts > 1) {
+                            log.warn("Succeeded in updating " + record.getRecordId() + " on attempt " + attempts +
+                                    " and version " + vertex +
+                                    " because another user/thread modified the record.");
+                        }
+                    } catch (OConcurrentModificationException e) {
+                        log.warn("Failed to save " + record.getRecordId() + 
+                                " because another user/thread modified the record.");
+                        if (attempts > MAX_RETRY_ATTEMPTS) {
+                            log.warn("Giving up saving " + record.getRecordId() + 
+                                    " due to concurrent modification failures.");
+                            throw new ConcurrentModificationException(e);
+                        }
                     }
-                    return;
                 }
-                ODocument odoc = (ODocument) obj;
-                updateDocumentWithRecord(odoc, record);
-                odoc.save();
+            } else {
+                int attempts = 0;
+                boolean done = false;
+                ODocument odoc = null;
+                while (!done) {
+                    try {
+                        attempts++;
+                        ORID orid = extractORID(entityStore, record);
+                        Object obj = db.getRawGraph().load(orid);
+                        if (obj == null) {
+                            if (log.isDebugEnabled()) { 
+                                log.debug("Attempted to update an object " + record + 
+                                        " that is not known in the database.");
+                            }
+                            return;
+                        }
+                        odoc = (ODocument) obj;
+                        updateDocumentWithRecord(odoc, record);
+                        odoc.save();
+                        db.commit();
+                        done = true;
+                        if (attempts > 1) {
+                            if (log.isDebugEnabled()) {
+                                log.debug("Succeeded in updating " + record.getRecordId() + " on attempt " + attempts +
+                                        " and version " + odoc.getVersion() + 
+                                        " because another user/thread modified the record.");
+                            }
+                        }
+                    } catch (OConcurrentModificationException e) {
+                        if (log.isDebugEnabled()) {
+                            log.warn("Failed to update " + record.getRecordId() + " on attempt " + attempts +
+                                    " and version " + odoc.getVersion() + 
+                                    " because another user/thread modified the record.");
+                        }
+                        if (attempts > MAX_RETRY_ATTEMPTS) {
+                            log.warn("Giving up updating " + record.getRecordId() + 
+                                    " due to concurrent modification failures.");
+                            throw new ConcurrentModificationException(e);
+                        }
+                    }
+                }
             }
-            db.commit();
-        } catch (OConcurrentModificationException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Failed to save " + record.getRecordId() + " because another user/thread modified the record; you should retry.");
-            }
-            throw new ConcurrentModificationException(e);
         } catch (Exception e) {
             log.error("Failed while trying to save a record of type: " + className + " due to "
                     + e, e);
@@ -1106,9 +1153,12 @@ public class EntityDaoOrientdb implements EntityDao
         try {
             db = connect(entityStore);
             if (link.getRecordLinkId() == null) {
-                boolean exists = checkIfLinkExists(db, entityStore, link);
-                if (exists) {
+                ODocument exists = checkIfLinkExists(db, entityStore, link);
+                if (exists != null) {
                     log.warn("Record link already exists in the repository: " + link);
+                    String recordLinkId = exists.getIdentity().toString();
+                    link.setRecordLinkId(recordLinkId);
+                    return link;
                 }
                 saveLinkAsEdge(db, entityStore, link);
             } else {
@@ -1312,7 +1362,7 @@ public class EntityDaoOrientdb implements EntityDao
         return map;
     }
     
-    private boolean checkIfLinkExists(OrientGraph db, EntityStore entityStore, RecordLink link) {
+    private ODocument checkIfLinkExists(OrientGraph db, EntityStore entityStore, RecordLink link) {
         String leftRid = addClusterIdIfMissing(entityStore, entityStore.getEntityName(),
                 link.getLeftRecord().getRecordId().toString());
         String rightRid = addClusterIdIfMissing(entityStore, entityStore.getEntityName(),
@@ -1321,9 +1371,9 @@ public class EntityDaoOrientdb implements EntityDao
                 link.getLinkSource().getLinkSourceId() + " and (out = '" + rightRid + "' or in = '" + rightRid + "')";
         List<ODocument> result = db.getRawGraph().query(new OSQLSynchQuery<ODocument>(query));
         if (result.isEmpty()) {
-            return false;
+            return null;
         }
-        return true;
+        return result.get(0);
     }
 
     private void updateLinkEdges(OrientGraph db, EntityStore entityStore, RecordLink link) {

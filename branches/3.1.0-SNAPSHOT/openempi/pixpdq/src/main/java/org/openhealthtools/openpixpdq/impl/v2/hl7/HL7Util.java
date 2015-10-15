@@ -21,7 +21,10 @@ package org.openhealthtools.openpixpdq.impl.v2.hl7;
 
 import org.openhealthtools.openpixpdq.impl.v2.MessageValidation;
 
+import ca.uhn.hl7v2.DefaultHapiContext;
 import ca.uhn.hl7v2.HL7Exception;
+import ca.uhn.hl7v2.HapiContext;
+import ca.uhn.hl7v2.llp.MinLowerLayerProtocol;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.Type;
 import ca.uhn.hl7v2.model.v25.segment.QPD;
@@ -31,10 +34,17 @@ import ca.uhn.hl7v2.util.Terser;
 /**
  * This class defines some utility methods used by all actor implementation
  *
- * @author Wenzhi Li
- * @version 1.0, Apr 26, 2007
  */
-public class HL7Util {
+public class HL7Util
+{
+    private static HapiContext context;
+    
+    static {
+        context = new DefaultHapiContext();
+        context.setValidationContext(new MessageValidation());
+        context.setLowerLayerProtocol(new MinLowerLayerProtocol(true));
+    }
+    
     /**
      * Echos and Populates QPD segment from an existing QPD segment. This method only echoes up to
      * the fifth component and the fifth sub-component.
@@ -69,9 +79,8 @@ public class HL7Util {
 	public static String encodeMessage(Message msg) throws HL7Exception {
 		if (msg == null)
 			return null;
-		PipeParser parser = new PipeParser();
-        parser.setValidationContext(new MessageValidation());
 
+		PipeParser parser = context.getPipeParser();
 		return parser.encode(msg);
 	}
 }

@@ -22,6 +22,8 @@ package org.openhie.openempi.service;
 
 import java.util.List;
 
+import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.AuthorizationException;
 import org.openhie.openempi.BadRequestException;
 import org.openhie.openempi.ConflictException;
 import org.openhie.openempi.NotFoundException;
@@ -36,6 +38,9 @@ public interface RecordResourceService
 
     public List<Record> findByAttributes(String versionId, Integer entityId, List<String> keyVal, Integer firstResult,
             Integer maxResults) throws BadRequestException, NotFoundException;
+
+    public List<Record> findByBlocking(String versionId, Integer entityId, List<String> keyVal)
+            throws BadRequestException, NotFoundException;
 
     public List<Record> findByIdentifier(String versionId, Integer entityId, String identifierName,
             Integer identifierDomainId, Integer firstResult, Integer maxResults) throws BadRequestException,
@@ -54,4 +59,19 @@ public interface RecordResourceService
             Integer identifierDomainId) throws BadRequestException;
 
     public Record updateRecord(String versionId, Record record) throws ConflictException;
+    
+    public void assignGlobalIdentifiers(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException;
+
+    public void generateCustomFields(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException;
+
+    public void generateRecordLinks(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException;
+
+    public void initializeMatchingAlgorithm(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException;
+    
+    public void rebuildBlockingIndexes(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException;
 }

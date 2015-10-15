@@ -26,7 +26,8 @@
 	xmlns:tx="http://www.springframework.org/schema/tx"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
             http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-2.0.xsd
-            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.0.xsd"
+            http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-2.0.xsd
+            http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd"
 	default-lazy-init="true">
 
 	<!--
@@ -266,10 +267,6 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		<property name="username" value="admin"/>
 		<property name="password" value="admin"/>
 		
-<!-- 
-		<property name="entityDefinitionService" ref="entityDefinitionManagerService"/>
-		<property name="entityCacheManager" ref="entityCacheManager"/>
--->
 	</bean>
 
 	<bean id="recordLinkResourceServiceImpl"
@@ -283,19 +280,15 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 	<bean id="securityResourceServiceImpl"
 		class="org.openhie.openempi.service.impl.SecurityResourceServiceImpl">
 	</bean>
-
-	<bean id="recordLinkResourceServiceClusterImpl"
-		class="org.openhie.openempi.service.impl.RecordLinkResourceServiceImpl">
+	
+	<bean id="personManagerResourceServiceImpl"
+		class="org.openhie.openempi.service.impl.PersonManagerResourceServiceImpl">
 	</bean>
-
-	<bean id="recordResourceServiceClusterImpl"
-		class="org.openhie.openempi.service.impl.RecordResourceServiceClusterImpl">
+	
+	<bean id="personQueryResourceServiceImpl"
+		class="org.openhie.openempi.service.impl.PersonQueryResourceServiceImpl">
 	</bean>
-
-	<bean id="securityResourceServiceClusterImpl"
-		class="org.openhie.openempi.service.impl.SecurityResourceServiceClusterImpl">
-	</bean>
-
+	
 	<bean id="personQueryServiceAdapter" class="org.openhie.openempi.service.impl.PersonQueryServiceAdapter">
 		<property name="personEntityName" value="person" />
 		<property name="entityDefinitionService" ref="entityDefinitionManagerService"/>
@@ -455,8 +448,11 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 			</map>
 		</property>
 	</bean>
-
 <!-- 
+
+	Uncomment just this section and the brokerService property on the notificationService
+	entry above if you want to enable the JMS notification service.	
+
 	<brokerService useJmx="false" 
 		xmlns="http://activemq.apache.org/schema/core"
 		brokerName="notificationBroker"
@@ -489,7 +485,8 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 		</transportConnectors>
 	</brokerService>
  -->
-<!--
+ 
+<!-- 
 	<bean id="notificationBroker" class="org.apache.activemq.broker.BrokerService"
 		destroy-method="stop">
 		<property name="brokerName" value="notificationBroker" />
@@ -503,7 +500,8 @@ class="org.springframework.security.providers.dao.DaoAuthenticationProvider">
 			</list>
 		</property>
 	</bean>
--->
+ -->
+ 
 	<!--  Distance Metrics  -->
 	<bean id="Exact"
 		class="org.openhie.openempi.stringcomparison.metrics.ExactMatchDistanceMetric">

@@ -34,7 +34,7 @@ public class ResourceServiceFactory
                     + serviceName.serviceName());
         }
         String beanName = null;
-        if (Context.isInCLusterMode()) {
+        if (Context.isInClusterMode()) {
             beanName = serviceName.clusterImplementation();
         } else {
             beanName = serviceName.implementation();

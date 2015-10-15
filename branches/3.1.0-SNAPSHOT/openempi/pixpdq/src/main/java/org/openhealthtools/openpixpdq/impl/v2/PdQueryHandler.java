@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -68,8 +69,6 @@ import org.openhealthtools.openpixpdq.impl.v2.hl7.HL7Util;
 import org.openhealthtools.openpixpdq.impl.v2.hl7.HL7v25;
 
 import ca.uhn.hl7v2.HL7Exception;
-import ca.uhn.hl7v2.app.Application;
-import ca.uhn.hl7v2.app.ApplicationException;
 import ca.uhn.hl7v2.model.DataTypeException;
 import ca.uhn.hl7v2.model.GenericComposite;
 import ca.uhn.hl7v2.model.GenericPrimitive;
@@ -95,6 +94,8 @@ import ca.uhn.hl7v2.model.v25.segment.QPD;
 import ca.uhn.hl7v2.model.v25.segment.RCP;
 import ca.uhn.hl7v2.parser.EncodingCharacters;
 import ca.uhn.hl7v2.parser.PipeParser;
+import ca.uhn.hl7v2.protocol.ReceivingApplication;
+import ca.uhn.hl7v2.protocol.ReceivingApplicationException;
 import ca.uhn.hl7v2.util.Terser;
 
 /**
@@ -106,7 +107,7 @@ import ca.uhn.hl7v2.util.Terser;
  * @version 1.0, Oct 23, 2008
  *
  */
-class PdQueryHandler extends BaseHandler implements Application {
+class PdQueryHandler extends BaseHandler implements ReceivingApplication {
     /* Logger for problems */
     private static Logger log = Logger.getLogger(PdSupplier.class);
 
@@ -153,7 +154,7 @@ class PdQueryHandler extends BaseHandler implements Application {
      * 
      * @param msgIn the incoming PDQ query message
      */
-    public Message processMessage(Message msgIn) throws ApplicationException, HL7Exception {
+    public Message processMessage(Message msgIn, Map<String, Object> theMetadata) throws ReceivingApplicationException, HL7Exception {
    		Message retMessage = null;
     	MessageStore store = MessageStoreHelper.initMessageStore(msgIn, actor.getStoreLogger(), true);
    		try {
@@ -169,14 +170,14 @@ class PdQueryHandler extends BaseHandler implements Application {
             	retMessage = processQCN_J01((QCN_J01)msgIn);
             } 
             else {
-                throw new ApplicationException( "Unexpected request to PD Supplier server. Valid messages are QBP^Q22 and QCN^J01");
+                throw new ReceivingApplicationException( "Unexpected request to PD Supplier server. Valid messages are QBP^Q22 and QCN^J01");
             }
    			
 		} catch (PixPdqException e) {
 			if (store !=null) { 
 				store.setErrorMessage( e.getMessage() );
 			}
-			throw new ApplicationException(ExceptionUtil.strip(e.getMessage()), e);		
+			throw new ReceivingApplicationException(ExceptionUtil.strip(e.getMessage()), e);		
 		} catch (HL7Exception e) {
 			if (store !=null) {
 				store.setErrorMessage( e.getMessage() );
@@ -482,11 +483,8 @@ class PdQueryHandler extends BaseHandler implements Application {
             if (useFirstPID) {
                 pid = qr.getPID();   
                 useFirstPID = false;
-            }
-            else {
-                //Add a new PID segment
-                String name = qr.add(PID.class, false, true);
-                pid = (PID)qr.get(name);
+            } else {
+                pid = (PID) qr.insertRepetition("PID", patientIndex);
             }
             try {
                 int idIndex = populatePID(pid, patient, patientIndex+1, returnDomains);

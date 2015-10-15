@@ -20,6 +20,7 @@
  */
 package org.openhie.openempi.service.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.openhie.openempi.ApplicationException;
@@ -55,7 +56,11 @@ public class RecordLinkResourceServiceImpl extends BaseServiceImpl implements Re
         if (recordLinks == null || recordLinks.size() == 0) {
             throw new NotFoundException();
         }
-        return recordLinks;
+        List<RecordLink> populatedRecordLinks = new ArrayList<RecordLink>(recordLinks.size());
+        for (RecordLink link : recordLinks) {
+            populatedRecordLinks.add(queryService.loadRecordLink(entity, link.getRecordLinkId()));
+        }
+        return populatedRecordLinks;
     }
 
     public RecordLink loadByRecordLinkId(String versionId, Integer entityId, String recordLinkId)
@@ -91,7 +96,11 @@ public class RecordLinkResourceServiceImpl extends BaseServiceImpl implements Re
         if (recordLinks == null || recordLinks.size() == 0) {
             throw new NotFoundException();
         }
-        return recordLinks;
+        List<RecordLink> populatedRecordLinks = new ArrayList<RecordLink>(recordLinks.size());
+        for (RecordLink link : recordLinks) {
+        	populatedRecordLinks.add(queryService.loadRecordLink(entity, link.getRecordLinkId()));
+        }
+        return populatedRecordLinks;
     }
 
     public RecordLink addRecordLink(String versionId, Integer entityId, RecordLink recordLink)
@@ -138,8 +147,8 @@ public class RecordLinkResourceServiceImpl extends BaseServiceImpl implements Re
                 throw new NotFoundException();
             }
             recordLinkFound.setState(RecordLinkState.fromString(recordLink.getState().getState()));
-            recordLink.setWeight(recordLink.getWeight());
-            recordLink =  managerService.updateRecordLink(recordLink);
+            recordLinkFound.setWeight(recordLink.getWeight());
+            recordLink =  managerService.updateRecordLink(recordLinkFound);
             return recordLink;
        } catch (ApplicationException e) {
            throw new ConflictException();

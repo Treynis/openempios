@@ -28,9 +28,9 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 
 import org.openempi.webapp.client.UserFileDataService;
-import org.openempi.webapp.client.model.UserFileWeb;
 import org.openempi.webapp.client.model.FileLoaderConfigurationWeb;
 import org.openempi.webapp.client.model.ParameterTypeWeb;
+import org.openempi.webapp.client.model.UserFileWeb;
 import org.openempi.webapp.server.util.ModelTransformer;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.jobqueue.JobEntryFactory;
@@ -38,8 +38,7 @@ import org.openhie.openempi.jobqueue.JobParameterConstants;
 import org.openhie.openempi.jobqueue.JobTypeEnum;
 import org.openhie.openempi.loader.FileLoader;
 import org.openhie.openempi.loader.FileLoaderFactory;
-import org.openhie.openempi.loader.FileLoaderManager;
-import org.openhie.openempi.loader.FileLoaderResults;
+import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.JobEntry;
 import org.openhie.openempi.model.ParameterType;
 import org.openhie.openempi.model.User;
@@ -235,23 +234,23 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
         authenticateCaller();
         String msg = "";
         try {
-            FileLoaderManager fileLoaderManager = new FileLoaderManager();
-
             org.openhie.openempi.model.Entity entity = null;
             if (userFile.getEntity() != null) {
-                entity = ModelTransformer.mapToEntity(userFile.getEntity(), org.openhie.openempi.model.Entity.class);
+                entity = ModelTransformer.mapToEntity(userFile.getEntity(), Entity.class);
             }
-
-            fileLoaderManager.dataProfile(entity, userFile.getFilename(), userFile.getUserFileId());
-
-            UserManager userService = Context.getUserManager();
-            org.openhie.openempi.model.UserFile userFileFound = userService.getUserFile(userFile.getUserFileId());
-            userFileFound.setProfiled("Y");
-            userFileFound.setProfileProcessed("In Processing");
-            userService.saveUserFile(userFileFound);
-            msg = "Data profile operation successfully launched";
-
-            return msg;
+            JobEntry jobEntry = JobEntryFactory.createJobEntry(entity, JobTypeEnum.DATA_PROFILING,
+                    "Job to profile the data in file " +  userFile.getName() + " on behalf of user " +
+                    Context.getUserContext().getUser().getUsername());
+            jobEntry.addJobParameter(JobParameterConstants.FILENAME_PARAM, userFile.getFilename());
+            jobEntry.addJobParameter(JobParameterConstants.USERFILEID_PARAM, userFile.getUserFileId().toString());
+            try {
+                jobEntry = Context.getJobQueueService().createJobEntry(jobEntry);
+                Context.notifyObserver(ObservationEventType.JOB_QUEUED_EVENT, jobEntry);
+                return "Data Profiling job has been created.";
+            } catch (Throwable t) {
+                msg = t.getMessage();
+                throw new Exception(msg);
+            }
         } catch (Exception e) {
             log.error("Failed to process data profile  " + userFile.getFilename() + " due to " + e.getMessage());
             msg = "Failed to process data profile" + userFile.getFilename()
@@ -261,13 +260,11 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
     }
 
     public List<FileLoaderConfigurationWeb> getFileLoaderConfigurations() {
-        Object obj;
         FileLoader fileLoader;
 
         List<FileLoaderConfigurationWeb> fileLoaderConfigurations = new ArrayList<FileLoaderConfigurationWeb>();
 
         try {
-            obj = Context.getApplicationContext().getBean(NOMINAL_FILE_LOADER); // file loader
             fileLoader = FileLoaderFactory.getFileLoader(Context.getApplicationContext(), NOMINAL_FILE_LOADER);
 
             FileLoaderConfigurationWeb theLoader = new FileLoaderConfigurationWeb();
@@ -288,7 +285,6 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
         }
 
         try {
-            obj = Context.getApplicationContext().getBean(CONCURRENT_FILE_LOADER); // file loader hp
             fileLoader = FileLoaderFactory.getFileLoader(Context.getApplicationContext(), CONCURRENT_FILE_LOADER);
 
             FileLoaderConfigurationWeb theLoader = new FileLoaderConfigurationWeb();
@@ -309,7 +305,6 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
         }
 
         try {
-            obj = Context.getApplicationContext().getBean(FLEXIBLE_FILE_LOADER); // file loader map
             fileLoader = FileLoaderFactory.getFileLoader(Context.getApplicationContext(), FLEXIBLE_FILE_LOADER);
 
             FileLoaderConfigurationWeb theLoader = new FileLoaderConfigurationWeb();
@@ -330,17 +325,5 @@ public class UserFileDataServiceImpl extends AbstractRemoteServiceServlet implem
         }
 
         return fileLoaderConfigurations;
-    }
-
-    private String getFileLoaderAlias() {
-        try {
-            Object obj = Context.getApplicationContext().getBean(CONCURRENT_FILE_LOADER);
-            if (obj != null) {
-                return CONCURRENT_FILE_LOADER;
-            }
-            return NOMINAL_FILE_LOADER;
-        } catch (Throwable t) {
-            return NOMINAL_FILE_LOADER;
-        }
     }
 }

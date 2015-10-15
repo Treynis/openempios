@@ -23,15 +23,20 @@ package org.openhie.openempi.service.impl;
 import java.util.List;
 
 import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.AuthorizationException;
 import org.openhie.openempi.BadRequestException;
 import org.openhie.openempi.ConflictException;
+import org.openhie.openempi.InitializationException;
 import org.openhie.openempi.NotFoundException;
+import org.openhie.openempi.blocking.BlockingLifecycleObserver;
+import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
 import org.openhie.openempi.entity.RecordQueryService;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Identifier;
 import org.openhie.openempi.model.IdentifierDomain;
+import org.openhie.openempi.model.Permission;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.service.IdentifierDomainService;
 import org.openhie.openempi.service.RecordResourceService;
@@ -70,6 +75,26 @@ public class RecordResourceServiceImpl extends BaseServiceImpl implements Record
         Record record = ConvertUtil.convertKeyValListToRecord(entity, keyVal);
         RecordQueryService queryService = Context.getRecordQueryService();
         List<Record> records = queryService.findRecordsByAttributes(entity, record, firstResult, maxResults);
+        if (records == null || records.size() == 0) {
+            throw new NotFoundException();
+        }
+        return records;
+    }
+
+    public List<Record> findByBlocking(String versionId, Integer entityId, List<String> keyVal)
+            throws BadRequestException, NotFoundException {
+        if (entityId == null) {
+            throw new BadRequestException();
+        }
+        EntityDefinitionManagerService defService = Context.getEntityDefinitionManagerService();
+        Entity entity = defService.loadEntity(entityId);
+        if (entity == null) {
+            throw new BadRequestException();
+        }
+        // findRecordsByAttributes
+        Record record = ConvertUtil.convertKeyValListToRecord(entity, keyVal);
+        RecordQueryService queryService = Context.getRecordQueryService();
+        List<Record> records = queryService.findRecordsByBlocking(entity, record);
         if (records == null || records.size() == 0) {
             throw new NotFoundException();
         }
@@ -213,4 +238,103 @@ public class RecordResourceServiceImpl extends BaseServiceImpl implements Record
             throw new ConflictException();
         }
     }
+
+    @Override
+    public void assignGlobalIdentifiers(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException {
+        if (entityId == null) {
+            throw new BadRequestException();
+        }
+        try {
+            Context.getUserContext().hasPermission(Permission.GLOBAL_IDENTIFIERS_EDIT_PERMISSION);
+        } catch (AuthorizationException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+                throw e;
+            }
+        }
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        Context.getRecordManagerService().assignGlobalIdentifier(entity);
+    }
+
+    @Override
+    public void generateCustomFields(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException {
+        if (entityId == null) {
+            throw new BadRequestException();
+        }
+        try {
+            Context.getUserContext().hasPermission(Permission.CUSTOM_FIELDS_CONFIGURE_PERMISSION);
+        } catch (AuthorizationException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+                throw e;
+            }
+        }
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        Context.getRecordManagerService().generateCustomFields(entity);
+    }
+
+    @Override
+    public void generateRecordLinks(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException {
+        if (entityId == null) {
+            throw new BadRequestException();
+        }
+        try {
+            Context.getUserContext().hasPermission(Permission.MATCHING_CONFIGURE_PERMISSION);
+        } catch (AuthorizationException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+                throw e;
+            }
+        }
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        Context.getRecordManagerService().linkAllRecordPairs(entity);
+    }
+
+    @Override
+    public void initializeMatchingAlgorithm(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException {
+        if (entityId == null) {
+            throw new BadRequestException();
+        }
+        try {
+            Context.getUserContext().hasPermission(Permission.MATCHING_CONFIGURE_PERMISSION);
+        } catch (AuthorizationException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+                throw e;
+            }
+        }
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        Context.getRecordManagerService().initializeRepository(entity);
+    }
+
+    @Override
+    public void rebuildBlockingIndexes(String versionId, Integer entityId)
+            throws ApplicationException, AuthorizationException, BadRequestException {
+        if (entityId == null) {
+            throw new BadRequestException();
+        }
+        try {
+            Context.getUserContext().hasPermission(Permission.BLOCKING_CONFIGURE_PERMISSION);
+        } catch (AuthorizationException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+                throw e;
+            }
+        }
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        BlockingService blockingService = Context.getBlockingService(entity.getName());
+        BlockingLifecycleObserver blockingLifecycle = (BlockingLifecycleObserver) blockingService;
+        try {
+            blockingLifecycle.rebuildIndex();
+        } catch (InitializationException e) {
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage(), e);
+                throw new ApplicationException(e.getMessage());
+            }            
+        }
+   }
 }

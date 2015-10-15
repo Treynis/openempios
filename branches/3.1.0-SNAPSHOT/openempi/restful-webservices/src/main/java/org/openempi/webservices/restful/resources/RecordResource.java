@@ -38,6 +38,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.openempi.webservices.restful.util.Converter;
+import org.openhie.openempi.ApplicationException;
+import org.openhie.openempi.AuthorizationException;
 import org.openhie.openempi.BadRequestException;
 import org.openhie.openempi.ConflictException;
 import org.openhie.openempi.NotFoundException;
@@ -103,6 +105,29 @@ public class RecordResource extends BaseResource
         }
     }
 
+    @GET
+    @Path("/findByBlocking")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    public List<org.openempi.webservices.restful.model.Record> findByBlocking(@PathParam("versionId") String versionId,
+                                                 @QueryParam("entityId") Integer entityId,
+                                                 @QueryParam("keyVal") List<String> keyVal) {
+        validateVersion(versionId);
+        try {
+            List<Record> records = recordService.findByBlocking(versionId, entityId, keyVal);
+            
+            List<org.openempi.webservices.restful.model.Record> restRecords = new ArrayList<org.openempi.webservices.restful.model.Record>();
+            for (Record rec : records) {
+                restRecords.add(Converter.convertRecordToRestfulRecord(rec));
+            }
+            return restRecords;
+        } catch (BadRequestException e) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        } catch (NotFoundException e) {
+            throw new WebApplicationException(Response.Status.NOT_FOUND);
+        }
+    }
+    
     @GET
     @Path("/recordCountByAttributes")
     @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
@@ -256,6 +281,131 @@ public class RecordResource extends BaseResource
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         } catch (ConflictException e) {
             throw new WebApplicationException(Response.Status.CONFLICT);
+        }
+    }
+    
+    @PUT
+    @Path("/assignGlobalIdentifiers")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    public void assignGlobalIdentifiers(@PathParam("versionId") String versionId,
+            @QueryParam("entityId") Integer entityId) {
+        validateVersion(versionId);
+        if (entityId == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        if (entity == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        try {
+            recordService.assignGlobalIdentifiers(versionId, entityId);
+        } catch (AuthorizationException e) {
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
+        } catch (ApplicationException e) {
+            throw new WebApplicationException(Response.Status.NOT_MODIFIED);
+        }
+    }
+    
+    @PUT
+    @Path("/generateCustomFields")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    public void generateCustomFields(@PathParam("versionId") String versionId,
+            @QueryParam("entityId") Integer entityId) {
+        validateVersion(versionId);
+        if (entityId == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        if (entity == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        try {
+            recordService.generateCustomFields(versionId, entityId);
+        } catch (AuthorizationException e) {
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
+        } catch (ApplicationException e) {
+            throw new WebApplicationException(Response.Status.NOT_MODIFIED);
+        }
+    }
+    
+    @PUT
+    @Path("/generateRecordLinks")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    public void generateRecordLinks(@PathParam("versionId") String versionId,
+            @QueryParam("entityId") Integer entityId) {
+        validateVersion(versionId);
+        if (entityId == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        if (entity == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        try {
+            recordService.generateRecordLinks(versionId, entityId);
+        } catch (AuthorizationException e) {
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
+        } catch (ApplicationException e) {
+            throw new WebApplicationException(Response.Status.NOT_MODIFIED);
+        }
+    }
+    
+    @PUT
+    @Path("/initializeMatchingAlgorithm")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    public void initializeMatchingAlgorithm(@PathParam("versionId") String versionId,
+            @QueryParam("entityId") Integer entityId) {
+        validateVersion(versionId);
+        if (entityId == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        if (entity == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        try {
+            recordService.initializeMatchingAlgorithm(versionId, entityId);
+        } catch (AuthorizationException e) {
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
+        } catch (ApplicationException e) {
+            throw new WebApplicationException(Response.Status.NOT_MODIFIED);
+        }
+    }
+    
+    @PUT
+    @Path("/rebuildBlockingIndexes")
+    @Consumes({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON })
+    public void rebuildBlockingIndexes(@PathParam("versionId") String versionId,
+            @QueryParam("entityId") Integer entityId) {
+        validateVersion(versionId);
+        if (entityId == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        Entity entity = Context.getEntityDefinitionManagerService().loadEntity(entityId);
+        if (entity == null) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+
+        try {
+            recordService.rebuildBlockingIndexes(versionId, entityId);
+        } catch (AuthorizationException e) {
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
+        } catch (ApplicationException e) {
+            throw new WebApplicationException(Response.Status.NOT_MODIFIED);
         }
     }
 }

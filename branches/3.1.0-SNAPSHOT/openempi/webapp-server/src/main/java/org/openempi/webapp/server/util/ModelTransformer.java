@@ -980,8 +980,8 @@ public class ModelTransformer
 		HashMap<String, Object> map  = new java.util.HashMap<String, Object>();
 		if (record.getPropertyNames() != null) {
 			for (String attributeName : record.getPropertyNames()) {
-
-				theRecord.set(attributeName, record.get(attributeName));
+			    Object value = record.get(attributeName);
+				theRecord.set(attributeName, value);
 			}
 		}
 

@@ -33,7 +33,7 @@ public interface SchemaManager
     static final InternalAttribute DATE_CREATED_PROPERTY = new InternalAttribute(
             Constants.DATE_CREATED_PROPERTY, OType.DATETIME, false);
     static final InternalAttribute DATE_REVIEWED_PROPERTY = new InternalAttribute(
-            Constants.DATE_REVIEWED_PROPERTY, OType.LONG, false);
+            Constants.DATE_REVIEWED_PROPERTY, OType.DATETIME, false);
     static final InternalAttribute DATE_VOIDED_PROPERTY = new InternalAttribute(Constants.DATE_VOIDED_PROPERTY,
             OType.DATETIME, false);
     static final InternalAttribute DIRTY_RECORD_PROPERTY = new InternalAttribute(Constants.DIRTY_RECORD_PROPERTY,

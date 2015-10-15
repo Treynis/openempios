@@ -76,7 +76,7 @@ public class AdminServiceImpl extends AbstractRemoteServiceServlet implements Ad
 		loader = PixPdqConfigurationLoader.getInstance();
 		loader.destroyAllActors();
 		try {
-			String[] propertyFiles = {"openpixpdq.properties"};
+			String[] propertyFiles = { "openpixpdq.properties" };
 			loader.loadProperties(propertyFiles);
 			File configurationFile = getConfigurationFile();
 			log.debug("Using as configuration the file " + configurationFile.getAbsolutePath());

@@ -42,6 +42,7 @@
 			<xsd:attribute name="delimiter" type="xsd:token" />
 			<xsd:attribute name="header-first-line" type="xsd:boolean"/>
 			<xsd:attribute name="training-data-extractor" type="xsd:string"/>
+			<xsd:attribute name="character-set-encoding" type="xsd:string"/>
 		<xsd:attribute name="namespace-identifier" type="xsd:string"/>
 		<xsd:attribute name="one-to-many" type="xsd:boolean" default="false"/>
 		<xsd:attribute name="universal-identifier" type="xsd:string"/>

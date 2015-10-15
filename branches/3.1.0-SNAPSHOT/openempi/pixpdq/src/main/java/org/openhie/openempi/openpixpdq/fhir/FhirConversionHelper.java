@@ -30,8 +30,8 @@ import org.openhealthtools.openexchange.datamodel.Identifier;
 import org.openhealthtools.openexchange.datamodel.PatientIdentifier;
 import org.openhealthtools.openexchange.datamodel.PersonName;
 import org.openhealthtools.openexchange.datamodel.SharedEnums.SexType;
+import org.openhealthtools.openexchange.utils.StringUtil;
 import org.openhealthtools.openpixpdq.api.PdqQuery;
-import org.openhie.openempi.util.ConvertUtil;
 
 import ca.uhn.fhir.model.dstu.resource.Patient;
 import ca.uhn.fhir.model.dstu.valueset.AdministrativeGenderCodesEnum;
@@ -138,14 +138,14 @@ public class FhirConversionHelper
 	        patient.addIdentifier();
 	        patient.getIdentifier().get(0).setUse(IdentifierUseEnum.OFFICIAL);
 	        if (id.getAssigningAuthority() != null) {
-	        	if (!ConvertUtil.isNullOrEmpty(id.getAssigningAuthority().getAuthorityNameString())) {
+	        	if (!StringUtil.isNullString(id.getAssigningAuthority().getAuthorityNameString())) {
 			        patient.getIdentifier().get(0).getAssigner()
 			        	.setDisplay(id.getAssigningAuthority().getAuthorityNameString());
 	        	}
-	        	if (!ConvertUtil.isNullOrEmpty(id.getAssigningAuthority().getNamespaceId())) {
+	        	if (!StringUtil.isNullString(id.getAssigningAuthority().getNamespaceId())) {
 	    	        patient.getIdentifier().get(0)
 	    	        	.setSystem(new UriDt("urn:oid:" + id.getAssigningAuthority().getNamespaceId()));
-	        	} else if (!ConvertUtil.isNullOrEmpty(id.getAssigningAuthority().getUniversalId())) {
+	        	} else if (!StringUtil.isNullString(id.getAssigningAuthority().getUniversalId())) {
 	        		patient.getIdentifier().get(0)
 	        			.setSystem(new UriDt("urn:oid:" + id.getAssigningAuthority().getUniversalId() + ":" +
 	        					id.getAssigningAuthority().getUniversalIdType()));

@@ -1,36 +1,453 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" output="target/classes" path="src/main/java">
-		<attributes>
-			<attribute name="optional" value="true"/>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry excluding="**" kind="src" output="target/classes" path="src/main/resources">
-		<attributes>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="src" output="target/test-classes" path="src/test/java">
-		<attributes>
-			<attribute name="optional" value="true"/>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry excluding="**" kind="src" output="target/test-classes" path="src/test/resources">
-		<attributes>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6">
-		<attributes>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.m2e.MAVEN2_CLASSPATH_CONTAINER">
-		<attributes>
-			<attribute name="maven.pomderived" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="output" path="target/classes"/>
+  <classpathentry kind="src" path="src/test/java" output="target/test-classes" including="**/*.java"/>
+  <classpathentry kind="src" path="src/test/resources" output="target/test-classes" excluding="**/*.java"/>
+  <classpathentry kind="src" path="src/main/java" including="**/*.java"/>
+  <classpathentry kind="src" path="src/main/resources" excluding="**/*.java"/>
+  <classpathentry kind="output" path="target/classes"/>
+  <classpathentry kind="var" path="M2_REPO/javax/activation/activation/1.1/activation-1.1.jar" sourcepath="M2_REPO/javax/activation/activation/1.1/activation-1.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/javax/jms/jms/1.1/jms-1.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/javax/annotation/jsr250-api/1.0/jsr250-api-1.0.jar" sourcepath="M2_REPO/javax/annotation/jsr250-api/1.0/jsr250-api-1.0-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/javax/transaction/jta/1.1/jta-1.1.jar" sourcepath="M2_REPO/javax/transaction/jta/1.1/jta-1.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/javax/mail/mail/1.4/mail-1.4.jar" sourcepath="M2_REPO/javax/mail/mail/1.4/mail-1.4-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/javax/persistence/persistence-api/1.0/persistence-api-1.0.jar" sourcepath="M2_REPO/javax/persistence/persistence-api/1.0/persistence-api-1.0-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/activemq/activeio-core/3.1.2/activeio-core-3.1.2.jar" sourcepath="M2_REPO/org/apache/activemq/activeio-core/3.1.2/activeio-core-3.1.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/activemq/activeio-core/3.1.2/activeio-core-3.1.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/activemq/activemq-core/5.4.2/activemq-core-5.4.2.jar" sourcepath="M2_REPO/org/apache/activemq/activemq-core/5.4.2/activemq-core-5.4.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/activemq/activemq-core/5.4.2/activemq-core-5.4.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/activemq/activemq-pool/5.4.2/activemq-pool-5.4.2.jar" sourcepath="M2_REPO/org/apache/activemq/activemq-pool/5.4.2/activemq-pool-5.4.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/activemq/activemq-pool/5.4.2/activemq-pool-5.4.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/activemq/protobuf/activemq-protobuf/1.1/activemq-protobuf-1.1.jar" sourcepath="M2_REPO/org/apache/activemq/protobuf/activemq-protobuf/1.1/activemq-protobuf-1.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/activemq/protobuf/activemq-protobuf/1.1/activemq-protobuf-1.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/ant/ant/1.8.3/ant-1.8.3.jar" sourcepath="M2_REPO/org/apache/ant/ant/1.8.3/ant-1.8.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/ant/ant/1.8.3/ant-1.8.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/ant/ant-launcher/1.8.3/ant-launcher-1.8.3.jar" sourcepath="M2_REPO/org/apache/ant/ant-launcher/1.8.3/ant-launcher-1.8.3-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/antlr/antlr/2.7.6/antlr-2.7.6.jar" sourcepath="M2_REPO/antlr/antlr/2.7.6/antlr-2.7.6-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/aopalliance/aopalliance/1.0/aopalliance-1.0.jar" sourcepath="M2_REPO/aopalliance/aopalliance/1.0/aopalliance-1.0-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/asm/asm/3.2/asm-3.2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/asm/asm-analysis/3.2/asm-analysis-3.2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/asm/asm-commons/3.2/asm-commons-3.2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/asm/asm-tree/3.2/asm-tree-3.2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/asm/asm-util/3.2/asm-util-3.2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/tinkerpop/blueprints/blueprints-core/2.6.0/blueprints-core-2.6.0.jar" sourcepath="M2_REPO/com/tinkerpop/blueprints/blueprints-core/2.6.0/blueprints-core-2.6.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/tinkerpop/blueprints/blueprints-core/2.6.0/blueprints-core-2.6.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/castor/castor/1.2/castor-1.2.jar" sourcepath="M2_REPO/org/codehaus/castor/castor/1.2/castor-1.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/codehaus/castor/castor/1.2/castor-1.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/cglib/cglib-nodep/2.1_3/cglib-nodep-2.1_3.jar" sourcepath="M2_REPO/cglib/cglib-nodep/2.1_3/cglib-nodep-2.1_3-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/classworlds/classworlds/1.1-alpha-2/classworlds-1.1-alpha-2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-beanutils/commons-beanutils/1.8.0/commons-beanutils-1.8.0.jar" sourcepath="M2_REPO/commons-beanutils/commons-beanutils/1.8.0/commons-beanutils-1.8.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/commons-beanutils/commons-beanutils/1.8.0/commons-beanutils-1.8.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/commons-beanutils/commons-beanutils-core/1.8.0/commons-beanutils-core-1.8.0.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-codec/commons-codec/1.6/commons-codec-1.6.jar" sourcepath="M2_REPO/commons-codec/commons-codec/1.6/commons-codec-1.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/commons-codec/commons-codec/1.6/commons-codec-1.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/commons-collections/commons-collections/3.2/commons-collections-3.2.jar" sourcepath="M2_REPO/commons-collections/commons-collections/3.2/commons-collections-3.2-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-configuration/commons-configuration/1.6/commons-configuration-1.6.jar" sourcepath="M2_REPO/commons-configuration/commons-configuration/1.6/commons-configuration-1.6-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-digester/commons-digester/1.7/commons-digester-1.7.jar" sourcepath="M2_REPO/commons-digester/commons-digester/1.7/commons-digester-1.7-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/commons-digester/commons-digester/1.7/commons-digester-1.7-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/commons-lang/commons-lang/2.3/commons-lang-2.3.jar" sourcepath="M2_REPO/commons-lang/commons-lang/2.3/commons-lang-2.3-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-logging/commons-logging/1.1/commons-logging-1.1.jar" sourcepath="M2_REPO/commons-logging/commons-logging/1.1/commons-logging-1.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-logging/commons-logging-api/1.1/commons-logging-api-1.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/commons-net/commons-net/2.0/commons-net-2.0.jar" sourcepath="M2_REPO/commons-net/commons-net/2.0/commons-net-2.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/commons-net/commons-net/2.0/commons-net-2.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/commons-pool/commons-pool/1.4/commons-pool-1.4.jar" sourcepath="M2_REPO/commons-pool/commons-pool/1.4/commons-pool-1.4-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/googlecode/concurrentlinkedhashmap/concurrentlinkedhashmap-lru/1.4.1/concurrentlinkedhashmap-lru-1.4.1.jar" sourcepath="M2_REPO/com/googlecode/concurrentlinkedhashmap/concurrentlinkedhashmap-lru/1.4.1/concurrentlinkedhashmap-lru-1.4.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/googlecode/concurrentlinkedhashmap/concurrentlinkedhashmap-lru/1.4.1/concurrentlinkedhashmap-lru-1.4.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/tomcat/dbcp/6.0.33/dbcp-6.0.33.jar"/>
+  <classpathentry kind="var" path="M2_REPO/dom4j/dom4j/1.6.1/dom4j-1.6.1.jar" sourcepath="M2_REPO/dom4j/dom4j/1.6.1/dom4j-1.6.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/net/sf/ehcache/ehcache-core/2.6.2/ehcache-core-2.6.2.jar" sourcepath="M2_REPO/net/sf/ehcache/ehcache-core/2.6.2/ehcache-core-2.6.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/net/sf/ehcache/ehcache-core/2.6.2/ehcache-core-2.6.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/hibernate/ejb3-persistence/1.0.2.GA/ejb3-persistence-1.0.2.GA.jar" sourcepath="M2_REPO/org/hibernate/ejb3-persistence/1.0.2.GA/ejb3-persistence-1.0.2.GA-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/geronimo/specs/geronimo-j2ee-management_1.1_spec/1.0.1/geronimo-j2ee-management_1.1_spec-1.0.1.jar" sourcepath="M2_REPO/org/apache/geronimo/specs/geronimo-j2ee-management_1.1_spec/1.0.1/geronimo-j2ee-management_1.1_spec-1.0.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/geronimo/specs/geronimo-j2ee-management_1.1_spec/1.0.1/geronimo-j2ee-management_1.1_spec-1.0.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/geronimo/specs/geronimo-jms_1.1_spec/1.1.1/geronimo-jms_1.1_spec-1.1.1.jar" sourcepath="M2_REPO/org/apache/geronimo/specs/geronimo-jms_1.1_spec/1.1.1/geronimo-jms_1.1_spec-1.1.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/geronimo/specs/geronimo-jms_1.1_spec/1.1.1/geronimo-jms_1.1_spec-1.1.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/geronimo/specs/geronimo-jta_1.0.1B_spec/1.0.1/geronimo-jta_1.0.1B_spec-1.0.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/geronimo/specs/geronimo-stax-api_1.0_spec/1.0/geronimo-stax-api_1.0_spec-1.0.jar" sourcepath="M2_REPO/org/apache/geronimo/specs/geronimo-stax-api_1.0_spec/1.0/geronimo-stax-api_1.0_spec-1.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/geronimo/specs/geronimo-stax-api_1.0_spec/1.0/geronimo-stax-api_1.0_spec-1.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/tinkerpop/gremlin/gremlin-groovy/2.6.0/gremlin-groovy-2.6.0.jar" sourcepath="M2_REPO/com/tinkerpop/gremlin/gremlin-groovy/2.6.0/gremlin-groovy-2.6.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/tinkerpop/gremlin/gremlin-groovy/2.6.0/gremlin-groovy-2.6.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/tinkerpop/gremlin/gremlin-java/2.6.0/gremlin-java-2.6.0.jar" sourcepath="M2_REPO/com/tinkerpop/gremlin/gremlin-java/2.6.0/gremlin-java-2.6.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/tinkerpop/gremlin/gremlin-java/2.6.0/gremlin-java-2.6.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/groovy/groovy/1.8.9/groovy-1.8.9.jar" sourcepath="M2_REPO/org/codehaus/groovy/groovy/1.8.9/groovy-1.8.9-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/codehaus/groovy/groovy/1.8.9/groovy-1.8.9-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/groovy/groovy-all/1.7.5/groovy-all-1.7.5.jar" sourcepath="M2_REPO/org/codehaus/groovy/groovy-all/1.7.5/groovy-all-1.7.5-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/codehaus/groovy/groovy-all/1.7.5/groovy-all-1.7.5-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar" sourcepath="M2_REPO/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/hamcrest/hamcrest-library/1.1/hamcrest-library-1.1.jar" sourcepath="M2_REPO/org/hamcrest/hamcrest-library/1.1/hamcrest-library-1.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/hibernate/hibernate-annotations/3.4.0.GA/hibernate-annotations-3.4.0.GA.jar" sourcepath="M2_REPO/org/hibernate/hibernate-annotations/3.4.0.GA/hibernate-annotations-3.4.0.GA-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/hibernate/hibernate-commons-annotations/3.1.0.GA/hibernate-commons-annotations-3.1.0.GA.jar" sourcepath="M2_REPO/org/hibernate/hibernate-commons-annotations/3.1.0.GA/hibernate-commons-annotations-3.1.0.GA-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/hibernate/hibernate-core/3.3.2.GA/hibernate-core-3.3.2.GA.jar" sourcepath="M2_REPO/org/hibernate/hibernate-core/3.3.2.GA/hibernate-core-3.3.2.GA-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/hibernate/hibernate-core/3.3.2.GA/hibernate-core-3.3.2.GA-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/hibernate/javax/persistence/hibernate-jpa-2.0-api/1.0.0.Final/hibernate-jpa-2.0-api-1.0.0.Final.jar" sourcepath="M2_REPO/org/hibernate/javax/persistence/hibernate-jpa-2.0-api/1.0.0.Final/hibernate-jpa-2.0-api-1.0.0.Final-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/hibernate/javax/persistence/hibernate-jpa-2.0-api/1.0.0.Final/hibernate-jpa-2.0-api-1.0.0.Final-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/hibernate/hibernate-validator/3.1.0.GA/hibernate-validator-3.1.0.GA.jar" sourcepath="M2_REPO/org/hibernate/hibernate-validator/3.1.0.GA/hibernate-validator-3.1.0.GA-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/carrotsearch/hppc/0.6.0/hppc-0.6.0.jar" sourcepath="M2_REPO/com/carrotsearch/hppc/0.6.0/hppc-0.6.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/carrotsearch/hppc/0.6.0/hppc-0.6.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/ibm/icu/icu4j/4.0.1/icu4j-4.0.1.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/ibm/icu/icu4j/4.0.1/icu4j-4.0.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/ivy/ivy/2.3.0/ivy-2.3.0.jar" sourcepath="M2_REPO/org/apache/ivy/ivy/2.3.0/ivy-2.3.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/ivy/ivy/2.3.0/ivy-2.3.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/fasterxml/jackson/core/jackson-annotations/2.2.3/jackson-annotations-2.2.3.jar" sourcepath="M2_REPO/com/fasterxml/jackson/core/jackson-annotations/2.2.3/jackson-annotations-2.2.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.2.3/jackson-annotations-2.2.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/fasterxml/jackson/core/jackson-core/2.2.3/jackson-core-2.2.3.jar" sourcepath="M2_REPO/com/fasterxml/jackson/core/jackson-core/2.2.3/jackson-core-2.2.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.2.3/jackson-core-2.2.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/jackson/jackson-core-lgpl/1.7.4/jackson-core-lgpl-1.7.4.jar" sourcepath="M2_REPO/org/codehaus/jackson/jackson-core-lgpl/1.7.4/jackson-core-lgpl-1.7.4-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/fasterxml/jackson/core/jackson-databind/2.2.3/jackson-databind-2.2.3.jar" sourcepath="M2_REPO/com/fasterxml/jackson/core/jackson-databind/2.2.3/jackson-databind-2.2.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.2.3/jackson-databind-2.2.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/jackson/jackson-mapper-lgpl/1.7.4/jackson-mapper-lgpl-1.7.4.jar" sourcepath="M2_REPO/org/codehaus/jackson/jackson-mapper-lgpl/1.7.4/jackson-mapper-lgpl-1.7.4-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/fusesource/jansi/jansi/1.5/jansi-1.5.jar" sourcepath="M2_REPO/org/fusesource/jansi/jansi/1.5/jansi-1.5-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/fusesource/jansi/jansi/1.5/jansi-1.5-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/net/sf/jasperreports/jasperreports/4.5.0/jasperreports-4.5.0.jar" sourcepath="M2_REPO/net/sf/jasperreports/jasperreports/4.5.0/jasperreports-4.5.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/net/sf/jasperreports/jasperreports/4.5.0/jasperreports-4.5.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/jasypt/jasypt/1.6/jasypt-1.6.jar" sourcepath="M2_REPO/org/jasypt/jasypt/1.6/jasypt-1.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/jasypt/jasypt/1.6/jasypt-1.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/javassist/javassist/3.12.1.GA/javassist-3.12.1.GA.jar" sourcepath="M2_REPO/javassist/javassist/3.12.1.GA/javassist-3.12.1.GA-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/javassist/javassist/3.12.1.GA/javassist-3.12.1.GA-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/javassist/javassist/3.16.1-GA/javassist-3.16.1-GA.jar" sourcepath="M2_REPO/org/javassist/javassist/3.16.1-GA/javassist-3.16.1-GA-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/javassist/javassist/3.16.1-GA/javassist-3.16.1-GA-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/sun/xml/bind/jaxb-impl/2.2.5-b10/jaxb-impl-2.2.5-b10.jar" sourcepath="M2_REPO/com/sun/xml/bind/jaxb-impl/2.2.5-b10/jaxb-impl-2.2.5-b10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/sun/xml/bind/jaxb-impl/2.2.5-b10/jaxb-impl-2.2.5-b10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/sun/xml/bind/jaxb-xjc/2.2.5-b10/jaxb-xjc-2.2.5-b10.jar" sourcepath="M2_REPO/com/sun/xml/bind/jaxb-xjc/2.2.5-b10/jaxb-xjc-2.2.5-b10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/sun/xml/bind/jaxb-xjc/2.2.5-b10/jaxb-xjc-2.2.5-b10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/jfree/jcommon/1.0.15/jcommon-1.0.15.jar"/>
+  <classpathentry kind="var" path="M2_REPO/jdom/jdom/1.1.3/jdom-1.1.3.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/jettison/jettison/1.3.3/jettison-1.3.3.jar" sourcepath="M2_REPO/org/codehaus/jettison/jettison/1.3.3/jettison-1.3.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/codehaus/jettison/jettison/1.3.3/jettison-1.3.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/jfree/jfreechart/1.0.12/jfreechart-1.0.12.jar"/>
+  <classpathentry kind="var" path="M2_REPO/jline/jline/0.9.94/jline-0.9.94.jar" sourcepath="M2_REPO/jline/jline/0.9.94/jline-0.9.94-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/jmock/jmock/2.4.0/jmock-2.4.0.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/jmock/jmock-junit4/2.4.0/jmock-junit4-2.4.0.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/sun/jmx/jmxri/1.2.1/jmxri-1.2.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/sun/jdmk/jmxtools/1.2.1/jmxtools-1.2.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/net/java/dev/jna/jna/4.0.0/jna-4.0.0.jar" sourcepath="M2_REPO/net/java/dev/jna/jna/4.0.0/jna-4.0.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/net/java/dev/jna/jna/4.0.0/jna-4.0.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/net/java/dev/jna/jna-platform/4.0.0/jna-platform-4.0.0.jar" sourcepath="M2_REPO/net/java/dev/jna/jna-platform/4.0.0/jna-platform-4.0.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/net/java/dev/jna/jna-platform/4.0.0/jna-platform-4.0.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/junit/junit/4.11/junit-4.11.jar" sourcepath="M2_REPO/junit/junit/4.11/junit-4.11-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/junit/junit/4.11/junit-4.11-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/junit/junit-dep/4.4/junit-dep-4.4.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/activemq/kahadb/5.4.2/kahadb-5.4.2.jar" sourcepath="M2_REPO/org/apache/activemq/kahadb/5.4.2/kahadb-5.4.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/activemq/kahadb/5.4.2/kahadb-5.4.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/log4j/log4j/1.2.15/log4j-1.2.15.jar" sourcepath="M2_REPO/log4j/log4j/1.2.15/log4j-1.2.15-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-artifact/2.0.6/maven-artifact-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-artifact/2.0.6/maven-artifact-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-artifact/2.0.6/maven-artifact-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-artifact-manager/2.0.6/maven-artifact-manager-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-artifact-manager/2.0.6/maven-artifact-manager-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-artifact-manager/2.0.6/maven-artifact-manager-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/jvnet/jaxb2/maven2/maven-jaxb2-plugin/0.8.1/maven-jaxb2-plugin-0.8.1.jar" sourcepath="M2_REPO/org/jvnet/jaxb2/maven2/maven-jaxb2-plugin/0.8.1/maven-jaxb2-plugin-0.8.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/jvnet/jaxb2/maven2/maven-jaxb2-plugin/0.8.1/maven-jaxb2-plugin-0.8.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/jvnet/jaxb2/maven2/maven-jaxb2-plugin-core/0.8.1/maven-jaxb2-plugin-core-0.8.1.jar" sourcepath="M2_REPO/org/jvnet/jaxb2/maven2/maven-jaxb2-plugin-core/0.8.1/maven-jaxb2-plugin-core-0.8.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/jvnet/jaxb2/maven2/maven-jaxb2-plugin-core/0.8.1/maven-jaxb2-plugin-core-0.8.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/jvnet/jaxb2/maven2/maven-jaxb22-plugin/0.8.1/maven-jaxb22-plugin-0.8.1.jar" sourcepath="M2_REPO/org/jvnet/jaxb2/maven2/maven-jaxb22-plugin/0.8.1/maven-jaxb22-plugin-0.8.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/jvnet/jaxb2/maven2/maven-jaxb22-plugin/0.8.1/maven-jaxb22-plugin-0.8.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-model/2.0.6/maven-model-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-model/2.0.6/maven-model-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-model/2.0.6/maven-model-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/jfrog/maven/annomojo/maven-plugin-anno/1.3.1/maven-plugin-anno-1.3.1.jar" sourcepath="M2_REPO/org/jfrog/maven/annomojo/maven-plugin-anno/1.3.1/maven-plugin-anno-1.3.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/jfrog/maven/annomojo/maven-plugin-anno/1.3.1/maven-plugin-anno-1.3.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-plugin-api/2.0.6/maven-plugin-api-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-plugin-api/2.0.6/maven-plugin-api-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-plugin-api/2.0.6/maven-plugin-api-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-plugin-registry/2.0.6/maven-plugin-registry-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-plugin-registry/2.0.6/maven-plugin-registry-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-plugin-registry/2.0.6/maven-plugin-registry-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-profile/2.0.6/maven-profile-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-profile/2.0.6/maven-profile-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-profile/2.0.6/maven-profile-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-project/2.0.6/maven-project-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-project/2.0.6/maven-project-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-project/2.0.6/maven-project-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-repository-metadata/2.0.6/maven-repository-metadata-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-repository-metadata/2.0.6/maven-repository-metadata-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-repository-metadata/2.0.6/maven-repository-metadata-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/maven-settings/2.0.6/maven-settings-2.0.6.jar" sourcepath="M2_REPO/org/apache/maven/maven-settings/2.0.6/maven-settings-2.0.6-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/maven-settings/2.0.6/maven-settings-2.0.6-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/net/sf/opencsv/opencsv/2.1/opencsv-2.1.jar" sourcepath="M2_REPO/net/sf/opencsv/opencsv/2.1/opencsv-2.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/net/sf/opencsv/opencsv/2.1/opencsv-2.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="src" path="/openempi-entity-configuration"/>
+  <classpathentry kind="src" path="/openempi-entity-core"/>
+  <classpathentry kind="var" path="M2_REPO/org/osgi/org.osgi.core/4.1.0/org.osgi.core-4.1.0.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-client/2.0.10/orientdb-client-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-client/2.0.10/orientdb-client-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-client/2.0.10/orientdb-client-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-core/2.0.10/orientdb-core-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-core/2.0.10/orientdb-core-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-core/2.0.10/orientdb-core-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-enterprise/2.0.10/orientdb-enterprise-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-enterprise/2.0.10/orientdb-enterprise-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-enterprise/2.0.10/orientdb-enterprise-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-graphdb/2.0.10/orientdb-graphdb-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-graphdb/2.0.10/orientdb-graphdb-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-graphdb/2.0.10/orientdb-graphdb-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-object/2.0.10/orientdb-object-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-object/2.0.10/orientdb-object-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-object/2.0.10/orientdb-object-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-server/2.0.10/orientdb-server-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-server/2.0.10/orientdb-server-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-server/2.0.10/orientdb-server-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/orientechnologies/orientdb-tools/2.0.10/orientdb-tools-2.0.10.jar" sourcepath="M2_REPO/com/orientechnologies/orientdb-tools/2.0.10/orientdb-tools-2.0.10-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/orientechnologies/orientdb-tools/2.0.10/orientdb-tools-2.0.10-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/com/tinkerpop/pipes/2.6.0/pipes-2.6.0.jar" sourcepath="M2_REPO/com/tinkerpop/pipes/2.6.0/pipes-2.6.0-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/com/tinkerpop/pipes/2.6.0/pipes-2.6.0-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7.jar" sourcepath="M2_REPO/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/sonatype/plexus/plexus-build-api/0.0.7/plexus-build-api-0.0.7-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/plexus/plexus-container-default/1.0-alpha-9-stable-1/plexus-container-default-1.0-alpha-9-stable-1.jar" sourcepath="M2_REPO/org/codehaus/plexus/plexus-container-default/1.0-alpha-9-stable-1/plexus-container-default-1.0-alpha-9-stable-1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/codehaus/plexus/plexus-container-default/1.0-alpha-9-stable-1/plexus-container-default-1.0-alpha-9-stable-1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/codehaus/plexus/plexus-utils/1.5.15/plexus-utils-1.5.15.jar" sourcepath="M2_REPO/org/codehaus/plexus/plexus-utils/1.5.15/plexus-utils-1.5.15-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/codehaus/plexus/plexus-utils/1.5.15/plexus-utils-1.5.15-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/poi/poi/3.7/poi-3.7.jar" sourcepath="M2_REPO/org/apache/poi/poi/3.7/poi-3.7-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/poi/poi-ooxml/3.7/poi-ooxml-3.7.jar" sourcepath="M2_REPO/org/apache/poi/poi-ooxml/3.7/poi-ooxml-3.7-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/poi/poi-ooxml-schemas/3.7/poi-ooxml-schemas-3.7.jar"/>
+  <classpathentry kind="var" path="M2_REPO/postgresql/postgresql/8.1-407.jdbc3/postgresql-8.1-407.jdbc3.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/sun/org/apache/xml/internal/resolver/20050927/resolver-20050927.jar" sourcepath="M2_REPO/com/sun/org/apache/xml/internal/resolver/20050927/resolver-20050927-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/simmetrics/simmetrics/1.6.2/simmetrics-1.6.2.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/slf4j/slf4j-api/1.6.1/slf4j-api-1.6.1.jar" sourcepath="M2_REPO/org/slf4j/slf4j-api/1.6.1/slf4j-api-1.6.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/slf4j/slf4j-api/1.6.1/slf4j-api-1.6.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/slf4j/slf4j-log4j12/1.6.1/slf4j-log4j12-1.6.1.jar" sourcepath="M2_REPO/org/slf4j/slf4j-log4j12/1.6.1/slf4j-log4j12-1.6.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/slf4j/slf4j-log4j12/1.6.1/slf4j-log4j12-1.6.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/iq80/snappy/snappy/0.3/snappy-0.3.jar" sourcepath="M2_REPO/org/iq80/snappy/snappy/0.3/snappy-0.3-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/iq80/snappy/snappy/0.3/snappy-0.3-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/xerial/snappy/snappy-java/1.1.0.1/snappy-java-1.1.0.1.jar" sourcepath="M2_REPO/org/xerial/snappy/snappy-java/1.1.0.1/snappy-java-1.1.0.1-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/xerial/snappy/snappy-java/1.1.0.1/snappy-java-1.1.0.1-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-aop/3.1.1.RELEASE/spring-aop-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-aop/3.1.1.RELEASE/spring-aop-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-asm/3.1.1.RELEASE/spring-asm-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-asm/3.1.1.RELEASE/spring-asm-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-aspects/3.1.1.RELEASE/spring-aspects-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-aspects/3.1.1.RELEASE/spring-aspects-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-beans/3.1.1.RELEASE/spring-beans-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-beans/3.1.1.RELEASE/spring-beans-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-context/3.1.1.RELEASE/spring-context-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-context/3.1.1.RELEASE/spring-context-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-context-support/3.1.1.RELEASE/spring-context-support-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-context-support/3.1.1.RELEASE/spring-context-support-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-core/3.1.1.RELEASE/spring-core-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-core/3.1.1.RELEASE/spring-core-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-expression/3.1.1.RELEASE/spring-expression-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-expression/3.1.1.RELEASE/spring-expression-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-jdbc/3.1.1.RELEASE/spring-jdbc-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-jdbc/3.1.1.RELEASE/spring-jdbc-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-jms/3.1.1.RELEASE/spring-jms-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-jms/3.1.1.RELEASE/spring-jms-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-orm/3.1.1.RELEASE/spring-orm-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-orm/3.1.1.RELEASE/spring-orm-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/security/spring-security-core/2.0.1/spring-security-core-2.0.1.jar" sourcepath="M2_REPO/org/springframework/security/spring-security-core/2.0.1/spring-security-core-2.0.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/security/spring-security-core-tiger/2.0.1/spring-security-core-tiger-2.0.1.jar" sourcepath="M2_REPO/org/springframework/security/spring-security-core-tiger/2.0.1/spring-security-core-tiger-2.0.1-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-test/3.1.1.RELEASE/spring-test-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-test/3.1.1.RELEASE/spring-test-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/springframework/spring-tx/3.1.1.RELEASE/spring-tx-3.1.1.RELEASE.jar" sourcepath="M2_REPO/org/springframework/spring-tx/3.1.1.RELEASE/spring-tx-3.1.1.RELEASE-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/stax/stax-api/1.0.1/stax-api-1.0.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/subethamail/subethasmtp-smtp/1.2/subethasmtp-smtp-1.2.jar" sourcepath="M2_REPO/org/subethamail/subethasmtp-smtp/1.2/subethasmtp-smtp-1.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/subethamail/subethasmtp-smtp/1.2/subethasmtp-smtp-1.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/subethamail/subethasmtp-wiser/1.2/subethasmtp-wiser-1.2.jar" sourcepath="M2_REPO/org/subethamail/subethasmtp-wiser/1.2/subethasmtp-wiser-1.2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/subethamail/subethasmtp-wiser/1.2/subethasmtp-wiser-1.2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/tomcat/tomcat-jdbc/7.0.35/tomcat-jdbc-7.0.35.jar" sourcepath="M2_REPO/org/apache/tomcat/tomcat-jdbc/7.0.35/tomcat-jdbc-7.0.35-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/tomcat/tomcat-juli/7.0.35/tomcat-juli-7.0.35.jar" sourcepath="M2_REPO/org/apache/tomcat/tomcat-juli/7.0.35/tomcat-juli-7.0.35-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/com/eaio/uuid/uuid/3.1/uuid-3.1.jar"/>
+  <classpathentry kind="var" path="M2_REPO/velocity/velocity/1.4/velocity-1.4.jar" sourcepath="M2_REPO/velocity/velocity/1.4/velocity-1.4-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/velocity/velocity-dep/1.4/velocity-dep-1.4.jar" sourcepath="M2_REPO/velocity/velocity-dep/1.4/velocity-dep-1.4-sources.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/maven/wagon/wagon-provider-api/1.0-beta-2/wagon-provider-api-1.0-beta-2.jar" sourcepath="M2_REPO/org/apache/maven/wagon/wagon-provider-api/1.0-beta-2/wagon-provider-api-1.0-beta-2-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/maven/wagon/wagon-provider-api/1.0-beta-2/wagon-provider-api-1.0-beta-2-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/org/apache/xbean/xbean-spring/3.7/xbean-spring-3.7.jar" sourcepath="M2_REPO/org/apache/xbean/xbean-spring/3.7/xbean-spring-3.7-sources.jar">
+    <attributes>
+      <attribute value="jar:file:/home/odysseas/.m2/repository/org/apache/xbean/xbean-spring/3.7/xbean-spring-3.7-javadoc.jar!/" name="javadoc_location"/>
+    </attributes>
+  </classpathentry>
+  <classpathentry kind="var" path="M2_REPO/xml-apis/xml-apis/1.3.02/xml-apis-1.3.02.jar"/>
+  <classpathentry kind="var" path="M2_REPO/org/apache/xmlbeans/xmlbeans/2.4.0/xmlbeans-2.4.0.jar" sourcepath="M2_REPO/org/apache/xmlbeans/xmlbeans/2.4.0/xmlbeans-2.4.0-sources.jar"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 </classpath>

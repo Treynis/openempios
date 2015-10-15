@@ -6,7 +6,7 @@
 	<artifactId>openempi-entity</artifactId>
 	<packaging>pom</packaging>
 	<name>OpenEMPI Entity Application</name>
-	<version>3.0.0</version>
+	<version>3.1.0</version>
 	<description>
 	Is an open source implementation of an Enterprise Master Patient (EMPI) which is a repository that maintains
 	a registry of all patients across an enterprise. An EMPI provides many benefits including:
@@ -96,21 +96,22 @@
 		<module>sorted-neighborhood-blocking</module>
 		<module>suffix-array-blocking</module>
 		<module>record-cache</module>
-  -->
+		<module>nhin-adapter</module>
+		<module>nhin-proxy</module>
+-->
 		<module>exact-matching</module>
 		<module>probabilistic-matching</module>
 		<module>shallow-matching</module>
 		<module>single-best-record</module>
 		<module>file-loader-hp</module>
 		<module>file-loader-map</module>
+		<module>ihe-common</module>
 		<module>pixpdq</module>
 		<module>pixpdq-adapter</module>
-		<module>nhin-adapter</module>
-		<module>nhin-proxy</module>
 		<module>webapp-server</module>
 		<module>restful-webservices</module>
 		<module>webapp-web</module>
-		<module>cluster-node</module>
+
 <!--
 		<module>test-suite</module>
 -->
@@ -220,6 +221,7 @@
 -->
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.5.5</version>
 				<configuration>
 					<descriptors>
 						<descriptor>src/main/assembly/assembly.xml</descriptor>
@@ -479,6 +481,24 @@
 			<groupId>log4j</groupId>
 			<artifactId>log4j</artifactId>
 			<version>${log4j.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>javax.mail</groupId>
+					<artifactId>mail</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>javax.jms</groupId>
+					<artifactId>jms</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jdmk</groupId>
+					<artifactId>jmxtools</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.sun.jmx</groupId>
+					<artifactId>jmxri</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.jmock</groupId>
@@ -798,7 +818,7 @@
 		</plugins>
 	</reporting>
 	<properties>
-		<release.version>3.0.0</release.version>
+		<release.version>3.1.0</release.version>
 		
 		<project.buildTimestamp>${maven.build.timestamp}</project.buildTimestamp>
 		<maven.build.timestamp.format>yyyy-MM-dd:HH:mm</maven.build.timestamp.format>
@@ -840,7 +860,7 @@
 		<!-- PIX/PDQ related dependencies -->
 		<openpixpdq.version>1.1</openpixpdq.version>
 		<braid.version>1.2.2</braid.version>
-		<hapi.version>0.5.1</hapi.version>
+		<hapi.version>2.2</hapi.version>
 		<eventmonitoring.version>1.0</eventmonitoring.version>
 
 		<!-- Cargo settings -->
@@ -882,7 +902,7 @@
                 <bigmemory.version>3.7.2</bigmemory.version>
                 <ehcache-ee.version>2.6.5</ehcache-ee.version>
                 <ehcache-probe.version>1.0.3</ehcache-probe.version>
-		<hazelcast.version>3.3</hazelcast.version>
+		<hazelcast.version>3.4.2</hazelcast.version>
 		<hibernate.annotations.version>3.4.0.GA</hibernate.annotations.version>
 		<hibernate.validator.version>3.1.0.GA</hibernate.validator.version>
 		<hibernate.search.version>3.1.0.GA</hibernate.search.version>
@@ -894,7 +914,7 @@
 		<jstl.version>1.1.2</jstl.version>
 		<log4j.version>1.2.15</log4j.version>
 		<slf4j.version>1.6.1</slf4j.version>
-		<orientdb.version>2.0.1</orientdb.version>
+		<orientdb.version>2.0.14</orientdb.version>
 		<oscache.version>2.3</oscache.version>
 		<sitemesh.version>2.2.1</sitemesh.version>
 		<spring.security.version>2.0.1</spring.security.version>
