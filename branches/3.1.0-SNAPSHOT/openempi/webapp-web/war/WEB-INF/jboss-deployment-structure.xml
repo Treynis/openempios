@@ -1,0 +1,13 @@
+<jboss-deployment-structure>
+    <deployment>
+      <exclude-subsystems>
+         <subsystem name="jaxrs"/>
+         <subsystem name="webservices"/>
+      </exclude-subsystems>
+      <exclusions>
+         <module name="org.jboss.as.jpa"/>
+         <module name="javax.persistence.api" />
+         <module name="org.hibernate" />
+      </exclusions>
+    </deployment>
+</jboss-deployment-structure> 

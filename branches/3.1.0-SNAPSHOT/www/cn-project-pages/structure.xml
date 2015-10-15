@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<structure>
+  <page>
+    <id>uAy2nC</id>
+    <name>Architecture</name>
+    <directory>Architecture</directory>
+    <ordinal>1</ordinal>
+  </page>
+  <page>
+    <id>lsvuoV</id>
+    <name>Requirements</name>
+    <directory>Requirements</directory>
+    <ordinal>2</ordinal>
+  </page>
+  <page>
+    <id>if5D0X</id>
+    <name>Installation</name>
+    <directory>Installation</directory>
+    <ordinal>3</ordinal>
+  </page>
+  <page>
+    <id>tCMp3j</id>
+    <name>Task Areas</name>
+    <directory>Task Areas</directory>
+    <ordinal>4</ordinal>
+  </page>
+  <page>
+    <id>iuekd9</id>
+    <name>Contribute</name>
+    <directory>Contribute</directory>
+    <ordinal>5</ordinal>
+  </page>
+  <page>
+    <id>Ym74xP</id>
+    <name>Resources</name>
+    <directory>Resources</directory>
+    <ordinal>6</ordinal>
+  </page>
+</structure>
+
