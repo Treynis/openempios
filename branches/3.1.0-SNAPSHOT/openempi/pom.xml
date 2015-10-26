@@ -159,6 +159,93 @@
 				<configuration>
 					<encoding>UTF-8</encoding>
 				</configuration>
+				<executions>
+					<execution>
+						<id>copy-resources</id>
+						<!-- here the phase you need -->
+						<phase>install</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${basedir}/../lib</outputDirectory>
+							<resources>
+								<resource>
+									<directory>basic-blocking-hp/target</directory>
+								        <includes>
+										<include>openempi-entity-basic-blocking-hp-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>clustering/target</directory>
+								        <includes>
+										<include>openempi-entity-clustering-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>core/target</directory>
+								        <includes>
+										<include>openempi-entity-core-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>configuration/target</directory>
+								        <includes>
+										<include>openempi-entity-configuration-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>exact-matching/target</directory>
+								        <includes>
+										<include>openempi-entity-exact-matching-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>file-loader-hp/target</directory>
+								        <includes>
+										<include>openempi-entity-file-loader-hp-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>file-loader-map/target</directory>
+								        <includes>
+										<include>openempi-entity-file-loader-map-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>ihe-common/target</directory>
+								        <includes>
+										<include>openempi-entity-ihe-common-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>openpixpdq-adapter/target</directory>
+								        <includes>
+										<include>openempi-entity-openpixpdq-adapter-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>probabilistic-matching/target</directory>
+								        <includes>
+										<include>openempi-entity-probabilistic-matching-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>single-best-record/target</directory>
+								        <includes>
+										<include>openempi-entity-single-best-record-3.1.0.jar</include>
+									</includes>
+								</resource>
+								<resource>
+									<directory>shallow-matching/target</directory>
+								        <includes>
+										<include>openempi-entity-shallow-matching-3.1.0.jar</include>
+									</includes>
+								</resource>
+							</resources>              
+						</configuration>            
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -667,9 +754,9 @@
 			<id>postgresql</id>
 			<properties>
 				<hibernate.dialect>org.hibernate.dialect.PostgreSQLDialect</hibernate.dialect>
-				<jdbc.groupId>postgresql</jdbc.groupId>
+				<jdbc.groupId>org.postgresql</jdbc.groupId>
 				<jdbc.artifactId>postgresql</jdbc.artifactId>
-				<jdbc.version>8.1-407.jdbc3</jdbc.version>
+				<jdbc.version>9.3-1102-jdbc3</jdbc.version>
 				<jdbc.driverClassName>org.postgresql.Driver</jdbc.driverClassName>
 				<jdbc.url><![CDATA[jdbc:postgresql://localhost/openempi]]></jdbc.url>
 				<jdbc.username>postgres</jdbc.username>
@@ -875,9 +962,9 @@
 		<dbunit.dataTypeFactoryName>org.dbunit.ext.postgresql.PostgresqlDataTypeFactory</dbunit.dataTypeFactoryName>
 		<dbunit.operation.type>CLEAN_INSERT</dbunit.operation.type>
 		<hibernate.dialect>org.hibernate.dialect.PostgreSQLDialect</hibernate.dialect>
-		<jdbc.groupId>postgresql</jdbc.groupId>
+		<jdbc.groupId>org.postgresql</jdbc.groupId>
 		<jdbc.artifactId>postgresql</jdbc.artifactId>
-		<jdbc.version>8.1-407.jdbc3</jdbc.version>
+		<jdbc.version>9.3-1103-jdbc3</jdbc.version>
 		<jdbc.driverClassName>org.postgresql.Driver</jdbc.driverClassName>
 		<jdbc.url><![CDATA[jdbc:postgresql://localhost/openempi]]></jdbc.url>
 		<jdbc.username>openempi</jdbc.username>

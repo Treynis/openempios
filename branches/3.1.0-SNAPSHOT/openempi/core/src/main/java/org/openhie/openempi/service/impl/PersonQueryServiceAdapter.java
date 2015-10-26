@@ -433,15 +433,45 @@ public class PersonQueryServiceAdapter extends BaseServiceImpl implements Person
         return null;
     }
 	
-
     public List<Person> getSingleBestRecords(List<Integer> personIds) {
-        // TODO Auto-generated method stub
-        return null;
+        if (personIds == null || getEntity() == null || Context.getSingleBestRecordService() == null) {
+            return new ArrayList<Person>();
+        }
+        List<Person> persons = new ArrayList<Person>(personIds.size());
+        for (Integer personId : personIds) {
+            Person person = getSingleBestRecord(personId);
+            persons.add(person);
+        }
+        return persons;
     }
 
     public Person getSingleBestRecord(Integer personId) {
-        // TODO Auto-generated method stub
-        return null;
+        
+        if (getEntity() == null || personId == null) {
+            return null;
+        }
+        
+        // First load the source record
+        Person person = loadPerson(personId);
+        if (person == null || Context.getSingleBestRecordService() == null) {
+            // If we can't find the person, then return a blank record
+            return new Person();
+        }
+        List<Person> linkedPersons = findLinkedPersons(person);
+        if (linkedPersons == null || linkedPersons.size() == 0) {
+            return person;
+        }
+            
+        // Add the person itself to the list to complete the cluster
+        linkedPersons.add(person);
+        List<Record> records = new java.util.ArrayList<Record>(linkedPersons.size());
+        for (Person aPerson : linkedPersons) {
+            records.add(ConvertUtil.getRecordFromPerson(getEntity(), aPerson));
+        }
+        
+        Record filteredRecord = Context.getSingleBestRecordService().getSingleBestRecord(records);
+        Person filteredPerson = loadPerson(filteredRecord.getRecordId().intValue());
+        return filteredPerson;
     }
     
 	public List<Person> findPersonsByAttributesPaged(Person person, int firstResult, int maxResults) {

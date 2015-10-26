@@ -1,5 +1,5 @@
 <projectDescription>
-  <name>openempi-file-loader-hp</name>
+  <name>openempi-entity-file-loader-hp</name>
   <comment>Is an open source implementation of an Enterprise Master Patient (EMPI) which is a repository that maintains
 	a registry of all patients across an enterprise. An EMPI provides many benefits including:
 	- Maintains a central registry of all patients and their demographics, assigning a unique identifier to each patient
@@ -7,7 +7,10 @@
 	to another location), data entry errors during patient registration, or missing demographic information.
 	- Provides record locator service by enabling physicians across the enterprise to identify which health care providers
 	a patient has visited.</comment>
-  <projects/>
+  <projects>
+    <project>openempi-entity-configuration</project>
+    <project>openempi-entity-core</project>
+  </projects>
   <buildSpec>
     <buildCommand>
       <name>org.eclipse.jdt.core.javabuilder</name>
@@ -21,12 +24,8 @@
     <buildCommand>
       <name>org.springframework.ide.eclipse.core.springbuilder</name>
     </buildCommand>
-    <buildCommand>
-      <name>org.eclipse.m2e.core.maven2Builder</name>
-    </buildCommand>
   </buildSpec>
   <natures>
-    <nature>org.eclipse.m2e.core.maven2Nature</nature>
     <nature>org.eclipse.wst.common.project.facet.core.nature</nature>
     <nature>org.eclipse.jdt.core.javanature</nature>
     <nature>org.eclipse.wst.common.modulecore.ModuleCoreNature</nature>

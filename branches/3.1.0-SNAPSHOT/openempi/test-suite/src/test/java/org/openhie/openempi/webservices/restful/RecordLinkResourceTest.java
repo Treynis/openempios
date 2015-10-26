@@ -92,7 +92,6 @@ public class RecordLinkResourceTest extends BaseRestfulServiceTestCase
                 .get(RecordLink.class);
         assertTrue("Failed to retrieve record link.", recordLink != null);
 
-
         // load by record id
         Record record = recordLink.getLeftRecord();
         recordLinks = getWebResource()

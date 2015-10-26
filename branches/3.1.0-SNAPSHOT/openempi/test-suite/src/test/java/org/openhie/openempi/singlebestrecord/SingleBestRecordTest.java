@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.Constants;
+import org.openhie.openempi.blocking.BlockingLifecycleObserver;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
@@ -47,11 +48,13 @@ public class SingleBestRecordTest extends BaseServiceTestCase
 	public void testSingleBestRecordService() {
 		Person personOne = new Person();
 		personOne.setAddress1("1st record");
+		personOne.setAddress2("P.O. Box 2340");
 		personOne.setCity("Palo Alto");
 		personOne.setState("CA");
 		personOne.setPostalCode("94301");
 		personOne.setFamilyName("Record");
 		personOne.setGivenName("Single");
+		personOne.setPhoneAreaCode("310-233-2234");
 		PersonIdentifier pi = new PersonIdentifier();
 		pi.setIdentifier("1234");
 		IdentifierDomain id = new IdentifierDomain();
@@ -90,13 +93,9 @@ public class SingleBestRecordTest extends BaseServiceTestCase
 		}
 	}
 
-	/**
-	 * Here we test the case where the SBR should return the record with the NID. We create two patient records, one with a NID
-	 * and one without. The records are close enough that they are linked to one another. We then intentionally provide the record
-	 * without the NID to the service and it should return the one with the NID.
-	 * 
-	 */
 	public void testSingleBestRecordServiceRuleTwo() {
+	    ((BlockingLifecycleObserver) Context.getBlockingService("person")).rebuildIndex();
+
 		Person personOne = new Person();
 		personOne.setAddress1("1st record");
 		personOne.setCity("Palo Alto");
@@ -133,6 +132,7 @@ public class SingleBestRecordTest extends BaseServiceTestCase
 		
 		Person personThree = new Person();
 		personThree.setAddress1("2nd record");
+		personThree.setAddress2("P.O. Box 2340");
 		personThree.setCity("Palo Alto");
 		personThree.setState("CA");
 		personThree.setPostalCode("94301");
@@ -155,7 +155,7 @@ public class SingleBestRecordTest extends BaseServiceTestCase
 		for (Person p : found) {
 			System.out.println("Found: " + found);
 			Person sbr = Context.getPersonQueryService().getSingleBestRecord(p.getPersonId());
-			assertEquals("First name must be Bast", sbr.getGivenName(), "Bests");
+			assertEquals("First name must be Bests", sbr.getGivenName(), "Bests");
 			System.out.println("The gender is: " + sbr.getGender());
 			assertEquals("Gender must be male", sbr.getGender().getGenderCode(), "M");
 		}

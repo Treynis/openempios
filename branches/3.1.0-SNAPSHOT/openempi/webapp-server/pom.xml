@@ -85,14 +85,14 @@
                         <artifactId>openempi-entity-shallow-matching</artifactId>
                         <version>${release.version}</version>
                 </dependency>
+                <dependency>
+                        <groupId>org.openhie.openempi</groupId>
+                        <artifactId>openempi-entity-single-best-record</artifactId>
+                        <version>${release.version}</version>
+                </dependency>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>
 			<artifactId>openempi-entity-probabilistic-matching</artifactId>
-			<version>${release.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.openhie.openempi</groupId>
-			<artifactId>openempi-entity-file-loader-map</artifactId>
 			<version>${release.version}</version>
 		</dependency>
 		<dependency>
@@ -104,7 +104,7 @@
 			<groupId>org.openhie.openempi</groupId>
 			<artifactId>openempi-entity-openpixpdq-adapter</artifactId>
 			<version>${release.version}</version>
-		</dependency>
+		</dependency>		
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-aop</artifactId>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>openempi-configuration</name>
+	<name>openempi-entity-configuration</name>
 	<comment>Is an open source implementation of an Enterprise Master Patient (EMPI) which is a repository that maintains
 	a registry of all patients across an enterprise. An EMPI provides many benefits including:
 	- Maintains a central registry of all patients and their demographics, assigning a unique identifier to each patient

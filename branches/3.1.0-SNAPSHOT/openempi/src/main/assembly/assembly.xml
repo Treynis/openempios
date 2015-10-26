@@ -34,23 +34,10 @@
 			<destName>openempi-core-${release.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
-
 		<file>
 			<source>pixpdq-adapter/target/openempi-entity-openpixpdq-adapter-${release.version}.jar</source>
 			<outputDirectory>/</outputDirectory>
 			<destName>openempi-entity-openpixpdq-adapter-${release.version}.jar</destName>
-			<fileMode>0644</fileMode>
-		</file>
-		<file>
-			<source>nhin-adapter/target/openempi-entity-nhin-adapter-${release.version}.war</source>
-			<outputDirectory>/</outputDirectory>
-			<destName>openempi-entity-nhin-adapter-${release.version}.war</destName>
-			<fileMode>0644</fileMode>
-		</file>
-		<file>
-			<source>nhin-proxy/target/openempi-entity-nhin-proxy-${release.version}.jar</source>
-			<outputDirectory>/</outputDirectory>
-			<destName>openempi-entity-nhin-proxy-${release.version}.jar</destName>
 			<fileMode>0644</fileMode>
 		</file>
 		<file>
@@ -76,7 +63,7 @@
 			<directory>../data</directory>
 			<outputDirectory>conf</outputDirectory>
 			<includes>
-				<include>dataset_A_1000.csv</include>
+				<include>test-data-5k.csv</include>
 			</includes>
 			<useDefaultExcludes>true</useDefaultExcludes>
 			<fileMode>0644</fileMode>

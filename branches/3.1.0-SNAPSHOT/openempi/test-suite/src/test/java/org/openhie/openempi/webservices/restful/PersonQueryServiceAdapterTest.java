@@ -194,7 +194,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     
     public void testLoadPerson() {
         Person person = new Person();
-        person.setGivenName("Leane");
+        person.setGivenName("Neh");
         List<Person> persons = getWebResource().path("person-query-resource")
                 .path("findPersonsByAttributes")
                 .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
@@ -244,8 +244,8 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     
     public void testFindPersonById() {
         Person person = new Person();
-        person.setGivenName("Leane");
-        person.setFamilyName("Neh");
+        person.setGivenName("Neh");
+        person.setFamilyName("Leane");
         List<Person> persons = getWebResource().path("person-query-resource")
                 .path("findPersonsByAttributes")
                 .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
@@ -267,8 +267,8 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     
     public void testLoadAllUnreviewedPersonLinks() {        
         // get person person right
-        Person personLeft = findTestPersonByName("Leane", "Neh");         
-        Person personRight = findTestPersonByName("Leane", "Ned");          
+        Person personLeft = findTestPersonByName("Neh", "Leane");         
+        Person personRight = findTestPersonByName("Ned", "Leane");          
         if( personLeft == null || personRight == null ) {
             assertNotNull("Unable to find test person", null);  
             return;
@@ -362,7 +362,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
         }   
         
         // findLinkedPersons
-        Person person = findTestPersonByName("Leane", "Neh");       
+        Person person = findTestPersonByName("Neh", "Leane");       
     	PersonIdentifier personIdentifier = person.getPersonIdentifiers().iterator().next();; 
  
     	List<Person> persons = getWebResource().path("person-query-resource")
@@ -374,7 +374,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     }
     
     public void testGetPersonLinks() {
-        Person person = findTestPerson("Odysseas", "TEMP1");      
+        Person person = findTestPerson("Master", "TEMP1");      
  
        	List<PersonLink> personLinks = getWebResource().path("person-query-resource")
         			.path("getPersonLinks")
