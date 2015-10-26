@@ -35,12 +35,11 @@ import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
 import org.openhie.openempi.model.Person;
-import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.PersonIdentifier;
+import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.Race;
 import org.openhie.openempi.model.ReviewRecordPair;
 
-import com.google.gwt.user.client.rpc.core.java.util.Collections;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.core.header.MediaTypes;
@@ -374,23 +373,12 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
     }
     
     public void testFindLinkedPersons() {
-    	List<Person> persons = 
-    			getWebResource().path("person-query-resource")
-    				.path("loadPersons")
-    				.queryParam("personId", "8114")
-    				.queryParam("personId", "5042")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<Person>>(){});
-    	assertTrue("Failed to retrieve person list.",
-    			persons != null && persons.size() > 0);
-
-       	Person person = persons.get(0);       	
+        Person person = findTestPersonByName("Neh", "Leane");       
+        assertNotNull("Unable to retrieve test person: "+person, person);
+        
     	PersonIdentifier personIdentifier = person.getPersonIdentifiers().iterator().next();; 
  
-    	persons = getWebResource().path("person-query-resource")
+    	List<Person> persons = getWebResource().path("person-query-resource")
         			.path("findLinkedPersons")
         			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
         			.accept(MediaType.APPLICATION_XML)
@@ -399,20 +387,8 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
     }
  
     public void testGetPersonLinks() {
-    	List<Person> persons = 
-    			getWebResource().path("person-query-resource")
-    				.path("loadPersons")
-    				.queryParam("personId", "8114")
-    				.queryParam("personId", "5042")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<Person>>(){});
-    	assertTrue("Failed to retrieve person list.",
-    			persons != null && persons.size() > 0);
-
-       	Person person = persons.get(0);       	
+        Person person = findTestPersonByName("Neh", "Leane");      	
+        assertNotNull("Unable to retrieve test person: "+person, person);
  
        	List<PersonLink> personLinks = getWebResource().path("person-query-resource")
         			.path("getPersonLinks")
@@ -880,6 +856,7 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
 		
 		Person personThree = new Person();
 		personThree.setAddress1("2nd record");
+		personThree.setAddress2("Best address");
 		personThree.setCity("Palo Alto");
 		personThree.setState("CA");
 		personThree.setPostalCode("94301");
@@ -1005,4 +982,23 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
 		}
 		return true;
 	}
+	
+	public Person findTestPersonByName(String givenName, String familyName) {
+        
+        List<Person> persons = null;
+        Person person = new Person();
+        person.setGivenName(givenName);
+        person.setFamilyName(familyName);
+        
+        persons = getWebResource().path("person-query-resource")
+                    .path("findPersonsByAttributes")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_XML)
+                    .post(new GenericType<List<Person>>(){}, person);
+ 
+        if (persons == null || persons.size() == 0) {
+            return null;
+        }        
+        return persons.get(0);              
+    }
 }

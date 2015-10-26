@@ -449,7 +449,7 @@ public class BlockingServiceCache
                     try {
                         blockRecord = getBlockingDao().loadBlockData(getEntity(), roundClass, blockingKeyValue);
                         if (blockRecord == null) {
-                            log.warn("Received a request to delete a record from the index that is not in the index: " + record.getRecordId());
+                            log.warn("Received a request (update) to delete a record from the index that is not in the index: " + record.getRecordId());
                             return;
                         }
                         Set<Long> rids = (Set<Long>) blockRecord.get(RECORDIDS_FIELD);

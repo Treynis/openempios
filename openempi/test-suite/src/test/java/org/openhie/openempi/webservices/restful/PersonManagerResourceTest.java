@@ -88,7 +88,7 @@ public class PersonManagerResourceTest extends BaseRestfulServiceTestCase
 	public void testUpdatePersonById() {
     	List<Person> persons = null;
        	Person person = new Person();
-       	person.setGivenName("Odysseas");
+       	person.setGivenName("Master");
        	
     	persons = getWebResource().path("person-query-resource")
         			.path("findPersonsByAttributes")

@@ -287,6 +287,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
             int i=0;
             for (BlockingRound blockingRound : blockingRounds) {
                 blockingRound.setName("round." + i);
+                i++;
             }
         }
 

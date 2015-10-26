@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -46,6 +47,7 @@ import java.util.Set;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.DynaProperty;
 import org.apache.commons.beanutils.WrapDynaClass;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openhie.openempi.Constants;
@@ -187,7 +189,17 @@ public final class ConvertUtil
     public static Object cloneBean(Object obj) {
     		Object clone = null;
 			try {
-				clone = BeanUtils.cloneBean(obj);
+				if (obj instanceof Serializable) {
+					if (log.isTraceEnabled()) {
+						log.trace("Cloning serializable object: " + obj.getClass());
+					}
+					clone = SerializationUtils.clone((Serializable) obj);
+				} else {
+					if (log.isTraceEnabled()) {
+						log.trace("Cloning non-serializable object: " + obj.getClass());
+					}
+					clone = BeanUtils.cloneBean(obj);					
+				}
 			} catch (Exception e) {
 				log.warn("Unable to clone object: " + obj + ". Error: " + e, e);
 			}
