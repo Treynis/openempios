@@ -37,7 +37,7 @@ PRGDIR=`dirname "$PRG"`
 BASEDIR=`cd "$PRGDIR/.." >/dev/null; pwd`
 
 # Reset the REPO variable. If you need to influence this use the environment setup file.
-REPO=$OPENEMPI_HOME/../lib
+REPO=$OPENEMPI_HOME/lib
 
 
 # OS specific support.  $var _must_ be set to either true or false.
@@ -127,4 +127,4 @@ exec "$JAVACMD" $JAVA_OPTS -Xms10248m -Dopenempi.home=$OPENEMPI_HOME \
   -Dbasedir="$BASEDIR" \
   -Dlog.console.level=SEVERE \
   org.openhie.openempi.loader.FileLoaderManager \
-  $OPENEMPI_HOME/../data/test-data-5k.csv flexibleDataLoader person true file-loader-map-testing.xml false true "$@"
+  $OPENEMPI_HOME/conf/test-data-5k.csv flexibleDataLoader person true file-loader-map-testing.xml false true "$@"

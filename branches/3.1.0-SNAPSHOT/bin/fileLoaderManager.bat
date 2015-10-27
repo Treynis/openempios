@@ -65,7 +65,7 @@ goto repoSetup
 set BASEDIR=%~dp0\..
 
 :repoSetup
-set REPO=
+set REPO=%OPENEMPI_HOME%\lib
 
 
 if "%JAVACMD%"=="" set JAVACMD=java
@@ -82,7 +82,7 @@ if NOT "%CLASSPATH_PREFIX%" == "" set CLASSPATH=%CLASSPATH_PREFIX%;%CLASSPATH%
 @REM Reaching here means variables are defined and arguments have been captured
 :endInit
 
-%JAVACMD% %JAVA_OPTS% -Xms10248m -Dopenempi.home=%OPENEMPI_HOME% -classpath %CLASSPATH% -Dapp.name="fileLoaderManager" -Dapp.repo="%REPO%" -Dapp.home="%BASEDIR%" -Dbasedir="%BASEDIR%" org.openhie.openempi.loader.FileLoaderManager %OPENEMPI_HOME%/../data/test-data-5k.csv flexibleDataLoader person true file-loader-map-testing.xml false false %CMD_LINE_ARGS%
+%JAVACMD% %JAVA_OPTS% -Xms10248m -Dopenempi.home=%OPENEMPI_HOME% -classpath %CLASSPATH% -Dapp.name="fileLoaderManager" -Dapp.repo="%REPO%" -Dapp.home="%BASEDIR%" -Dbasedir="%BASEDIR%" org.openhie.openempi.loader.FileLoaderManager %OPENEMPI_HOME%/conf/test-data-5k.csv flexibleDataLoader person true file-loader-map-testing.xml false false %CMD_LINE_ARGS%
 if %ERRORLEVEL% NEQ 0 goto error
 goto end
 
