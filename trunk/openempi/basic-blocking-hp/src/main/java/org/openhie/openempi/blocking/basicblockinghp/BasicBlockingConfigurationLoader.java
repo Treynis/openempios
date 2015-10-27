@@ -101,7 +101,8 @@ public class BasicBlockingConfigurationLoader implements ConfigurationLoader
 		    maxBlockSize = DEFAULT_MAX_BLOCK_SIZE;
 		}
 		configurationData.put(BasicBlockingConstants.MAXIMUM_BLOCK_SIZE, maxBlockSize);
-		
+		configurationData.put(BasicBlockingConstants.LAST_UPDATE_DATE, new java.util.Date());
+
         registry.registerConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION,
                 configurationData);
 		registry.registerConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_ALGORITHM_NAME_KEY,
@@ -126,6 +127,7 @@ public class BasicBlockingConfigurationLoader implements ConfigurationLoader
 		updateConfigurationInFile(entityName, xmlConfigurationFragment);
 		Context.getConfiguration().saveConfiguration();
 		log.debug("Storing updated blocking configuration in configuration registry: " + rounds);
+		configurationData.put(BasicBlockingConstants.LAST_UPDATE_DATE, new java.util.Date());
 		registry.registerConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION,
 		        configurationData);
 	}

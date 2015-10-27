@@ -91,4 +91,16 @@ public class MatchRule extends BaseObject
 	public String toString() {
 		return "MatchRule [name=" + name + ", fields=" + fields + "]";
 	}
+
+    public String toStringShort() {
+        StringBuffer sb = new StringBuffer();
+        for (int i=0; i < fields.size(); i++) {
+            MatchField field = fields.get(i);
+            sb.append(field.fieldName);
+            if (i < fields.size()-1) {
+                sb.append(",");
+            }
+        }
+        return "MatchRule [fields=" + sb.toString() + "]";
+    }
 }

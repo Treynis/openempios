@@ -22,9 +22,9 @@ package org.openhie.openempi.context;
 
 import java.io.Serializable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.openhie.openempi.AuthenticationException;
+import org.openhie.openempi.AuthorizationException;
+import org.openhie.openempi.model.Permission;
 import org.openhie.openempi.model.User;
 import org.openhie.openempi.service.UserManager;
 
@@ -36,10 +36,7 @@ import org.openhie.openempi.service.UserManager;
 public class UserContext implements Serializable
 {
     private static final long serialVersionUID = -2671499717171556489L;
-
-    private static final Log log = LogFactory.getLog(UserContext.class);
-	
-	private UserManager userManager;
+	private transient UserManager userManager;
 	
 	private User user;
 	private String sessionKey;
@@ -47,7 +44,6 @@ public class UserContext implements Serializable
 	public String authenticate(String username, String password) throws AuthenticationException {
 		User user = userManager.authenticate(username, password);
 		sessionKey = userManager.createSession(user);
-		log.debug("Authentication request succeeded for user " + username);
 		this.user = user;
 		return sessionKey;
  	}
@@ -57,6 +53,17 @@ public class UserContext implements Serializable
 		this.sessionKey = sessionKey;
 		this.user = user;
 		return user;
+	}
+	
+	public void hasPermission(Permission permission) throws AuthorizationException {
+	    if (permission == null || user == null) {
+	        return;
+	    }
+	    java.util.Set<Permission> permissions = userManager.getUserPermissions(user);
+	    if (permissions.contains(permission)) {
+	        return;
+	    }
+	    throw new AuthorizationException("User " + user.getUsername() + " does not have permission " + permission);
 	}
 	
 	public UserManager getUserManager() {

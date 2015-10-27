@@ -99,6 +99,57 @@ public class VectorConfigurationHelper
 		configurationData.put(ProbabilisticMatchingConstants.PROBABILISTIC_MATCHING_VECTOR_CLASSIFICATIONS,
 		        vectorClassifications);
 	}
+    
+    static void calculateAllVectorWeights(FellegiSunterParameters fellegiSunterParams) {
+        int vectorCount = fellegiSunterParams.getVectorCount();
+        for (int index = 0; index < vectorCount; index++) {
+            VectorConfigurationHelper.calculateVectorWeight(index, fellegiSunterParams);
+        }       
+    }
+    
+    static void calculateVectorWeight(int vectorValue, FellegiSunterParameters fellegiSunterParams) {
+        int bitPositions = fellegiSunterParams.getFieldCount();
+        double weight = 0;
+        for (int i = 0; i < bitPositions; i++) {
+            int bitPosValue = getBitValueAtPosition(vectorValue, i);
+            if (bitPosValue == 1) {
+                Double numerator = fellegiSunterParams.getMValue(i);
+                Double denominator = fellegiSunterParams.getUValue(i);
+                numerator = adjustMinimumValue(numerator);
+                denominator = adjustMinimumValue(denominator);
+                weight += Math.log(numerator / denominator) / Math.log(2.0);
+            } else {
+                Double numerator = (1.0 - fellegiSunterParams.getMValue(i));
+                Double denominator = (1.0 - fellegiSunterParams.getUValue(i));
+                numerator = adjustMinimumValue(numerator);
+                denominator = adjustMinimumValue(denominator);
+                weight += Math.log(numerator / denominator) / Math.log(2.0);
+            }
+        }
+        fellegiSunterParams.setVectorWeight(vectorValue, weight);
+        if (log.isTraceEnabled()) {
+            log.trace("Set the weight of vector " + vectorValue + " to " + weight);
+        }
+    }
+
+    static Double adjustMinimumValue(Double numerator) {
+        if (numerator.doubleValue() < ProbabilisticMatchingConstants.MIN_MARGINAL_VALUE.doubleValue()) {
+            numerator = ProbabilisticMatchingConstants.MIN_MARGINAL_VALUE;
+        }
+        return numerator;
+    }
+    
+    static int getBitValueAtPosition(int value, int pos) {
+        int mask = 1;
+        for (int i = 1; i <= pos; i++) {
+            mask = mask << 1;
+        }
+        int valueAtPosition = mask & value;
+        if (valueAtPosition > 0) {
+            valueAtPosition = 1;
+        }
+        return valueAtPosition;
+    }
 
 	private static void classifyVector(VectorConfiguration vector, FellegiSunterParameters params) {
 		if (vector.getWeight() >= params.getUpperBound()) {

@@ -65,18 +65,24 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
 			Object previewOnlyFlag = properties.get(FileLoaderParameters.PREVIEW_ONLY);
 			if (previewOnlyFlag != null  && previewOnlyFlag instanceof Boolean && previewOnlyFlag.equals(Boolean.TRUE)) {
 				previewOnly = true;
+			} else {
+			    previewOnly = false;
 			}
 
 			Object isImportFlag = properties.get(FileLoaderParameters.IS_IMPORT);
 			if (isImportFlag != null  && isImportFlag instanceof Boolean && isImportFlag.equals(Boolean.TRUE)) {
 				log.info("Will be doing an import instead of an add");
 				isImport = true;
+			} else {
+			    isImport = false;
 			}
 			
 			Object skipHeaderLine = properties.get(FileLoaderParameters.SKIP_HEADER_LINE);
 			if (skipHeaderLine != null && skipHeaderLine instanceof Boolean && skipHeaderLine.equals(Boolean.TRUE)) {
 				log.info("WIll skip the header line during import");
 				skipHeaderLine = true;
+			} else {
+			    skipHeaderLine = false;
 			}
 			
 			Object entityName = properties.get(FileLoaderParameters.ENTITY_NAME);
@@ -94,6 +100,8 @@ public class SpringEntityLoaderManager implements EntityLoaderManager
                 log.info("Will be doing a massive import");
 			    isMassiveInsert = Boolean.TRUE;
 			    recordManagerService.declareIntent(entity, new IntentMassiveInsert());
+			} else {
+			    isMassiveInsert = Boolean.FALSE;
 			}
 		}
 	}

@@ -401,50 +401,10 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         // repeat the calculation for every record pair; there are only 2^n
         // vector configurations
         // where n is the number of match fields.
-        int vectorCount = fellegiSunterParams.getVectorCount();
-        for (int index = 0; index < vectorCount; index++) {
-            calculateVectorWeight(index, fellegiSunterParams);
-        }
+        VectorConfigurationHelper.calculateAllVectorWeights(fellegiSunterParams);
         for (RecordPair pair : pairs) {
             calculateRecordPairWeight(pair, fellegiSunterParams);
         }
-    }
-
-    private void calculateVectorWeight(int vectorValue, FellegiSunterParameters fellegiSunterParams) {
-        int bitPositions = fellegiSunterParams.getFieldCount();
-        double weight = 0;
-        for (int i = 0; i < bitPositions; i++) {
-            int bitPosValue = getBitValueAtPosition(vectorValue, i);
-            if (bitPosValue == 1) {
-                Double numerator = fellegiSunterParams.getMValue(i);
-                Double denominator = fellegiSunterParams.getUValue(i);
-                numerator = adjustMinimumValue(numerator);
-                denominator = adjustMinimumValue(denominator);
-                weight += Math.log(numerator / denominator) / Math.log(2.0);
-            } else {
-                Double numerator = (1.0 - fellegiSunterParams.getMValue(i));
-                Double denominator = (1.0 - fellegiSunterParams.getUValue(i));
-                numerator = adjustMinimumValue(numerator);
-                denominator = adjustMinimumValue(denominator);
-                weight += Math.log(numerator / denominator) / Math.log(2.0);
-            }
-            fellegiSunterParams.setVectorWeight(vectorValue, weight);
-            if (log.isTraceEnabled()) {
-                log.trace("Set the weight of vector " + vectorValue + " to " + weight);
-            }
-        }
-    }
-
-    private static int getBitValueAtPosition(int value, int pos) {
-        int mask = 1;
-        for (int i = 1; i <= pos; i++) {
-            mask = mask << 1;
-        }
-        int valueAtPosition = mask & value;
-        if (valueAtPosition > 0) {
-            valueAtPosition = 1;
-        }
-        return valueAtPosition;
     }
 
     private void calculateRecordPairWeight(RecordPair pair, FellegiSunterParameters fellegiSunterParams) {
@@ -452,13 +412,6 @@ public class ProbabilisticMatchingService extends AbstractMatchingLifecycleObser
         int vectorValue = vector.getBinaryVectorValue();
         pair.setWeight(fellegiSunterParams.getVectorWeight(vectorValue));
         pair.setVector(vectorValue);
-    }
-
-    private Double adjustMinimumValue(Double numerator) {
-        if (numerator.doubleValue() < MIN_MARGINAL_VALUE.doubleValue()) {
-            numerator = MIN_MARGINAL_VALUE;
-        }
-        return numerator;
     }
 
     public List<RecordPair> orderRecordPairsByWeight(List<RecordPair> pairs) {

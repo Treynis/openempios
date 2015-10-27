@@ -46,7 +46,7 @@ import org.hibernate.annotations.Parameter;
 @Table(name = "user_session")
 @GenericGenerator(name = "user_session_gen", strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator", parameters = {
         @Parameter(name = "sequence_name", value = "user_session_seq"),
-        @Parameter(name = "increment_size", value = "10"),
+        @Parameter(name = "increment_size", value = "1000"),
         @Parameter(name = "optimizer", value = "hilo")})
 public class UserSession implements Serializable
 {

@@ -30,6 +30,8 @@ public interface UserSessionDao extends UniversalDao
 	public void saveUserSession(UserSession session);
 	
 	public List<UserSession> findAll();
+    
+    public List<UserSession> findByUser(Long userId);
 	
 	public UserSession findById(Integer sessionId);
 	

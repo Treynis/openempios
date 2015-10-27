@@ -30,6 +30,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openempi.webservices.restful.Constants;
 import org.openhie.openempi.model.User;
 
 import com.sun.jersey.api.model.AbstractMethod;
@@ -41,7 +42,6 @@ import com.sun.jersey.spi.container.ResourceFilterFactory;
 
 public class RestAuthFilterFactory implements ResourceFilterFactory
 {
-    private static final String OPENEMPI_SESSION_KEY_HEADER = "OPENEMPI_SESSION_KEY";
     protected final Log log = LogFactory.getLog(getClass());
 
     @Context
@@ -77,7 +77,7 @@ public class RestAuthFilterFactory implements ResourceFilterFactory
                 return request;
             }
 
-            String sessionKey = request.getHeaderValue(OPENEMPI_SESSION_KEY_HEADER);
+            String sessionKey = request.getHeaderValue(Constants.OPENEMPI_SESSION_KEY_HEADER);
             if (sessionKey != null && sessionKey.length() > 0) {
                 User user = org.openhie.openempi.context.Context.authenticate(sessionKey);
                 if (user == null) {

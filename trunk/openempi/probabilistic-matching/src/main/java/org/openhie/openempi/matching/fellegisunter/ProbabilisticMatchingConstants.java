@@ -32,6 +32,8 @@ public class ProbabilisticMatchingConstants
 	public final static float DEFAULT_LOWER_BOUND = -5.0f;
 	public final static String FALSE_NEGATIVE_PROBABILITY_REGISTRY_KEY = "falseNegativeProbability";
 	public final static String FALSE_POSITIVE_PROBABILITY_REGISTRY_KEY = "falsePositiveProbability";
+	public final static Double MIN_MARGINAL_VALUE = 0.0000001;
+	public final static Double MAX_MARGINAL_VALUE = 0.9999999;
 	public final static String PROBABILISTIC_MATCHING_ALGORITHM_NAME = "Probabilistic Matching Algorithm";
 	public final static String PROBABILISTIC_MATCHING_M_VALUES_KEY = "mValues";
 	public final static String PROBABILISTIC_MATCHING_U_VALUES_KEY = "uValues";

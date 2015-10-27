@@ -24,10 +24,12 @@ import java.util.Map;
 
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.jobqueue.JobParameterConstants;
-import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.JobEntry;
 import org.openhie.openempi.model.JobEntryEventLog;
 import org.openhie.openempi.model.JobStatus;
+import org.openhie.openempi.profiling.DataProfiler;
+import org.openhie.openempi.profiling.FileRecordDataSource;
+import org.openhie.openempi.util.ConvertUtil;
 
 public class DataProfilingJobTypeHandler extends AbstractJobTypeHandler
 {
@@ -41,48 +43,52 @@ public class DataProfilingJobTypeHandler extends AbstractJobTypeHandler
         JobEntry jobEntry = getJobEntry();
         Map<String,Object> params = extractParameters(jobEntry);
         logJobEntryParameters(params);
-        String task = (String) params.get(JobParameterConstants.MATCHINGTASK_PARAM);
-        if (task == null || task.length() == 0) {
-            log.info("Unable to process the matching job with id " + jobEntry.getJobEntryId() + 
-                    " since the specific matching task to perform was not specified.");
+        String fileName = (String) params.get(JobParameterConstants.FILENAME_PARAM);
+        if (ConvertUtil.isNullOrEmpty(fileName)) {
+            log.warn("Unable to process the data profiling job with id " + jobEntry.getJobEntryId() + 
+                    " since the name of the file to be profiled has not been specified.");
             return;
         }
-        
-        if (!task.equals(JobParameterConstants.MATCHINGTASK_INITIALIZATION) &&
-                !task.equals(JobParameterConstants.MATCHINGTASK_LINKAGE)) {
-            log.info("Unable to process the matching job with id " + jobEntry.getJobEntryId() + 
-                    " since the specific matching task to perform is unknown: " + task);
+        String userFileIdStr = (String) params.get(JobParameterConstants.USERFILEID_PARAM);
+        if (ConvertUtil.isNullOrEmpty(userFileIdStr)) {
+            log.warn("Unable to process the data profiling job with id " + jobEntry.getJobEntryId() + 
+                    " since the user file entry has not been specified.");
             return;
         }
+        Integer userFileId = Integer.parseInt(userFileIdStr);
         
-        if (task.equals(JobParameterConstants.MATCHINGTASK_INITIALIZATION)) {
-            initializeMatchingAlgorithm(jobEntry);
-        } else {
-            generateAllLinks(jobEntry);
-        }
+		DataProfiler dataProfiler = (DataProfiler) Context.getApplicationContext().getBean("dataProfiler");
+		if (dataProfiler == null) {
+			log.warn("The data profiler has not been configured properly through the Spring configuration file.");
+			throw new RuntimeException("The Data Profiler has not been configured properly. Please check with your system administrator.");
+		}
+		
+		try {
+			FileRecordDataSource fileRecordDataSource = new FileRecordDataSource(fileName, userFileId);
+			dataProfiler.setRecordDataSource(fileRecordDataSource);
+			dataProfiler.run();
+	        updateJobEntry(true, "Successfully completed the data profile of file: " + fileName);
+	        updateUserFileEntry(userFileId);
+	    } catch (Exception e) {
+	        log.warn("Failed while profiling the data in a file: " + e, e);
+	        updateJobEntry(false, "Failed while profiling the data in the file due to: " + e.getMessage());
+	    }
     }
 
-    private void initializeMatchingAlgorithm(JobEntry jobEntry) {
-        
-        try {
-            Entity entity = jobEntry.getEntity();
-            Context.getRecordManagerService().initializeRepository(entity);
-            updateJobEntry(true, "Successfully completed the initialization of the matching service.");
-        } catch (Exception e) {
-            log.warn("Failed while initializing the matching service: " + e, e);
-            updateJobEntry(false, "Failed to initialize the matching service due to: " + e.getMessage());
+    private void updateUserFileEntry(Integer userFileId) {
+        org.openhie.openempi.model.UserFile userFileFound = Context.getUserManager().getUserFile(userFileId);
+        if (userFileFound == null) {
+            log.warn("The user file cannot be found in the system so, we can't update the status.");
+            return;
         }
-    }
-
-    private void generateAllLinks(JobEntry jobEntry) {
-        
         try {
-            Entity entity = jobEntry.getEntity();
-            Context.getRecordManagerService().linkAllRecordPairs(entity);
-            updateJobEntry(true, "Successfully completed linking all record pairs.");
+          userFileFound.setProfiled("Y");
+          userFileFound.setProfileProcessed("Completed.");
+          userFileFound.setRowsImported(0);
+          userFileFound.setRowsProcessed(0);
+          Context.getUserManager().saveUserFile(userFileFound);
         } catch (Exception e) {
-            log.warn("Failed while linking all record pairs: " + e, e);
-            updateJobEntry(false, "Failed to link all record pairs due to: " + e.getMessage());
+            log.warn("Failed to update the user file with the results of a successful import: " + e);
         }
     }
     

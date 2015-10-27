@@ -25,6 +25,7 @@ import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openhealthtools.openexchange.config.PropertyFacade;
 import org.openhealthtools.openexchange.datamodel.Address;
 import org.openhealthtools.openexchange.datamodel.Identifier;
 import org.openhealthtools.openexchange.datamodel.Patient;
@@ -33,6 +34,7 @@ import org.openhealthtools.openexchange.datamodel.PersonName;
 import org.openhealthtools.openexchange.datamodel.PhoneNumber;
 import org.openhealthtools.openexchange.datamodel.SharedEnums.SexType;
 import org.openhealthtools.openpixpdq.api.PdqQuery;
+import org.openhealthtools.openpixpdq.common.Constants;
 import org.openhie.openempi.model.EthnicGroup;
 import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
@@ -506,12 +508,13 @@ public class ConversionHelper
 	}
 
 	public static void populatePersonName(Person person, PersonName personName) {
+	    boolean uppercaseNames = PropertyFacade.getBoolean(Constants.UPPERCASE_NAMES, false);
 		String lastName = personName.getLastName();
-		if (lastName != null) {
+		if (lastName != null && uppercaseNames) {
 			lastName = lastName.toUpperCase();
 		}
 		String firstName = personName.getFirstName();
-		if (firstName != null) {
+		if (firstName != null && uppercaseNames) {
 			firstName = firstName.toUpperCase();
 		}
 		person.setGivenName(firstName);

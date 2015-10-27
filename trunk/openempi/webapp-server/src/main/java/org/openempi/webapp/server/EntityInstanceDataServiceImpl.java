@@ -421,6 +421,8 @@ public class EntityInstanceDataServiceImpl extends AbstractRemoteServiceServlet 
 
             RecordLink record = entityInstanceService.loadRecordLink(entityDef, recordLink.getRecordLinkId());
             record.setState(recordLink.getState());
+            record.setUserReviewedBy(Context.getUserContext().getUser());
+            record.setDateReviewed(new java.util.Date());
             record = entityInstanceManagerService.updateRecordLink(record);
 
             RecordLinkWeb recordWeb = ModelTransformer.mapToRecordLink(record, RecordLinkWeb.class, true);

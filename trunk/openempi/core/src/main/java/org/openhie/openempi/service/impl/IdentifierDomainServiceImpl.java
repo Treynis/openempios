@@ -186,6 +186,9 @@ public class IdentifierDomainServiceImpl extends BaseServiceImpl implements Iden
         IdentifierDomainAttribute attribute = identifierDomainDao.addIdentifierDomainAttribute(identifierDomain,
                 attributeName, attributeValue);
 
+        // TODO: We need to switch this to using the saveAuditEventEntry method instead of saveAuditEvent but the 
+        // audit events now need a reference to the entity to which they are associated. When we are dealing with this case
+        // though it is not clear which entity we should associated this audit event with
         Context.getAuditEventService().saveAuditEvent(
                 AuditEventType.ADD_IDENTIFIER_DOMAIN_ATTRIBUTE_EVENT_TYPE,
                 "Added attribute " + attributeName + " to identifier domain with ID "

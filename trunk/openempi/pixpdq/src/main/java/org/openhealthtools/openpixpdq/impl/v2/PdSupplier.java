@@ -29,12 +29,13 @@ import org.openhealthtools.openpixpdq.api.IJMXEventNotifier;
 import org.openhealthtools.openpixpdq.api.IPdSupplier;
 import org.openhealthtools.openpixpdq.common.Constants;
 import org.openhealthtools.openpixpdq.common.HL7Actor;
-import org.openhealthtools.openpixpdq.impl.v2.hl7.HL7Server;
 import org.openhealthtools.openpixpdq.impl.v2.hl7.HL7Util;
 
+import ca.uhn.hl7v2.DefaultHapiContext;
 import ca.uhn.hl7v2.HL7Exception;
-import ca.uhn.hl7v2.app.Application;
-import ca.uhn.hl7v2.llp.LowerLayerProtocol;
+import ca.uhn.hl7v2.HapiContext;
+import ca.uhn.hl7v2.app.HL7Service;
+import ca.uhn.hl7v2.llp.MinLowerLayerProtocol;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.Structure;
 import ca.uhn.hl7v2.model.v25.datatype.HD;
@@ -44,6 +45,7 @@ import ca.uhn.hl7v2.model.v25.message.RSP_K21;
 import ca.uhn.hl7v2.model.v25.segment.MSH;
 import ca.uhn.hl7v2.model.v25.segment.PID;
 import ca.uhn.hl7v2.parser.PipeParser;
+import ca.uhn.hl7v2.protocol.ReceivingApplication;
 import ca.uhn.hl7v2.util.Terser;
 
 /**
@@ -55,8 +57,6 @@ import ca.uhn.hl7v2.util.Terser;
  * <a href="http://www.ihe.net/Technical_Framework/index.cfm#IT">Vol. 2 (ITI TF-2): Transactions</a>, 
  * available on the IHE site for more details.   
  * 
- * @author Wenzhi Li
- * @version 1.0, Mar 27, 2007
  */
 public class PdSupplier extends HL7Actor implements IPdSupplier {
     /* Logger for problems */
@@ -66,7 +66,8 @@ public class PdSupplier extends HL7Actor implements IPdSupplier {
 	protected IConnectionDescription connection = null;  
 
     /** The PDQ Server */
-    private HL7Server server = null;
+	private HapiContext ctx;
+    private HL7Service server = null;
     /** PDQ event notifier **/
     private IJMXEventNotifier pixEvent = null; 
    /**
@@ -87,11 +88,12 @@ public class PdSupplier extends HL7Actor implements IPdSupplier {
         //call the super one to initiate standard start process
         super.start();
         //now begin the local start, initiate pdq supplier
-        LowerLayerProtocol llp = LowerLayerProtocol.makeLLP(); // The transport protocol
-        PipeParser parser = new PipeParser();
-        parser.setValidationContext(new MessageValidation());
-        server = new HL7Server(connection, llp, parser );
-        Application handler = new PdQueryHandler(this);
+        ctx = new DefaultHapiContext();
+        ctx.setValidationContext(new MessageValidation());
+        ctx.setLowerLayerProtocol(new MinLowerLayerProtocol(true));
+
+        server = ctx.newServer(connection.getPort(), false);
+        ReceivingApplication handler = new PdQueryHandler(this);
         server.registerApplication("QBP", "Q22", handler); //PDQ Query message
         server.registerApplication("QCN", "J01", handler); //Query Cancel message
         //now start the Pdq Supplier server
@@ -106,6 +108,7 @@ public class PdSupplier extends HL7Actor implements IPdSupplier {
     public void stop() {
         //now end the local stop, stop the pix manager server
         server.stop();
+        ctx.getExecutorService().shutdown();
 
         //call the super one to initiate standard stop process
         super.stop();
@@ -177,7 +180,7 @@ public class PdSupplier extends HL7Actor implements IPdSupplier {
 //            pn.getFamilyName().getSurname().setValue("Pin");
 //            pn.getGivenName().setValue("John");
 
-            String pidName = qr.add(PID.class, false, true);
+            String pidName = qr.getPID().getName();
             PID pid2 = (PID)qr.get( pidName );
             pid2.getPatientName(0).getGivenName().setValue("FirstName2");
 

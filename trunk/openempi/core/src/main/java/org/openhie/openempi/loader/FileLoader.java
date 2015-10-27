@@ -40,5 +40,7 @@ public interface FileLoader
 	
 	public void setParameter(String parameterName, Object value);
 	
+	public boolean isDone();
+	
 	public void shutdown();
 }

@@ -178,32 +178,28 @@ public class UserFileController extends Controller
     }
 
     private void dataProfileFileEntries(List<UserFileWeb> fileEntries) {
+        final UserFileWeb userFile = fileEntries.get(0);
         final EntityWeb currentEntity = Registry.get(Constants.ENTITY_ATTRIBUTE_MODEL);
         if (currentEntity == null) {
             return;
         }
-
-        UserFileWeb userFile = fileEntries.get(0);
+        userFile.setEntity(currentEntity);
         getUserFileDataService().dataProfileUserFile(userFile, new AsyncCallback<String>()
         {
-
             public void onFailure(Throwable caught) {
-
                 if (caught instanceof AuthenticationException) {
                     Dispatcher.get().dispatch(AppEvents.Logout);
                     return;
                 }
-                String error = "There is data profile operation failure.";
-                logInfoMessage(currentEntity.getName(), error, new Date());
+                String error = "Launching the data profile operation failed due to: " + caught.getMessage();
+                logInfoMessage(userFile.getEntity().getName(), error, new Date());
                 forwardToView(userFileView, AppEvents.Error, caught.getMessage());
             }
 
             public void onSuccess(String value) {
-
-                updateUserFileData();
-
-                logInfoMessage(currentEntity.getName(), "Initiating the process of data profile operation.", new Date());
-                forwardToView(userFileView, AppEvents.FileEntryDataProfileSuccess, "Initiating the process of data profile operation");
+                logInfoMessage(userFile.getEntity().getName(), "Initiated the data profile operation.", new Date());
+                forwardToView(userFileView, AppEvents.FileEntryDataProfileSuccess,
+                        "Initiated the data profile operation");
             }
         });
     }

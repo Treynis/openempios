@@ -21,6 +21,7 @@
 package org.openhie.openempi.blocking.basicblockinghp;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 		    if (service.getBlockingServiceId() != getBlockingServiceId()) {
 		        continue;
 		    }
-	        BlockingConfiguration config = loadBlockingConfiguration(entity.getName());
+	        BlockingConfiguration config = loadBlockingConfiguration(entity.getName(), true);
 			BlockingServiceCache blockingServiceCache = new BlockingServiceCache(entity);
 			blockingServiceCache.setBlockingDao(blockingDao);
 			blockingServiceCache.setEntityDao(entityDao);
@@ -100,7 +101,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
             if (service.getBlockingServiceId() != getBlockingServiceId()) {
                 continue;
             }
-            BlockingConfiguration config = loadBlockingConfiguration(entity.getName());
+            BlockingConfiguration config = loadBlockingConfiguration(entity.getName(), true);
 			BlockingServiceCache blockingServiceCache = cacheByEntity.get(entity.getName());
 			blockingServiceCache.init(config.getBlockingRounds(), true);
 		}
@@ -175,11 +176,11 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 
 
 	public RecordPairSource getRecordPairSource(Entity entity) {
-		return getRecordPairSource(entity, loadBlockingConfiguration(entity.getName()).getBlockingRounds());
+		return getRecordPairSource(entity, loadBlockingConfiguration(entity.getName(), false).getBlockingRounds());
 	}
 
 	public List<BlockingRound> getBlockingRounds(String entityName) {
-	    BlockingConfiguration config = loadBlockingConfiguration(entityName);
+	    BlockingConfiguration config = loadBlockingConfiguration(entityName, false);
 	    if (config == null) {
 	        log.warn("No blocking rounds configuration has been registered for entity: " + entityName);
 	        return null;
@@ -195,7 +196,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	 *
 	 */
 	public List<RecordPair> findCandidates(Record record) {
-	    BlockingConfiguration config = loadBlockingConfiguration(record.getEntity().getName());
+	    BlockingConfiguration config = loadBlockingConfiguration(record.getEntity().getName(), false);
 	    List<BlockingRound> blockingRounds = config.getBlockingRounds();
 		Entity entity = record.getEntity();
 		BlockingServiceCache blockingServiceCache = cacheByEntity.get(entity.getName());
@@ -212,7 +213,7 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 
 	@Override
 	public List<Long> getRecordPairCount(Entity entity) {
-	    BlockingConfiguration config = loadBlockingConfiguration(entity.getName());
+	    BlockingConfiguration config = loadBlockingConfiguration(entity.getName(), false);
 		List<BlockingRound> blockingRounds = config.getBlockingRounds();
 		List<Long> counts = new ArrayList<Long>(blockingRounds.size());
 		for (BlockingRound round : blockingRounds) {
@@ -222,19 +223,26 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 	}
 
     @SuppressWarnings("unchecked")
-	private BlockingConfiguration loadBlockingConfiguration(String entityName) {
+	private BlockingConfiguration loadBlockingConfiguration(String entityName, boolean isInit) {
         BlockingConfiguration config = configByEntity.get(entityName);
-        if (config == null) {
-    	    Map<String,Object> configurationData = (Map<String,Object>) Context.getConfiguration()
-    	            .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
-    	    config = new BlockingConfiguration();
-
+        Map<String,Object> configurationData = (Map<String,Object>) Context.getConfiguration()
+                .lookupConfigurationEntry(entityName, ConfigurationRegistry.BLOCKING_CONFIGURATION);
+        Date lastUpdateDate = (Date) configurationData.get(BasicBlockingConstants.LAST_UPDATE_DATE);
+        if (config == null || lastUpdateDate == null ||
+                config.getLastUpdateDate().getTime() < lastUpdateDate.getTime()) {
+    	    
+    	    config = new BlockingConfiguration(new Date());
             List<BlockingRound> blockingRounds = (List<BlockingRound>)
                     configurationData.get(BasicBlockingConstants.BLOCKING_ROUNDS_REGISTRY_KEY);
             Integer maximumBlockSize = (Integer)
                     configurationData.get(BasicBlockingConstants.MAXIMUM_BLOCK_SIZE);
             config.setBlockingRounds(blockingRounds);
             config.setMaximumBlockSize(maximumBlockSize);
+            if (!isInit) {
+                BlockingServiceCache blockingServiceCache = cacheByEntity.get(entityName);
+                blockingServiceCache.init(config.getBlockingRounds(), false);
+            }
+            log.info("Initialized cache for entity " + entityName);
             configByEntity.put(entityName, config);
         }
         return config;
@@ -264,13 +272,23 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
     {
         private List<BlockingRound> blockingRounds;
         private Integer maximumBlockSize;
+        private Date lastUpdateDate;
 
+        public BlockingConfiguration(Date now) {
+            lastUpdateDate = now;
+        }
+        
         List<BlockingRound> getBlockingRounds() {
             return blockingRounds;
         }
 
         public void setBlockingRounds(List<BlockingRound> blockingRounds) {
             this.blockingRounds = blockingRounds;
+            int i=0;
+            for (BlockingRound blockingRound : blockingRounds) {
+                blockingRound.setName("round." + i);
+                i++;
+            }
         }
 
         public void setMaximumBlockSize(Integer maximumBlockSize) {
@@ -279,6 +297,10 @@ public class BlockingServiceImpl extends AbstractBlockingLifecycleObserver imple
 
         Integer getMaximumBlockSize() {
             return maximumBlockSize;
+        }
+
+        public Date getLastUpdateDate() {
+            return lastUpdateDate;
         }
     }
 }

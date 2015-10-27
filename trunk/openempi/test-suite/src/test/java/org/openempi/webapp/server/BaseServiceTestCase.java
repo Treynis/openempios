@@ -75,8 +75,9 @@ public abstract class BaseServiceTestCase extends BaseManagerTestCase
 
 	protected static Person buildTestPerson(String ssn) {
 		Person person = new Person();
-		person.setGivenName("Odysseas");
-		person.setFamilyName("Pentakalos");
+		person.setGivenName("Master");
+		person.setMiddleName("Patient");
+		person.setFamilyName("Index");
 		person.setAddress1("1000 Openempi Drive");
 		person.setCity("SYSNET");
 		person.setState("Virginia");

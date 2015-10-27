@@ -143,7 +143,7 @@ public class RecordLinkResource extends BaseResource
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
         try {
-            RecordLink recordLink = recordLinkService.addRecordLink(versionId, entity.getEntityId(),
+            RecordLink recordLink = recordLinkService.addRecordLink(versionId, entity.getEntityVersionId(),
                     Converter.convertRestfulRecordLinkToRecordLink(entity, restRecordLink));
             return Converter.convertRecordToRestfulRecordLink(recordLink);
        } catch (BadRequestException e) {
@@ -160,7 +160,9 @@ public class RecordLinkResource extends BaseResource
                                         @PathParam("versionId") String versionId,
                                         org.openempi.webservices.restful.model.RecordLink restRecordLink) {
         validateVersion(versionId);
-        if (restRecordLink == null || restRecordLink.getEntityId() == null) {
+        if (restRecordLink == null || restRecordLink.getEntityId() == null ||
+                restRecordLink.getRecordLinkId() == null ||
+                restRecordLink.getState() == null) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
         Entity entity = Context.getEntityDefinitionManagerService().loadEntity(restRecordLink.getEntityId());
@@ -168,7 +170,7 @@ public class RecordLinkResource extends BaseResource
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
         try {
-            RecordLink recordLink = recordLinkService.updateRecordLink(versionId, entity.getEntityId(),
+            RecordLink recordLink = recordLinkService.updateRecordLink(versionId, entity.getEntityVersionId(),
                     Converter.convertRestfulRecordLinkToRecordLink(entity, restRecordLink));
             return Converter.convertRecordToRestfulRecordLink(recordLink);
        } catch (BadRequestException e) {

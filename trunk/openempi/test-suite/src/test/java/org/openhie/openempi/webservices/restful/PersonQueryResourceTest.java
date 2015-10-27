@@ -35,8 +35,8 @@ import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
 import org.openhie.openempi.model.Person;
-import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.PersonIdentifier;
+import org.openhie.openempi.model.PersonLink;
 import org.openhie.openempi.model.Race;
 import org.openhie.openempi.model.ReviewRecordPair;
 
@@ -222,6 +222,7 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
     	if (id == null) {
     		return;
     	}
+    	addIdentifierDomainAttribute();
     	
     	List<IdentifierDomainAttribute> dentifierDomainAttributes = 
     			getWebResource().path("person-query-resource")
@@ -231,6 +232,39 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
         			.post(new GenericType<List<IdentifierDomainAttribute>>(){}, id);
     	
     	assertTrue("Unable to retrieve IdentifierDomainAttribute list using the namespace identifier: " + id.getNamespaceIdentifier(), dentifierDomainAttributes.size() > 0);
+    }
+    
+    public void addIdentifierDomainAttribute() {
+        List<IdentifierDomain> domains = 
+                getWebResource().path("person-query-resource")
+                    .path("getIdentifierDomains")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .get(new GenericType<List<IdentifierDomain>>(){});
+        assertTrue("Failed to retrieve domains list.", domains != null && domains.size() > 0);
+
+        IdentifierDomain id = null;
+        for (IdentifierDomain domain : domains) {
+            if (domain.getIdentifierDomainName().startsWith("IHENA")) {
+                id = domain;
+            }
+        }
+        if (id == null) {
+            // no this kind of IdentifierDomain
+            return;
+        }   
+        
+        IdentifierDomainAttributeRequest identifierDomainAttributeRequest = new IdentifierDomainAttributeRequest(id, "IHENA", "200");   
+        
+        ClientResponse response = getWebResource().path("person-manager-resource")
+            .path("addIdentifierDomainAttribute")
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class, identifierDomainAttributeRequest);
+
+        if (response.getStatus() != Status.OK.getStatusCode()) {
+            assertFalse("Incorrect status code received of " + response, false);
+        }
     }
     
     public void testGetPersonModelAllAttributeNames() {
@@ -267,13 +301,25 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
     }  
     
     public void testFindPersonById() {
-    	List<Person> persons = 
+        List<Person> persons = 
+                getWebResource().path("person-query-resource")
+                    .path("loadAllPersonsPaged")
+                    .queryParam("firstRecord", "1")
+                    .queryParam("maxRecords", "20")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .get(new GenericType<List<Person>>(){});
+        assertTrue("Failed to retrieve at least four person records.", persons.size() >= 4);
+        
+        Person[] personArr = persons.toArray(new Person[]{});
+        
+    	persons = 
     			getWebResource().path("person-query-resource")
     				.path("loadPersons")
-    				.queryParam("personId", "8114")
-    				.queryParam("personId", "8115")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
+    				.queryParam("personId", personArr[0].getPersonId().toString())
+    				.queryParam("personId", personArr[0].getPersonId().toString())
+    				.queryParam("personId", personArr[0].getPersonId().toString())
+    				.queryParam("personId", personArr[0].getPersonId().toString())
     				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
     				.accept(MediaType.APPLICATION_JSON)
     				.get(new GenericType<List<Person>>(){});
@@ -291,12 +337,24 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
         assertNotNull("Unable to retrieve person using the personIdentifier: "+personIdentifier, person);
     }
  
-    public void testgetGlobalIdentifierById() {
-    	List<Person> persons = 
+    public void testGetGlobalIdentifierById() {
+        List<Person> persons = 
+                getWebResource().path("person-query-resource")
+                    .path("loadAllPersonsPaged")
+                    .queryParam("firstRecord", "1")
+                    .queryParam("maxRecords", "20")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .get(new GenericType<List<Person>>(){});
+        assertTrue("Failed to retrieve at least two person records.", persons.size() >= 2);
+        
+        Person[] personArr = persons.toArray(new Person[]{});
+        
+    	persons = 
     			getWebResource().path("person-query-resource")
     				.path("loadPersons")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
+    				.queryParam("personId", personArr[0].getPersonId().toString())
+    				.queryParam("personId", personArr[1].getPersonId().toString())
     				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
     				.accept(MediaType.APPLICATION_JSON)
     				.get(new GenericType<List<Person>>(){});
@@ -311,27 +369,16 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
         			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
         			.accept(MediaType.APPLICATION_XML)
         			.post(PersonIdentifier.class, personIdentifier);
-        assertNotNull("Unable to get global identifier using the personIdentifier: "+globalIdentifier.getIdentifier(), personIdentifier);
+        assertNotNull("Unable to get global identifier using the personIdentifier: " + globalIdentifier.getIdentifier(), personIdentifier);
     }
     
     public void testFindLinkedPersons() {
-    	List<Person> persons = 
-    			getWebResource().path("person-query-resource")
-    				.path("loadPersons")
-    				.queryParam("personId", "8114")
-    				.queryParam("personId", "5042")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<Person>>(){});
-    	assertTrue("Failed to retrieve person list.",
-    			persons != null && persons.size() > 0);
-
-       	Person person = persons.get(0);       	
+        Person person = findTestPersonByName("Neh", "Leane");       
+        assertNotNull("Unable to retrieve test person: "+person, person);
+        
     	PersonIdentifier personIdentifier = person.getPersonIdentifiers().iterator().next();; 
  
-    	persons = getWebResource().path("person-query-resource")
+    	List<Person> persons = getWebResource().path("person-query-resource")
         			.path("findLinkedPersons")
         			.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
         			.accept(MediaType.APPLICATION_XML)
@@ -340,20 +387,8 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
     }
  
     public void testGetPersonLinks() {
-    	List<Person> persons = 
-    			getWebResource().path("person-query-resource")
-    				.path("loadPersons")
-    				.queryParam("personId", "8114")
-    				.queryParam("personId", "5042")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
-    				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-    				.accept(MediaType.APPLICATION_JSON)
-    				.get(new GenericType<List<Person>>(){});
-    	assertTrue("Failed to retrieve person list.",
-    			persons != null && persons.size() > 0);
-
-       	Person person = persons.get(0);       	
+        Person person = findTestPersonByName("Neh", "Leane");      	
+        assertNotNull("Unable to retrieve test person: "+person, person);
  
        	List<PersonLink> personLinks = getWebResource().path("person-query-resource")
         			.path("getPersonLinks")
@@ -415,14 +450,25 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
         assertNotNull("Unable to retrieve matching persons using the person as search: "+person, persons);
     }
     
-    public void testLoadPerson() {
-    	List<Person> persons = 
+    public void testLoadPersons() {
+        List<Person> persons = 
+                getWebResource().path("person-query-resource")
+                    .path("loadAllPersonsPaged")
+                    .queryParam("firstRecord", "1")
+                    .queryParam("maxRecords", "20")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_JSON)
+                    .get(new GenericType<List<Person>>(){});
+        assertTrue("Failed to retrieve at least four person records.", persons.size() >= 4);
+        
+        Person[] personArr = persons.toArray(new Person[]{});
+    	persons = 
     			getWebResource().path("person-query-resource")
     				.path("loadPersons")
-    				.queryParam("personId", "8114")
-    				.queryParam("personId", "8115")
-    				.queryParam("personId", "49162")
-    				.queryParam("personId", "45099")
+    				.queryParam("personId", personArr[0].getPersonId().toString())
+    				.queryParam("personId", personArr[1].getPersonId().toString())
+    				.queryParam("personId", personArr[2].getPersonId().toString())
+    				.queryParam("personId", personArr[0].getPersonId().toString())
     				.header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
     				.accept(MediaType.APPLICATION_JSON)
     				.get(new GenericType<List<Person>>(){});
@@ -810,6 +856,7 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
 		
 		Person personThree = new Person();
 		personThree.setAddress1("2nd record");
+		personThree.setAddress2("Best address");
 		personThree.setCity("Palo Alto");
 		personThree.setState("CA");
 		personThree.setPostalCode("94301");
@@ -935,4 +982,23 @@ public class PersonQueryResourceTest extends BaseRestfulServiceTestCase
 		}
 		return true;
 	}
+	
+	public Person findTestPersonByName(String givenName, String familyName) {
+        
+        List<Person> persons = null;
+        Person person = new Person();
+        person.setGivenName(givenName);
+        person.setFamilyName(familyName);
+        
+        persons = getWebResource().path("person-query-resource")
+                    .path("findPersonsByAttributes")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_XML)
+                    .post(new GenericType<List<Person>>(){}, person);
+ 
+        if (persons == null || persons.size() == 0) {
+            return null;
+        }        
+        return persons.get(0);              
+    }
 }

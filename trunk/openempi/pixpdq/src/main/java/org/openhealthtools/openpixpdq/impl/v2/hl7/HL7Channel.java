@@ -28,7 +28,9 @@ import org.openhealthtools.openexchange.actorconfig.net.IConnectionDescription;
 import org.openhealthtools.openpixpdq.common.IHL7Channel;
 import org.openhealthtools.openpixpdq.impl.v2.MessageValidation;
 
+import ca.uhn.hl7v2.DefaultHapiContext;
 import ca.uhn.hl7v2.HL7Exception;
+import ca.uhn.hl7v2.HapiContext;
 import ca.uhn.hl7v2.app.Connection;
 import ca.uhn.hl7v2.app.Initiator;
 import ca.uhn.hl7v2.llp.LLPException;
@@ -88,25 +90,22 @@ public class HL7Channel implements IHL7Channel<Message>
 		// Create an HL7 connection
 		if ((hl7Connection == null) || !hl7Connection.isOpen()) {
 			// Open the appropriate TCP connection
-			IConnection conn = ConnectionFactory.getConnection(connection);
-			if (!conn.isConnectionValid()) {
-				throw new IOException("Cannot open connection to \"" + connection.getDescription() + "\"");
-			}
+//			IConnection conn = ConnectionFactory.getConnection(connection);
+//			if (!conn.isConnectionValid()) {
+//				throw new IOException("Cannot open connection to \"" + connection.getDescription() + "\"");
+//			}
 			// Create the HL7 connection using this TCP connection
 			try {
-                PipeParser parser = new PipeParser();
-                parser.setValidationContext(new MessageValidation());
-				hl7Connection = new Connection(parser, new MinLowerLayerProtocol(), conn.getSocket());
-			} catch (LLPException e) {
-				// Error in HAPI configuration
-				log.error("Cannot find HL7 low level protocol implementation", e);
-				conn.closeConnection();
-				return null;
-			} catch (IOException e) {
-				// Error communicating over socket
-				conn.closeConnection();
-				throw e;
-			}
+			    HapiContext context = new DefaultHapiContext();
+			    context.getPipeParser().setValidationContext(new MessageValidation());
+			    hl7Connection = context.newClient("localhost", connection.getPort(), false);
+			} catch (HL7Exception e) {
+                log.error("Cannot find HL7 low level protocol implementation", e);
+                if (hl7Connection != null) {
+                    hl7Connection.close();
+                }
+                return null;
+            }
 		}
 		// Get an initator to send the message
 		Initiator initiator = hl7Connection.getInitiator();
