@@ -33,7 +33,6 @@ import org.openempi.webapp.client.domain.AuthenticationException;
 import org.openempi.webapp.client.model.EntityAttributeGroupWeb;
 import org.openempi.webapp.client.model.EntityAttributeWeb;
 import org.openempi.webapp.client.model.EntityWeb;
-import org.openempi.webapp.client.model.ExactMatchingConfigurationWeb;
 import org.openempi.webapp.client.model.IdentifierWeb;
 import org.openempi.webapp.client.model.MatchConfigurationWeb;
 import org.openempi.webapp.client.model.MatchFieldWeb;
@@ -58,6 +57,7 @@ import com.extjs.gxt.ui.client.data.LoadEvent;
 import com.extjs.gxt.ui.client.data.PagingLoadConfig;
 import com.extjs.gxt.ui.client.data.PagingLoadResult;
 import com.extjs.gxt.ui.client.data.RpcProxy;
+import com.allen_sauer.gwt.log.client.Log;
 import com.extjs.gxt.ui.client.Registry;
 import com.extjs.gxt.ui.client.Style.HorizontalAlignment;
 import com.extjs.gxt.ui.client.Style.LayoutRegion;
@@ -705,10 +705,11 @@ public class EntityLinkView extends BaseEntityView
 			          int colIndex, ListStore<BaseModelData> store, Grid<BaseModelData> grid) {
 
 			    	  // get cell value
-			          String value = (String) model.get(property);
+			          String value = getStringValueFromModel(model, property);
+			          
 			          String attributeName = (String) model.get("attribute");
-			          String valueLeft = (String) model.get("leftRecord");
-			          String valueRight = (String) model.get("rightRecord");
+			          String valueLeft = getStringValueFromModel(model, "leftRecord");
+			          String valueRight = getStringValueFromModel(model, "rightRecord");
 
 			          String backgroundColor = "lightgrey";
 			          if (valueLeft == null && valueRight == null) {
@@ -747,6 +748,15 @@ public class EntityLinkView extends BaseEntityView
 //			          config.style = "background-color:"+backgroundColor+";";
 //			          return value;
 			      }
+
+            private String getStringValueFromModel(BaseModelData model, String property) {
+                Object valueObj = model.get(property);
+                String value = null;
+                if (valueObj != null) {
+                    value = valueObj.toString();
+                }
+                return value;
+            }
 			    };
 
 		column = new ColumnConfig();

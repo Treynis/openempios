@@ -210,8 +210,19 @@ public class UserManagerImpl extends UniversalManagerImpl implements UserManager
     /**
      * {@inheritDoc}
      */
-    public void removeUser(String userId) {
+    public void removeUser(String userIdStr) {
+        Long userId = new Long(userIdStr);
+        User user = userDao.getUser(userId);
+        if (user == null) {
+            log.debug("User to be deleted does not exist in the system: " + userIdStr);
+            return;
+        }
         log.debug("removing user: " + userId);
+        List<UserSession> sessions = userSessionDao.findByUser(userId);
+        for (UserSession session : sessions) {
+            userSessionDao.removeUserSession(session.getSessionKey());
+            log.debug("Removing session before deleting user: " + session);
+        }
         userDao.remove(new Long(userId));
     }
 

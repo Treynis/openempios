@@ -162,10 +162,10 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
         Person person = buildTestPerson("111-11-1111");
         person.setAddress1("TEMP1");
         ClientResponse response = getWebResource().path("person-manager-resource")
-        .path("addPerson")
-        .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        .accept(MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class, person);
+            .path("addPerson")
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class, person);
         if (response.getStatus() != Status.OK.getStatusCode()) {
             assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.CONFLICT.getStatusCode());
         }
@@ -173,10 +173,10 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
         person = buildTestPerson("222-22-2222");
         person.setAddress1("TEMP2");
         response = getWebResource().path("person-manager-resource")
-        .path("addPerson")
-        .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        .accept(MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class, person);
+            .path("addPerson")
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class, person);
         if (response.getStatus() != Status.OK.getStatusCode()) {
             assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.CONFLICT.getStatusCode());
         }
@@ -194,7 +194,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     
     public void testLoadPerson() {
         Person person = new Person();
-        person.setGivenName("Odysseas");
+        person.setGivenName("Neh");
         List<Person> persons = getWebResource().path("person-query-resource")
                 .path("findPersonsByAttributes")
                 .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
@@ -216,7 +216,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     public void testFindPersonsByAttributes() {
         List<Person> persons = null;
         Person person = new Person();
-        person.setGivenName("Odysseas");
+        person.setGivenName("Robert");
         
         persons = getWebResource().path("person-query-resource")
                     .path("findPersonsByAttributes")
@@ -229,7 +229,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     public void testFindPersonsByAttributesPaged() {
         List<Person> persons = null;
         Person person = new Person();
-        person.setGivenName("Odysseas");
+        person.setGivenName("Robert");
    
         PersonPagedRequest personPagedRequest= new PersonPagedRequest(person, 1, 10);
 
@@ -244,7 +244,8 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     
     public void testFindPersonById() {
         Person person = new Person();
-        person.setGivenName("Odysseas");
+        person.setGivenName("Neh");
+        person.setFamilyName("Leane");
         List<Person> persons = getWebResource().path("person-query-resource")
                 .path("findPersonsByAttributes")
                 .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
@@ -266,8 +267,8 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     
     public void testLoadAllUnreviewedPersonLinks() {        
         // get person person right
-        Person personLeft = findTestPerson("Odysseas", "TEMP1");         
-        Person personRight = findTestPerson("Odysseas", "TEMP2");          
+        Person personLeft = findTestPersonByName("Neh", "Leane");         
+        Person personRight = findTestPersonByName("Ned", "Leane");          
         if( personLeft == null || personRight == null ) {
             assertNotNull("Unable to find test person", null);  
             return;
@@ -288,10 +289,10 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
         recordPair.setWeight(1.0);
         
         ClientResponse response = getWebResource().path("person-manager-resource")
-        .path("addReviewRecordPair")
-        .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        .accept(MediaType.APPLICATION_JSON)
-        .put(ClientResponse.class, recordPair);
+            .path("addReviewRecordPair")
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .put(ClientResponse.class, recordPair);
 
         if (response.getStatus() != Status.OK.getStatusCode()) {
             assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.BAD_REQUEST.getStatusCode());
@@ -361,7 +362,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
         }   
         
         // findLinkedPersons
-        Person person = findTestPerson("Odysseas", "TEMP1");       
+        Person person = findTestPersonByName("Neh", "Leane");       
     	PersonIdentifier personIdentifier = person.getPersonIdentifiers().iterator().next();; 
  
     	List<Person> persons = getWebResource().path("person-query-resource")
@@ -373,7 +374,7 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     }
     
     public void testGetPersonLinks() {
-        Person person = findTestPerson("Odysseas", "TEMP1");      
+        Person person = findTestPerson("Master", "TEMP1");      
  
        	List<PersonLink> personLinks = getWebResource().path("person-query-resource")
         			.path("getPersonLinks")
@@ -384,29 +385,29 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
     }
 
     public void testDeletePerson() {
-        Person person = findTestPerson("Odysseas", "TEMP1");  
+        Person person = findTestPerson("Master", "TEMP1");  
 
         // remove person completely
         ClientResponse response = getWebResource().path("person-manager-resource")
-        .path("removePersonById")
-        .queryParam("personId", person.getPersonId().toString())
-        .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        .accept(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+            .path("removePersonById")
+            .queryParam("personId", person.getPersonId().toString())
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
 
-        if (response.getStatus() != Status.OK.getStatusCode()) {
-            assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NOT_FOUND.getStatusCode());
+        if (response.getStatus() != Status.NO_CONTENT.getStatusCode()) {
+            assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NO_CONTENT.getStatusCode());
         }
         
-        person = findTestPerson("Odysseas", "TEMP2");  
+        person = findTestPerson("Master", "TEMP2");  
 
         // remove person completely
         response = getWebResource().path("person-manager-resource")
-        .path("removePersonById")
-        .queryParam("personId", person.getPersonId().toString())
-        .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
-        .accept(MediaType.APPLICATION_JSON)
-        .post(ClientResponse.class);
+            .path("removePersonById")
+            .queryParam("personId", person.getPersonId().toString())
+            .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+            .accept(MediaType.APPLICATION_JSON)
+            .post(ClientResponse.class);
 
         if (response.getStatus() != Status.OK.getStatusCode()) {
             assertFalse("Incorrect status code received of " + response, response.getStatus() == Status.NOT_FOUND.getStatusCode());
@@ -419,6 +420,25 @@ public class PersonQueryServiceAdapterTest extends BaseRestfulServiceTestCase
         Person person = new Person();
         person.setGivenName(givenName);
         person.setAddress1(address);
+        
+        persons = getWebResource().path("person-query-resource")
+                    .path("findPersonsByAttributes")
+                    .header(OPENEMPI_SESSION_KEY_HEADER, getSessionKey())
+                    .accept(MediaType.APPLICATION_XML)
+                    .post(new GenericType<List<Person>>(){}, person);
+ 
+        if (persons == null || persons.size() == 0) {
+            return null;
+        }        
+        return persons.get(0);              
+    }
+    
+    public Person findTestPersonByName(String givenName, String familyName) {
+        
+        List<Person> persons = null;
+        Person person = new Person();
+        person.setGivenName(givenName);
+        person.setFamilyName(familyName);
         
         persons = getWebResource().path("person-query-resource")
                     .path("findPersonsByAttributes")

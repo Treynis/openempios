@@ -21,6 +21,7 @@
 package org.openhie.openempi.openpixpdqadapter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -233,19 +234,21 @@ public class PixManagerAdapter extends BasePixPdqAdapter implements IPixManagerA
 				return ret;
 			}
 			
+			Set<PatientIdentifier> idSet = new HashSet<PatientIdentifier>();
 			for (PersonIdentifier id : personFound.getPersonIdentifiers()) {
 				if (!id.equals(searchIdentifier)) {
-					ret.add(ConversionHelper.getPatientIdentifier(id));
+					idSet.add(ConversionHelper.getPatientIdentifier(id));
 				}
 			}
 			List<Person> persons = Context.getPersonQueryService().findLinkedPersons(searchIdentifier);
 			for (Person person : persons) {
 				for (PersonIdentifier id : person.getPersonIdentifiers()) {
 					if (!id.equals(searchIdentifier)) {
-						ret.add(ConversionHelper.getPatientIdentifier(id));
+						idSet.add(ConversionHelper.getPatientIdentifier(id));
 					}
 				}
 			}
+			ret.addAll(idSet);
 		} catch (Exception e) {
 			throw new PixManagerException(e);
 		}

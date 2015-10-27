@@ -34,8 +34,10 @@ import org.apache.commons.collections.buffer.CircularFifoBuffer;
 import org.openempi.webapp.client.EventNotificationService;
 import org.openempi.webapp.client.model.NotificationEventWeb;
 import org.openhie.openempi.context.Context;
+import org.openhie.openempi.model.Identifier;
 import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.PersonIdentifier;
+import org.openhie.openempi.model.Record;
 import org.openhie.openempi.notification.MergeNotificationEvent;
 import org.openhie.openempi.notification.MessageHandler;
 import org.openhie.openempi.notification.NotificationEvent;
@@ -129,24 +131,24 @@ public class EventNotificationServiceImpl extends AbstractRemoteServiceServlet i
 			event.setEventTypeName(eventObj.getEventType().getEventTypeName());
 			event.setMessageId(message.getJMSMessageID());
 			event.setTimestamp(new java.util.Date(message.getJMSTimestamp()));
-			event.setPersonIdentifier(getPersonIdentifier(eventObj));
+			event.setIdentifier(getIdentifier(eventObj));
 			return event;
 		}
 
-		private String getPersonIdentifier(NotificationEvent event) {
-			Person person;
+		private String getIdentifier(NotificationEvent event) {
+			Record record;
 			if (event instanceof MergeNotificationEvent) {
 				MergeNotificationEvent merge = (MergeNotificationEvent) event;
-				Person[] persons = (Person[]) merge.getEventData();
-				person = persons[0];
+				Record[] records = (Record[]) merge.getEventData();
+				record = records[0];
 			} else {
-				person = (Person) event.getEventData();
+				record = (Record) event.getEventData();
 			}
 			
-			if (person.getPersonIdentifiers() == null || person.getPersonIdentifiers().size() == 0) {
+			if (record.getIdentifiers() == null || record.getIdentifiers().size() == 0) {
 				return null;
 			}
-			PersonIdentifier identifier =  person.getPersonIdentifiers().iterator().next();
+			Identifier identifier =  record.getIdentifiers().iterator().next();
 			return identifier.getIdentifier();
 		}
 	}

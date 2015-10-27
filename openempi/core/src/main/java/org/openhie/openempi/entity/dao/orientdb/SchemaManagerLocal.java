@@ -40,6 +40,9 @@ public class SchemaManagerLocal extends SchemaManagerAbstract
             dataDirectory = ".";
         }
         String storeUrl = PLOCAL_STORAGE_MODE + ":" + dataDirectory + "/" + storageName;
+        if (log.isInfoEnabled()) {
+            log.info("Connecting to database using URL: " + storeUrl);
+        }
         return new EntityStore(entityName, storeName, storeUrl, storageName);
     }
 

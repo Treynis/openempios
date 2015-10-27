@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hl7.v3.ADExplicit;
 import org.hl7.v3.AdxpExplicitCity;
+import org.hl7.v3.AdxpExplicitCountry;
 import org.hl7.v3.AdxpExplicitPostalCode;
 import org.hl7.v3.AdxpExplicitState;
 import org.hl7.v3.AdxpExplicitStreetAddressLine;
@@ -455,6 +456,12 @@ public class AbstractIheService extends BaseHandler
 						log.debug("found postalCode element; content=" + postalCode.getContent());
 						address.setAddZip(postalCode.getContent());
 					}
+				} else if (oJAXBElement.getValue() instanceof AdxpExplicitCountry) {
+				    AdxpExplicitCountry country = (AdxpExplicitCountry) oJAXBElement.getValue();
+                    if (country.getContent() != null) {
+                        log.debug("found countryCode element; content=" + country.getContent());
+                        address.setAddCountry(country.getContent());
+                    }
 				} else {
 					log.warn("other name part=" + oJAXBElement.getValue());
 				}

@@ -22,6 +22,12 @@ package org.openhie.openempi.cluster;
 
 public enum ServiceName
 {
+    PERSON_MANAGER_RESOURCE_SERVICE("personManagerResourceService",
+            "personManagerResourceServiceImpl",
+            "personManagerResourceServiceClusterImpl"),
+    PERSON_QUERY_RESOURCE_SERVICE("personQueryResourceService",
+            "personQueryResourceServiceImpl",
+            "personQueryResourceServiceClusterImpl"),
     RECORD_LINK_RESOURCE_SERVICE("recordLinkResourceService",
             "recordLinkResourceServiceImpl",
             "recordLinkResourceServiceClusterImpl"),

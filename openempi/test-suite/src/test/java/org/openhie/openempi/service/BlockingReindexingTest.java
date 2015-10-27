@@ -23,17 +23,12 @@ package org.openhie.openempi.service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.openhie.openempi.blocking.BlockingLifecycleObserver;
 import org.openhie.openempi.blocking.BlockingService;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
-import org.openhie.openempi.entity.ForEachRecordConsumer;
-import org.openhie.openempi.entity.RecordConsumer;
-import org.openhie.openempi.entity.SampleRecordConsumer;
 import org.openhie.openempi.model.Entity;
 
 public class BlockingReindexingTest extends BaseServiceTestCase

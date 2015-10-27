@@ -23,6 +23,7 @@ package org.openhie.openempi.entity.impl;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 
+import org.openhie.openempi.context.UserContext;
 import org.openhie.openempi.entity.RecordConsumer;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Record;
@@ -32,6 +33,7 @@ public abstract class AbstractRecordConsumer implements RecordConsumer
 	private BlockingQueue<Record> queue;
 	private CountDownLatch latch;
 	private Entity entity;
+	private UserContext userContext;
 	
 	public Entity getEntity() {
         return entity;
@@ -56,4 +58,12 @@ public abstract class AbstractRecordConsumer implements RecordConsumer
 	public void setLatch(CountDownLatch latch) {
 		this.latch = latch;
 	}
+
+    public UserContext getUserContext() {
+        return userContext;
+    }
+
+    public void setUserContext(UserContext userContext) {
+        this.userContext = userContext;
+    }
 }

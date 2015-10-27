@@ -31,7 +31,7 @@ import org.openhie.openempi.model.Entity;
 public class ClearCustomFieldsTest extends BaseServiceTestCase
 {
 	public void testCustomFieldGeneration() {
-        RecordManagerService entityManagerService = Context.getRecordManagerService();
+        RecordManagerService recordManagerService = Context.getRecordManagerService();
         EntityDefinitionManagerService entityManager = Context.getEntityDefinitionManagerService();
         try {
             List<Entity> entities = entityManager.loadEntities();
@@ -39,7 +39,7 @@ public class ClearCustomFieldsTest extends BaseServiceTestCase
                 return;
             }
             Entity entity = entities.get(0);
-            entityManagerService.generateCustomFields(entity);
+            recordManagerService.generateCustomFields(entity);
         } catch (ApplicationException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

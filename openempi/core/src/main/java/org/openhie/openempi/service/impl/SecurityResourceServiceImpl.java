@@ -23,6 +23,7 @@ package org.openhie.openempi.service.impl;
 import org.openhie.openempi.AuthenticationException;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.service.SecurityResourceService;
+import org.openhie.openempi.util.ConvertUtil;
 
 public class SecurityResourceServiceImpl extends BaseServiceImpl implements SecurityResourceService
 {
@@ -32,4 +33,21 @@ public class SecurityResourceServiceImpl extends BaseServiceImpl implements Secu
         }
         return Context.authenticate(username, password);
     }
+
+	@Override
+	public String isSessionValid(String sessionKey) {
+		if (ConvertUtil.isNullOrEmpty(sessionKey)) {
+			return Boolean.FALSE.toString();
+		}
+		
+		try {
+			Context.authenticate(sessionKey);
+			return Boolean.TRUE.toString();
+		} catch (Exception e) {
+			if (log.isDebugEnabled()) {
+				log.debug("Invalid session key was passed in for authentication.");
+			}
+		}
+		return Boolean.FALSE.toString();
+	}
 }

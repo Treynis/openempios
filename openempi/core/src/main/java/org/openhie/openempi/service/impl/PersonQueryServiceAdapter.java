@@ -179,7 +179,10 @@ public class PersonQueryServiceAdapter extends BaseServiceImpl implements Person
 	public List<Person> loadPersons(List<Integer> personIds) {
 		List<Person> persons = new ArrayList<Person>();
 		for (Integer personId : personIds) {
-			persons.add(loadPerson(personId));
+			Person person = loadPerson(personId);
+			if (person != null) {
+				persons.add(person);
+			}
 		}
 		return persons;
 	}
@@ -407,18 +410,68 @@ public class PersonQueryServiceAdapter extends BaseServiceImpl implements Person
 	}
 	   
 	public List<Person> findMatchingPersonsByAttributes(Person person) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-    public List<Person> getSingleBestRecords(List<Integer> personIds) {
-        // TODO Auto-generated method stub
+        ValidationService validationService = Context.getValidationService();
+        validationService.validate(person);
+        
+        if( getEntity() != null && person != null ) {           
+            // convert Person to Record
+            Record theRecord = ConvertUtil.getRecordFromPersonForSearch(getEntity(), person);
+            if (theRecord == null) {
+                return null;
+            }
+            
+            //TODO: This needs to be fixed.
+            List<Record> records = recordQueryService.findRecordsByAttributes(getEntity(), theRecord);          
+            List<Person> persons = new java.util.ArrayList<Person>();
+            for (Record record : records) {
+                // convert Record to Person
+                Person personInstance = ConvertUtil.getPersonFromRecord(personDao, record);
+                persons.add(personInstance);
+            }               
+            return persons;
+        }       
         return null;
+    }
+	
+    public List<Person> getSingleBestRecords(List<Integer> personIds) {
+        if (personIds == null || getEntity() == null || Context.getSingleBestRecordService() == null) {
+            return new ArrayList<Person>();
+        }
+        List<Person> persons = new ArrayList<Person>(personIds.size());
+        for (Integer personId : personIds) {
+            Person person = getSingleBestRecord(personId);
+            persons.add(person);
+        }
+        return persons;
     }
 
     public Person getSingleBestRecord(Integer personId) {
-        // TODO Auto-generated method stub
-        return null;
+        
+        if (getEntity() == null || personId == null) {
+            return null;
+        }
+        
+        // First load the source record
+        Person person = loadPerson(personId);
+        if (person == null || Context.getSingleBestRecordService() == null) {
+            // If we can't find the person, then return a blank record
+            return new Person();
+        }
+        List<Person> linkedPersons = findLinkedPersons(person);
+        if (linkedPersons == null || linkedPersons.size() == 0) {
+            return person;
+        }
+            
+        // Add the person itself to the list to complete the cluster
+        linkedPersons.add(person);
+        List<Record> records = new java.util.ArrayList<Record>(linkedPersons.size());
+        for (Person aPerson : linkedPersons) {
+            records.add(ConvertUtil.getRecordFromPerson(getEntity(), aPerson));
+        }
+        
+        Record filteredRecord = Context.getSingleBestRecordService().getSingleBestRecord(records);
+        Person filteredPerson = loadPerson(filteredRecord.getRecordId().intValue());
+        return filteredPerson;
     }
     
 	public List<Person> findPersonsByAttributesPaged(Person person, int firstResult, int maxResults) {

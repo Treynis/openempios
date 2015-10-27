@@ -45,6 +45,7 @@ public class Constants {
 	public static final String RECEIVING_FACILITY = "ReceivingFacility";
 	
 	//property names
+    public static final String UPPERCASE_NAMES = "uppercase.names";
 	public static final String VALIDATE_RECEIVING_APPLICATION = "validate.receiving.application";
 	public static final String VALIDATE_RECEIVING_FACILITY    = "validate.receiving.facility";
 	

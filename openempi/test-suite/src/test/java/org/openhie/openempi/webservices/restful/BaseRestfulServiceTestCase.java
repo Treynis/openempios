@@ -30,6 +30,7 @@ import org.openempi.webservices.restful.model.AuthenticationRequest;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.filter.LoggingFilter;
 
 public class BaseRestfulServiceTestCase extends BaseServiceTestCase
 {
@@ -42,6 +43,7 @@ public class BaseRestfulServiceTestCase extends BaseServiceTestCase
 	@Override
 	protected void onSetUp() throws Exception {
 		client = Client.create();
+		client.addFilter(new LoggingFilter(System.out));
 		resource = client.resource(getBaseURI(null));
 		AuthenticationRequest request = new AuthenticationRequest("admin", "admin");
 		sessionKey = resource.path("security-resource")

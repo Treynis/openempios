@@ -8,14 +8,32 @@
 	<parent>
 		<groupId>org.openhie.openempi</groupId>
 		<artifactId>openempi-entity</artifactId>
-		<version>3.0.0</version>
+		<version>3.1.0</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 
 	<artifactId>openempi-entity-file-loader-map</artifactId>
 	<packaging>jar</packaging>
 	<name>OpenEMPI Entity - File Loader with Mapping</name>
+	<licenses>
+		<license>
+			<name>GNU Affero General Public License, Version 3</name>
+			<url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
+			<comments>The software ("Software") developed and owned by Network Engine for
+			Objects in Lund AB (referred to in this notice as "Neo Technology") is
+			licensed under the GNU AFFERO GENERAL PUBLIC LICENSE Version 3 to all
+			third parties and that license is included below.
 
+			However, if you have executed an End User Software License and Services
+			Agreement or an OEM Software License and Support Services Agreement, or
+			another commercial license agreement with Neo Technology or one of its
+			affiliates (each, a "Commercial Agreement"), the terms of the license in
+			such Commercial Agreement will supersede the GNU AFFERO GENERAL PUBLIC
+			LICENSE Version 3 and you may use the Software solely pursuant to the
+			terms of the relevant Commercial Agreement.
+			</comments>
+		</license>
+	</licenses>
 	<dependencies>
 		<dependency>
 			<groupId>org.openhie.openempi</groupId>

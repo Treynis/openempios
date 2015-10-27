@@ -19,7 +19,6 @@
  */
 package org.openhealthtools.openpixpdq.impl.v2;
 
-import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.log4j.Logger;
@@ -32,18 +31,19 @@ import org.openhealthtools.openpixpdq.api.IJMXEventNotifier;
 import org.openhealthtools.openpixpdq.api.IPixManager;
 import org.openhealthtools.openpixpdq.common.Constants;
 import org.openhealthtools.openpixpdq.common.HL7Actor;
-import org.openhealthtools.openpixpdq.impl.v2.hl7.HL7Server;
 
-import ca.uhn.hl7v2.app.Application;
+import ca.uhn.hl7v2.DefaultHapiContext;
+import ca.uhn.hl7v2.HapiContext;
 import ca.uhn.hl7v2.app.Connection;
 import ca.uhn.hl7v2.app.ConnectionHub;
+import ca.uhn.hl7v2.app.HL7Service;
 import ca.uhn.hl7v2.app.Initiator;
-import ca.uhn.hl7v2.llp.LowerLayerProtocol;
 import ca.uhn.hl7v2.llp.MinLowerLayerProtocol;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.parser.GenericParser;
 import ca.uhn.hl7v2.parser.Parser;
 import ca.uhn.hl7v2.parser.PipeParser;
+import ca.uhn.hl7v2.protocol.ReceivingApplication;
 
 /**
  * This is the Patient Identifier Cross-referencing (PIX) Manager actor, 
@@ -54,8 +54,6 @@ import ca.uhn.hl7v2.parser.PipeParser;
  * <a href="http://www.ihe.net/Technical_Framework/index.cfm#IT">Vol. 2 (ITI TF-2): Transactions</a>, 
  * available on the IHE site for more details.   
  *
- * @author Wenzhi Li
- * @version 1.0, Mar 1, 2007
  * @see IPixManager
  */
 public class PixManager extends HL7Actor implements IPixManager {
@@ -69,7 +67,9 @@ public class PixManager extends HL7Actor implements IPixManager {
     /* The connections for PIX Consumers that subscribe to the PIX Update Notification*/
     private Collection<IConnectionDescription> pixConsumerConnections = null;
     /** The PIX Server */
-    private HL7Server server = null;
+    private HapiContext ctx;
+    private HL7Service server = null;
+
     /** PIX event notifier **/
     private IJMXEventNotifier pixEvent = null; 
     /** Whether to get notification from eMPI about patient changes*/
@@ -102,13 +102,14 @@ public class PixManager extends HL7Actor implements IPixManager {
     public void start() {
         //call the super one to initiate standard start process
         super.start();
-        //now begin the local start, initiate pix manager server
-        LowerLayerProtocol llp = LowerLayerProtocol.makeLLP(); // The transport protocol
-        PipeParser parser = new PipeParser();
-        parser.setValidationContext(new MessageValidation());
-        server = new HL7Server(connection, llp, parser);
-        Application pixQuery = new PixQueryHandler(this);
-        Application pixFeed  = new PixFeedHandler(this);
+        ctx = new DefaultHapiContext();
+        ctx.setValidationContext(new MessageValidation());
+        MinLowerLayerProtocol mllp = new MinLowerLayerProtocol(true);
+        ctx.setLowerLayerProtocol(mllp);
+        
+        server = ctx.newServer(connection.getPort(), false);
+        ReceivingApplication  pixQuery = new PixQueryHandler(this);
+        ReceivingApplication pixFeed  = new PixFeedHandler(this);
      
         //Notification
         if (isNotification()){
@@ -139,6 +140,7 @@ public class PixManager extends HL7Actor implements IPixManager {
     public void stop() {
         //now end the local stop, stop the pix manager server
         server.stop();
+        ctx.getExecutorService().shutdown();
 
         //call the super one to initiate standard stop process
         super.stop();

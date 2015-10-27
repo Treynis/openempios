@@ -20,6 +20,7 @@
  */
 package org.openhie.openempi.entity.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.InitializationException;
@@ -37,8 +39,10 @@ import org.openhie.openempi.configuration.GlobalIdentifier;
 import org.openhie.openempi.context.Context;
 import org.openhie.openempi.dao.UniversalDao;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
+import org.openhie.openempi.entity.ForEachRecordConsumer;
 import org.openhie.openempi.entity.PersistenceLifecycleObserver;
 import org.openhie.openempi.entity.RecordCacheManager;
+import org.openhie.openempi.entity.RecordConsumer;
 import org.openhie.openempi.entity.RecordManagerService;
 import org.openhie.openempi.matching.MatchingService;
 import org.openhie.openempi.matching.ShallowMatchingService;
@@ -218,8 +222,9 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
                 savedRecords = getEntityDao().saveRecords(entity, records);
             }
 
-            // Generate a notification event to inform interested listeners via the lightweight mechanism that this event has occurred.
-            Context.notifyObserver(ObservationEventType.RECORDS_ADD_EVENT, records);
+            // Generate a notification event to inform interested listeners via the lightweight mechanism that
+            // this event has occurred.
+            Context.notifyObserver(ObservationEventType.RECORDS_ADD_EVENT, savedRecords);
             
             for (Record record : savedRecords) {
                 if (entity.getSynchronousMatching()) {
@@ -367,8 +372,14 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
 		validateRecordLink(entityDef, link);
 		try {
+            RecordState state = new RecordState(link.getLeftRecord().getRecordId(), IdentifierUpdateEvent.LINK_SOURCE);
 			link = getEntityDao().saveRecordLink(link);
-			return link;
+
+			if (Context.getConfiguration().getGlobalIdentifier().isAssignGlobalIdentifier()) {
+                updateGlobalIdentifier(link, state);
+            }
+
+            return link;
 		} catch (Exception e) {
 			throw new ApplicationException(e.getMessage());
 		}
@@ -406,7 +417,12 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		loadedLink.setDateReviewed(new Date());
 		loadedLink.setUserReviewedBy(Context.getUserContext().getUser());
 		try {
+		    
+            RecordState state = new RecordState(link.getLeftRecord().getRecordId(), IdentifierUpdateEvent.LINK_SOURCE);		    
 			link = getEntityDao().saveRecordLink(link);
+            if (Context.getConfiguration().getGlobalIdentifier().isAssignGlobalIdentifier()) {
+                updateGlobalIdentifier(link, state);
+            }
 
 			if( link.getState() == RecordLinkState.MATCH ) {
 
@@ -444,7 +460,11 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 
         validateRecordLink(entityDef, link);
         try {
+            RecordState state = new RecordState(link.getLeftRecord().getRecordId(), IdentifierUpdateEvent.LINK_SOURCE);
             getEntityDao().removeRecordLink(link);
+            if (Context.getConfiguration().getGlobalIdentifier().isAssignGlobalIdentifier()) {
+                updateGlobalIdentifierOnRemove(link, state);
+            }
         } catch (Exception e) {
             throw new ApplicationException(e.getMessage());
         }
@@ -738,7 +758,46 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         }
         return true;
     }
-    
+
+    private void updateGlobalIdentifier(RecordLink link, RecordState state) throws ApplicationException {
+        Identifier globalIdentifier = null;
+        globalIdentifier = extractGlobalIdentifier(link.getLeftRecord());
+        if (globalIdentifier != null) {
+            removeGlobalIdentifier(link.getRightRecord(),
+                    Context.getConfiguration().getGlobalIdentifierDomain());
+            globalIdentifier = cloneGlobalIdentifier(globalIdentifier);
+            link.getRightRecord().addIdentifier(globalIdentifier);
+            globalIdentifier.setRecord(link.getRightRecord());
+            getEntityDao().updateRecord(link.getRightRecord().getEntity(), link.getRightRecord());
+        } else {
+            log.warn("Found an existing record that doesn't have a global identifier: "
+                    + link.getLeftRecord().getEntity() + "," + link.getLeftRecord().getRecordId());
+        }
+        state.getPostLinks().add(link);
+        getUpdateEventNotificationGenerator().generateEvents(state);
+    }
+
+    private void updateGlobalIdentifierOnRemove(RecordLink link, RecordState state) throws ApplicationException {
+        Identifier globalIdentifier = extractGlobalIdentifier(link.getRightRecord());
+        if (globalIdentifier != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Removing global identifier " + globalIdentifier + " from record " +
+                        link.getRightRecord().getRecordId());
+            }
+            removeGlobalIdentifier(link.getRightRecord(),
+                    Context.getConfiguration().getGlobalIdentifierDomain());
+        }
+        globalIdentifier = generateGlobalIdentifier(Context.getConfiguration().getGlobalIdentifierDomain(),
+                link.getRightRecord());
+        getEntityDao().updateRecord(link.getRightRecord().getEntity(), link.getRightRecord());
+        if (log.isDebugEnabled()) {
+            log.debug("Adding a new global identifier " + globalIdentifier + " to record: "
+                    + link.getRightRecord().getRecordId());
+        }
+        state.getPostLinks().add(link);
+        getUpdateEventNotificationGenerator().generateEvents(state);
+    }
+
     private void assignGlobalIdentifier(IdentifierDomain domain, Entity entity, Record record, Map<Long, Long> ids,
             boolean hasLinks) throws ApplicationException {
         // If already processed through a linked entry then skip it
@@ -749,7 +808,6 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
         if (log.isDebugEnabled()) {
             log.debug("Assigning global identifier to record " + record.getRecordId());
         }
-        log.debug("Assigning global identifier to record " + record.getRecordId());
         Identifier globalIdentifier=null;
         if (!hasLinks) {
             globalIdentifier = generateGlobalIdentifier(domain, record);
@@ -889,7 +947,18 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 		}
 	}
 
-	public void generateCustomFields(Entity entity) throws ApplicationException {
+	public void generateCustomFieldsNew(Entity entity) throws ApplicationException {
+	    ForEachRecordConsumer forEach = Context.getForEachRecordConsumer();
+        Set<RecordConsumer> consumers = new HashSet<RecordConsumer>();
+        RecordConsumerForCustomFields consumer = new RecordConsumerForCustomFields();
+        consumer.setEntity(entity);
+        consumer.setUserContext(Context.getUserContext());
+        consumers.add(consumer);
+        log.info("Initiating custom field generation.");
+        forEach.startProcess(consumers, true);
+	}
+
+    public void generateCustomFields(Entity entity) throws ApplicationException {
 		if (entity == null || entity.getName() == null) {
 			log.debug("Attempted to generate custom fields for an entity without specifying the entity type.");
 			throw new ApplicationException("Failed to generate custom fields for an entity of unspecified type.");
@@ -997,4 +1066,44 @@ public class RecordManagerServiceImpl extends RecordCommonServiceImpl implements
 	public void setEntityCacheManager(RecordCacheManager entityCacheManager) {
 		this.entityCacheManager = entityCacheManager;
 	}
+    
+    private class RecordConsumerForCustomFields extends AbstractRecordConsumer
+    {
+        @Override
+        public void run() {
+            int count = 0;
+            boolean done = false;
+            Context.setUserContext(getUserContext());
+            try {
+                List<Record> chunk = new ArrayList<Record>();
+                while (!done) {
+                    Record record = getQueue().poll(5, TimeUnit.SECONDS);
+                    if (record != null) {
+                        chunk.add(record);
+                        count++;
+                        if (chunk.size() >= 100) {
+                            generateCustomFields(getEntity(), chunk);
+                            chunk.clear();
+                        }
+                        if (count % 10000 == 0) {
+                            log.info("Consumer " + Thread.currentThread().getName() + " processed " + count + " records.");
+                        }
+                    } else {
+                        done = true;
+                    }
+                }
+                if (chunk.size() > 0) {
+                    log.info("Consumer " + Thread.currentThread().getName() + " processed last chunk of " + chunk.size() + 
+                            " for a total of " + count + " records.");
+                    generateCustomFields(getEntity(), chunk);
+                }
+            } catch (ApplicationException e) {
+                log.error("Failed while generating custom fields.", e);
+            } catch (InterruptedException e) {
+                log.error("Finished the while loop.", e);
+            } finally {
+                getLatch().countDown();
+            }
+        }
+    }
 }

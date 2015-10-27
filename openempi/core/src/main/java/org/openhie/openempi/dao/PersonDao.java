@@ -26,6 +26,7 @@ import java.util.Set;
 import org.openhie.openempi.model.Gender;
 import org.openhie.openempi.model.IdentifierDomain;
 import org.openhie.openempi.model.IdentifierDomainAttribute;
+import org.openhie.openempi.model.Nationality;
 import org.openhie.openempi.model.Person;
 import org.openhie.openempi.model.PersonIdentifier;
 import org.openhie.openempi.model.Race;
@@ -116,4 +117,8 @@ public interface PersonDao extends UniversalDao
 	public Gender findGenderByName(String genderName);
 
 	public Gender findGenderByCode(String genderCode);
+    
+    public Nationality findNationalityByName(String genderName);
+
+    public Nationality findNationalityByCode(String genderCode);
 }

@@ -949,6 +949,24 @@ public class PersonDaoHibernate extends UniversalDaoHibernate implements PersonD
 		return list.get(0);
 	}
 
+    @SuppressWarnings("unchecked")
+    public Nationality findNationalityByCode(String nationalityCode) {
+        List<Nationality> list = (List<Nationality>) getHibernateTemplate().
+                find("from Nationality as n where n.nationalityCode = ?", nationalityCode);
+        if (list.size() == 0)
+            return null;
+        return list.get(0);        
+    }
+
+    @SuppressWarnings("unchecked")
+    public Nationality findNationalityByName(String nationalityName) {
+        List<Nationality> list = (List<Nationality>) getHibernateTemplate().
+                find("from Nationality as n where n.nationalityName = ?", nationalityName);
+        if (list.size() == 0)
+            return null;
+        return list.get(0);
+    }
+    
 	@SuppressWarnings("unchecked")
 	public Race findRaceByName(String raceName) {
 		List<Race> list = (List<Race>) getHibernateTemplate().

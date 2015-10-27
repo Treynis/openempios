@@ -59,11 +59,11 @@
   <servlet>
     <servlet-name>initializationService</servlet-name>
     <servlet-class>org.openempi.webapp.server.InitializationServlet</servlet-class>
-    <load-on-startup>1</load-on-startup>
     <init-param>
     	<param-name>OPENEMPI_UPDATES_SITE</param-name>
     	<param-value>http://www.openempi.org/openempi-downloads/openempi_updates/</param-value>
     </init-param>
+    <load-on-startup>1</load-on-startup>
   </servlet>
   
   <servlet>

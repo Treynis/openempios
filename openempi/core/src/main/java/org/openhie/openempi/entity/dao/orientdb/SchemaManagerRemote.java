@@ -38,7 +38,11 @@ public class SchemaManagerRemote extends SchemaManagerAbstract
         String storeName = entityName;
         String storageName = buildStoreName(entityName);
         String dataDirectory = Context.getConfiguration().getAdminConfiguration().getDataDirectory();
-        String storeUrl = REMOTE_STORAGE_MODE + ":localhost/" + dataDirectory + "/" + storageName;
+        String storeUrl = REMOTE_STORAGE_MODE + ":" + connectionManager.getServer() +
+                ":" + connectionManager.getPort() + "/" + dataDirectory + "/" + storageName;
+        if (log.isInfoEnabled()) {
+            log.info("Connecting to database using URL: " + storeUrl);
+        }
         return new EntityStore(entityName, storeName, storeUrl, storageName);
     }
 

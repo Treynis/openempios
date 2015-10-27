@@ -60,6 +60,13 @@ public interface UserDao extends GenericDao<User, Long>
     User getUser(Long userId);
     
     /**
+     * Gets the specific user identified by the username passed into the call.
+     * 
+     * @return User the user if found or null otherwise.
+     */
+    User getUser(String username);
+    
+    /**
      * Saves a user's information.
      * @param user the object to be saved
      * @return the persisted User object

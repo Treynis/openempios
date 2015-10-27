@@ -22,6 +22,7 @@ package org.openhie.openempi.context;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openhie.openempi.ApplicationException;
 import org.openhie.openempi.AuthenticationException;
 import org.openhie.openempi.Constants;
 import org.openhie.openempi.blocking.BlockingLifecycleObserver;
@@ -84,7 +86,8 @@ public class Context implements ApplicationContextAware
     protected static final Log log = LogFactory.getLog(Context.class);
 	private static final int THREAD_POOL_SIZE = 5;
 	private static final int SCHEDULER_THREAD_POOL_SIZE = 5;
-	
+    private static final long ENTITY_REGISTRY_LIFETIME_DURATION = 60000;
+
 	private static final ThreadLocal<Object[] /* UserContext */> userContextHolder = new ThreadLocal<Object[] /* UserContext */>();
 	private static ApplicationContext applicationContext;
 	private static ClusterManager clusterManager;
@@ -98,6 +101,8 @@ public class Context implements ApplicationContextAware
 	private static IdentifierDomainService identifierDomainService;
 	private static ValidationService validationService;
 	private static Configuration configuration;
+    private static Map<String,Object> localConfigurationRegistry;
+    private static Map<String,EntityRegistryEntry> entityRegistryCache = new HashMap<String,EntityRegistryEntry>();
 	private static List<MatchingService> matchingServiceList = new ArrayList<MatchingService>();
 	private static Map<String,MatchingService> matchingServiceMap = new HashMap<String,MatchingService>();
     private static List<BlockingService> blockingServiceList = new ArrayList<BlockingService>();
@@ -117,6 +122,7 @@ public class Context implements ApplicationContextAware
 	private static ScheduledExecutorService scheduler;
 	private static DataAccessIntent currentIntent;
 	private static boolean isInitialized = false;
+	private static boolean isClusterNode = false;
 	private static Map<ObservationEventType,EventObservable> observableByType = new HashMap<ObservationEventType,EventObservable>(); 
 	
 	static {
@@ -136,8 +142,7 @@ public class Context implements ApplicationContextAware
             startCluster();
 			configuration.init();
 			threadPool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-			scheduler = Executors.newScheduledThreadPool(SCHEDULER_THREAD_POOL_SIZE);
-			
+
 			startPersistenceService();
 			for (BlockingService service : blockingServiceList) {
 			    startBlockingService(service);
@@ -149,20 +154,25 @@ public class Context implements ApplicationContextAware
 			    startShallowMatchingService(service);
 			}
 			startNotificationService();
-			startScheduledTasks();
+			if (!isClusterNode) {
+				startScheduledTasks();
+			}
+			if (Context.isInClusterMode()) {
+			    getClusterManager().nodeIsReady();
+			}
 			isInitialized = true;
 		} catch (Throwable t) {
 			log.error("Failed while setting up the context for OpenEMPI: " + t, t);
 		}
 	}
-	
-	private static void startCluster() {
-	    clusterManager = new ClusterManager();
-	    clusterManager.start();
-    }
 
     public static void shutdown() {
-        stopScheduledTasks();
+    	if (Context.isInClusterMode()) {
+		    getClusterManager().nodeIsGoingDown();    		
+    	}
+    	if (!isClusterNode) {
+    		stopScheduledTasks();
+    	}
         stopFileLoaders();
         for (MatchingService service : matchingServiceList) {
             stopMatchingService(service);
@@ -175,10 +185,33 @@ public class Context implements ApplicationContextAware
         }
 		stopPersistenceService(null);
 		stopThreadPool();
-		clusterManager.stop();
+        stopCluster();
 		isInitialized = false;		
 	}
-	
+    
+    private static void startCluster() {
+        if (Context.isInClusterMode()) {
+            clusterManager = (ClusterManager) getApplicationContext().getBean(Constants.CLUSTER_MANAGER);
+            try {
+                getClusterManager().start();
+            } catch (ApplicationException e) {
+                log.error("Failed while starting the Cluster Manager: " + e, e);
+            }
+        } else {
+            localConfigurationRegistry = new HashMap<String,Object>();
+        }
+    }
+    
+    private static void stopCluster() {
+        if (Context.isInClusterMode()) {
+            try {
+                getClusterManager().stop();
+            } catch (ApplicationException e) {
+                log.error("Failed while shutting down the Cluster Manager: " + e, e);
+            }
+        }       
+    }
+
 	private static void stopFileLoaders() {
 	    FileLoader fileLoader = FileLoaderFactory.getFileLoader(getApplicationContext(), Constants.FLEXIBLE_FILE_LOADER);
 	    fileLoader.shutdown();
@@ -304,7 +337,7 @@ public class Context implements ApplicationContextAware
 		return openEmpiHome;
 	}
 
-	public static boolean isInCLusterMode() {
+	public static boolean isInClusterMode() {
 	    String value = System.getProperty(Constants.OPENEMPI_CLUSTER_MODE);
 	    if (value == null || value.isEmpty()) {
 	        return false;
@@ -392,6 +425,8 @@ public class Context implements ApplicationContextAware
 	
 	private static void startScheduledTasks() {
 		try {
+			scheduler = Executors.newScheduledThreadPool(SCHEDULER_THREAD_POOL_SIZE);
+
 			log.info("Scheduling tasks...");
 			@SuppressWarnings("unchecked")
 			List<ScheduledTaskEntry> list = (List<ScheduledTaskEntry>)
@@ -423,7 +458,11 @@ public class Context implements ApplicationContextAware
 
 	public static String authenticate(String username, String password)
 			throws AuthenticationException {
-		return getUserContext().authenticate(username, password);
+		String sessionKey = getUserContext().authenticate(username, password);
+		if (log.isDebugEnabled()) {
+			log.debug("Authentication request succeeded for user " + username);
+		}
+		return sessionKey;
 	}
 	
 	public static User authenticate(String sessionKey)
@@ -431,17 +470,51 @@ public class Context implements ApplicationContextAware
 		return getUserContext().authenticate(sessionKey);
 	}
 
-    public static Map<String, Object> getConfigurationRegistry() {
-        return clusterManager.getConfigurationRegistry();
-    }
-
     public static Object lookupConfigurationEntry(String entityName, String key) {
-        return clusterManager.lookupConfigurationEntry(entityName, key);
+        Map<String, Object> entityRegistry = getEntityRegistryFromCache(entityName);
+        return entityRegistry.get(key);
     }
-
 
     public static void registerConfigurationEntry(String entityName, String key, Object entry) {
-        clusterManager.registerConfigurationeEntry(entityName, key, entry);
+        Map<String,Object> entityRegistry = getEntityRegistryFromCache(entityName);
+        if (entityRegistry == null) {
+            entityRegistry = new HashMap<String,Object>();
+        }
+        log.info("Registering configuration entry " + entry + " with key " + key +
+                " in the registry for entity: " + entityName);
+        entityRegistry.put(key, entry);
+        getConfigurationRegistry().put(entityName, entityRegistry);
+        updateEntityRegistryInCache(entityName, entityRegistry);
+    }
+
+    private static Map<String, Object> getEntityRegistryFromCache(String entityName) {
+        EntityRegistryEntry entry = entityRegistryCache.get(entityName);
+        if (entry != null && entry.isRecentEntry()) {
+            if (log.isTraceEnabled()) {
+                log.trace("Found a recently updated entity registry for entity " + entityName);
+            }
+            return entry.getEntityRegistry();
+        }
+        @SuppressWarnings("unchecked")
+        Map<String,Object> entityRegistry = (Map<String, Object>) getConfigurationRegistry().get(entityName);
+        if (entityRegistry == null) {
+            log.warn("There is no configuration registry for entity " + entityName);
+            return  null;
+        }
+        entityRegistryCache.put(entityName, new EntityRegistryEntry(entityRegistry));
+        return entityRegistry;
+    }
+
+    private static void updateEntityRegistryInCache(String entityName, Map<String, Object> entityRegistry) {
+        entityRegistryCache.put(entityName, new EntityRegistryEntry(entityRegistry));
+    }
+
+    private static Map<String, Object> getConfigurationRegistry() {
+        if (Context.isInClusterMode()) {
+            return getClusterManager().getConfigurationRegistry();            
+        } else {
+            return localConfigurationRegistry;
+        }
     }
 
 	public static UserContext getUserContext() {
@@ -496,15 +569,6 @@ public class Context implements ApplicationContextAware
 
 	public static Future<Object> scheduleTask(Callable<Object> task) {
 		Future<Object> future = threadPool.submit(task);
-//		try {
-//			future.get();
-//		} catch (InterruptedException e) {
-//			log.error("Failed while scheduling a caller provided task: " + e, e);
-//			throw new RuntimeException("Failed while scheduling a caller provided task.");
-//		} catch (ExecutionException e) {
-//			log.error("Failed while scheduling a caller provided task: " + e, e);
-//			throw new RuntimeException("Failed while scheduling a caller provided task.");
-//		}
 		return future;
 	}
 	
@@ -569,35 +633,6 @@ public class Context implements ApplicationContextAware
 			throw new RuntimeException("Initialization failed while shutting down the persistence service.");
 		}		
 	}
-    
-//    private static void startRecordCacheService() {
-//        try {
-//            RecordCacheLifecycleObserver recordCacheService = (RecordCacheLifecycleObserver) Context.getRecordCacheService();
-//            if (recordCacheService != null) {
-//                recordCacheService.startup();
-//            }
-//        } catch (Exception e) {
-//            log.error("Unable to start the record cache service due to: " + e, e);
-//            System.exit(-1);
-//        }       
-//    }
-
-    private static void stopRecordCacheService(Object service) {
-        Callable<Object> task = new ServiceStarterStopper("Shutting down the record cache service before system shutdown.",
-                ServiceStarterStopper.STOP_SERVICE, ServiceStarterStopper.RECORD_CACHE_SERVICE, service);
-        try {
-            Future<Object> future = threadPool.submit(task);
-            future.get();
-        } catch (RejectedExecutionException e) {
-            log.warn("Was unable to initiate a stop request on the record service: " + e, e);
-        } catch (InterruptedException e) {
-            log.error("Failed while shutting down the record cache service: " + e, e);
-            throw new RuntimeException("Initialization failed while shutting down the record cache service.");
-        } catch (ExecutionException e) {
-            log.error("Failed while shutting down the record cache service: " + e, e);
-            throw new RuntimeException("Initialization failed while shutting down the record cache service.");
-        }
-    }
 	
 	private static void startMatchingService(Object service) {
 		Callable<Object> task = new ServiceStarterStopper("Starting the matching service at startup.",
@@ -789,6 +824,14 @@ public class Context implements ApplicationContextAware
 	
 	public static ClusterManager getClusterManager() {
 	    return clusterManager;
+	}
+	
+	public void setClusterManager(ClusterManager clusterManager) {
+		Context.clusterManager = clusterManager;
+	}
+	
+	public static void setIsClusterNode(boolean mode) {
+		isClusterNode = mode;
 	}
 	
 	public static BlockingService getBlockingService(String entityName) {
@@ -1009,4 +1052,27 @@ public class Context implements ApplicationContextAware
 			}
 		}
 	}
+
+    private static class EntityRegistryEntry
+    {
+        private Map<String,Object> entityRegistry;
+        private Date lastAccessTime;
+
+        public EntityRegistryEntry(Map<String, Object> entityRegistry) {
+            this.entityRegistry = entityRegistry;
+            this.lastAccessTime = new Date();
+        }
+
+        public boolean isRecentEntry() {
+            Date now = new Date();
+            if (now.getTime() - lastAccessTime.getTime() < ENTITY_REGISTRY_LIFETIME_DURATION) {
+                return true;
+            }
+            return false;
+        }
+
+        public Map<String, Object> getEntityRegistry() {
+            return entityRegistry;
+        }
+    }
 }

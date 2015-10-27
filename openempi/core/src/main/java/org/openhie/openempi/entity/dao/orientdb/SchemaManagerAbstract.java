@@ -20,6 +20,8 @@
  */
 package org.openhie.openempi.entity.dao.orientdb;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -40,6 +42,7 @@ import org.openhie.openempi.notification.ObservationEventType;
 
 import com.orientechnologies.orient.core.Orient;
 import com.orientechnologies.orient.core.collate.OCaseInsensitiveCollate;
+import com.orientechnologies.orient.core.collate.ODefaultCollate;
 import com.orientechnologies.orient.core.index.OIndex;
 import com.orientechnologies.orient.core.index.OIndexException;
 import com.orientechnologies.orient.core.metadata.schema.OClass;
@@ -50,6 +53,7 @@ import com.orientechnologies.orient.core.metadata.schema.OSchemaProxy;
 import com.orientechnologies.orient.core.metadata.schema.OType;
 import com.orientechnologies.orient.core.sql.OCommandSQL;
 import com.orientechnologies.orient.core.storage.OStorage;
+import com.orientechnologies.orient.core.config.OGlobalConfiguration;
 import com.tinkerpop.blueprints.impls.orient.OrientBaseGraph;
 
 public abstract class SchemaManagerAbstract extends Constants implements SchemaManager, Observer
@@ -78,7 +82,10 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
     public void initializeSchema(Entity entity, EntityStore entityStore) {
         OrientBaseGraph db = null;
         try {
-            db = connectionManager.connectInitial(entityStore);            
+        	ByteArrayOutputStream os = new ByteArrayOutputStream();
+            OGlobalConfiguration.dumpConfiguration(new PrintStream(os));
+            log.debug(os.toString());
+            db = connectionManager.connectInitial(entityStore);
             if (!isClassDefined(db, entity.getName())) {
                 createDatabase(entityStore, db);
                 initializeClasses(entity, entityStore, db);
@@ -288,7 +295,15 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
 //        log.info("Class " + className + " has been assigned cluster " + identifierEdgeClass.getDefaultClusterId());
 //        identifierEdgeClass.saveInternal();
         
-        // Create schema for storing links
+        // Create edge type for storing identifier associations
+        className = IDENTIFIER_EDGE_TYPE;
+        clusterIds = null;
+        final OClassImpl identifierEdgeClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
+                .createClass(className, edgeClass, clusterIds);
+        log.info("Class " + className + " has been assigned cluster " + identifierEdgeClass.getDefaultClusterId());
+        identifierEdgeClass.save();
+        
+        // Create edge type for storing links
         className = RECORD_LINK_TYPE;
         clusterIds = null;
         final OClassImpl linkClass = (OClassImpl) ((OSchemaProxy) db.getRawGraph().getMetadata().getSchema())
@@ -601,6 +616,11 @@ public abstract class SchemaManagerAbstract extends Constants implements SchemaM
             for (EntityAttribute attribute : entity.getAttributes()) {
                 OPropertyImpl property = classPropertiesByName.get(attribute.getName());
                 if (property != null) {
+                    if (attribute.getCaseInsensitive()) {
+                        property.setCollate(new OCaseInsensitiveCollate());
+                    } else {
+                        property.setCollate(new ODefaultCollate());
+                    }
                     continue;
                 }
                 

@@ -21,23 +21,24 @@
 package org.openhie.openempi.entity.impl;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Date;
+import java.util.List;
 
-import org.openhie.openempi.entity.ForEachRecordConsumer;
-import org.openhie.openempi.entity.RecordCacheManager;
+import org.openhie.openempi.context.Context;
+import org.openhie.openempi.dao.IdentifierDomainDao;
 import org.openhie.openempi.entity.EntityDefinitionManagerService;
+import org.openhie.openempi.entity.RecordCacheManager;
 import org.openhie.openempi.entity.RecordQueryService;
 import org.openhie.openempi.entity.dao.EntityDao;
-import org.openhie.openempi.dao.IdentifierDomainDao;
 import org.openhie.openempi.model.Entity;
 import org.openhie.openempi.model.Identifier;
+import org.openhie.openempi.model.IdentifierUpdateEvent;
 import org.openhie.openempi.model.LinkSource;
 import org.openhie.openempi.model.Record;
 import org.openhie.openempi.model.RecordLink;
 import org.openhie.openempi.model.RecordLinkState;
+import org.openhie.openempi.model.RecordPair;
 import org.openhie.openempi.model.User;
-import org.openhie.openempi.model.IdentifierUpdateEvent;
 
 public class RecordQueryServiceImpl extends RecordCommonServiceImpl implements RecordQueryService
 {
@@ -164,6 +165,31 @@ public class RecordQueryServiceImpl extends RecordCommonServiceImpl implements R
         }
 
         return entityDao.findRecordsByAttributes(entityDef, record, firstResult, maxResults);
+    }
+
+    public List<Record> findRecordsByBlocking(Entity entity, Record record) {
+        Entity entityDef = getEntityDefinition(entity);
+        if (entityDef == null) {
+            return new ArrayList<Record>();
+        }
+        boolean criteriaSpecified = validateCriteriaPresent(record);
+        if (!criteriaSpecified) {
+            log.debug("Attempted to query the system without specifying any criteria.");
+            return new ArrayList<Record>();
+        }
+        List<RecordPair> candidates = Context.getBlockingService(record.getEntity().getName()).findCandidates(record);
+        List<Record> resultSet = new ArrayList<Record>(candidates.size());
+        for (RecordPair pair : candidates) {
+            resultSet.add(getOtherRecordInPair(record, pair));
+        }
+        return resultSet;
+    }
+
+    private Record getOtherRecordInPair(Record record, RecordPair pair) {
+        if (pair.getLeftRecord().getRecordId() == record.getRecordId()) {
+            return pair.getLeftRecord();
+        }
+        return pair.getRightRecord();
     }
 
     public List<Record> loadRecordsById(Entity entity, List<Long> recordIds) {

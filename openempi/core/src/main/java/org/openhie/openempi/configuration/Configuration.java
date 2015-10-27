@@ -283,6 +283,12 @@ public class Configuration extends BaseServiceImpl implements ConfigurationRegis
 			adminConfiguration.setConfigFileDirectory(adminConfig.getFileRepositoryDirectory());
 		}
 		
+		if (adminConfig.getAutostartPixpdq()) {
+			adminConfiguration.setAutoStartPIXPDQ(true);
+		} else {
+			adminConfiguration.setAutoStartPIXPDQ(false);
+		}
+
 		if (adminConfig.getDataDirectory() == null) {
 			adminConfiguration.setDataDirectory(Context.getOpenEmpiHome() + "/data");
 		} else {
