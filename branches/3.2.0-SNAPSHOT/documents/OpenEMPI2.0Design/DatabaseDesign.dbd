@@ -1,0 +1,372 @@
+<XMLDiagram>
+<TDBADiagramController Locked="0">
+<Elements>
+<TDBADiagramObject id="1" propertiesclass="TDiagramMetaTableProperties" objectname="public.address_type">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="10" top="10" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="2" propertiesclass="TDiagramMetaTableProperties" objectname="public.ethnic_group">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="234" top="10" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="3" propertiesclass="TDiagramMetaTableProperties" objectname="public.gender">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="458" top="10" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="4" propertiesclass="TDiagramMetaTableProperties" objectname="public.identifier_domain">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="340" top="480" width="200" height="108"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="5" propertiesclass="TDiagramMetaTableProperties" objectname="public.language">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="682" top="10" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="6" propertiesclass="TDiagramMetaTableProperties" objectname="public.name_type">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="890" top="210" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="7" propertiesclass="TDiagramMetaTableProperties" objectname="public.nationality">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="890" top="360" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="8" propertiesclass="TDiagramMetaTableProperties" objectname="public.person">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="590" top="180" width="200" height="598"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="9" propertiesclass="TDiagramMetaTableProperties" objectname="public.person_identifier">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="320" top="680" width="200" height="136"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="11" propertiesclass="TDiagramMetaTableProperties" objectname="public.race">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="900" top="650" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="12" propertiesclass="TDiagramMetaTableProperties" objectname="public.religion">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="900" top="500" width="200" height="66"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="13" propertiesclass="TDiagramMetaTableProperties" objectname="public.role">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="10" top="770" width="200" height="52"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="14" propertiesclass="TDiagramMetaTableProperties" objectname="public.user">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="10" top="330" width="200" height="164"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="15" propertiesclass="TDiagramMetaTableProperties" objectname="public.user_role">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="10" top="640" width="200" height="63"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="16" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_address_type">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="256" top="256" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="110" y="40"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="17" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_ethnic_group">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="272" top="272" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="330" y="40"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="18" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_gender">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="288" top="288" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="560" y="40"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="19" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_language">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="304" top="304" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="780" y="40"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="20" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_name">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="320" top="320" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="994" y="240"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="21" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_nationality">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="336" top="336" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="990" y="390"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="22" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_race">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="352" top="352" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="996" y="680"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="23" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_religion">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="368" top="368" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="1002" y="530"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="24" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person_identifier.fk_identifier_domain">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="384" top="384" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="418" y="745"/>
+<Point x="440" y="530"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="25" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person_identifier.fk_person">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="400" top="400" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="418" y="745"/>
+<Point x="686" y="475"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="26" propertiesclass="TDiagramForeignKeyProperties" objectname="public.user_role.fk_user">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="416" top="416" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="110" y="670"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="27" propertiesclass="TDiagramForeignKeyProperties" objectname="public.user_role.fk_role">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="432" top="432" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="110" y="670"/>
+<Point x="110" y="800"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="10" propertiesclass="TDiagramMetaTableProperties" objectname="public.person_link">
+<TDiagramMetaTableProperties>
+<Glyph>
+<Geometry left="10" top="160" width="200" height="94"/>
+</Glyph>
+</TDiagramMetaTableProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="28" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person_link.lh_person">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="448" top="448" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="110" y="207"/>
+<Point x="686" y="475"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="29" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person_link.rh_person">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="464" top="464" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="110" y="207"/>
+<Point x="686" y="475"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="30" propertiesclass="TDiagramForeignKeyProperties" objectname="public.identifier_domain.fk_creator">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="480" top="480" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="440" y="530"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="31" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person_identifier.fk_creator">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="496" top="496" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="418" y="745"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="32" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person_identifier.fk_voided_by">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="512" top="512" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="418" y="745"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="33" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_changed_by">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="528" top="528" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="34" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_creator">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="544" top="544" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+<TDBADiagramObject id="35" propertiesclass="TDiagramForeignKeyProperties" objectname="public.person.fk_voided_by">
+<TDiagramForeignKeyProperties>
+<Relation>
+<Geometry left="560" top="560" width="200" height="100"/>
+<Glyph>
+<Geometry>
+<Point x="690" y="480"/>
+<Point x="110" y="410"/>
+</Geometry>
+</Glyph>
+</Relation>
+</TDiagramForeignKeyProperties>
+</TDBADiagramObject>
+</Elements>
+<Surface zoom="139.579945559955" scrollx="536" scrolly="0"/>
+</TDBADiagramController>
+</XMLDiagram>
