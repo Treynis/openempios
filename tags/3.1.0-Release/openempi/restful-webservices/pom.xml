@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<parent>
+		<groupId>org.openhie.openempi</groupId>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.1.0</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<modelVersion>4.0.0</modelVersion>
+
+	<artifactId>openempi-entity-restful-webservices</artifactId>
+	<packaging>jar</packaging>
+	<name>OpenEMPI Entity - RESTful Web Services</name>
+	<licenses>
+		<license>
+			<name>GNU Affero General Public License, Version 3</name>
+			<url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
+			<comments>The software ("Software") developed and owned by Network Engine for
+			Objects in Lund AB (referred to in this notice as "Neo Technology") is
+			licensed under the GNU AFFERO GENERAL PUBLIC LICENSE Version 3 to all
+			third parties and that license is included below.
+
+			However, if you have executed an End User Software License and Services
+			Agreement or an OEM Software License and Support Services Agreement, or
+			another commercial license agreement with Neo Technology or one of its
+			affiliates (each, a "Commercial Agreement"), the terms of the license in
+			such Commercial Agreement will supersede the GNU AFFERO GENERAL PUBLIC
+			LICENSE Version 3 and you may use the Software solely pursuant to the
+			terms of the relevant Commercial Agreement.
+			</comments>
+		</license>
+	</licenses>
+	<dependencies>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-configuration</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-core</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aop</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>${slf4j.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-bundle</artifactId>
+			<version>1.12</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-json</artifactId>
+			<version>1.12</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey</groupId>
+			<artifactId>jersey-grizzly2</artifactId>
+			<version>1.12</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>3.1</version>
+		</dependency>
+		<!-- test -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.0.2</version>
+				<configuration>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+				</configuration>
+			</plugin>
+			<!-- 
+			<plugin>
+				<groupId>org.codehaus.enunciate</groupId>
+				<artifactId>maven-enunciate-plugin</artifactId>
+				<configuration>
+					<configFile>enunciate.xml</configFile>
+					<exports>
+						<jaxws.client.library.binaries>client.jar</jaxws.client.library.binaries>
+					</exports>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>assemble</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			-->
+		</plugins>
+	</build>
+</project>

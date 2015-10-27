@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.openhie.openempi</groupId>
+		<artifactId>openempi-entity</artifactId>
+		<version>3.1.0</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+
+	<artifactId>openempi-entity-test-suite</artifactId>
+	<packaging>jar</packaging>
+	<name>OpenEMPI Entity - Test Suite</name>
+	<licenses>
+		<license>
+			<name>GNU Affero General Public License, Version 3</name>
+			<url>http://www.gnu.org/licenses/agpl-3.0-standalone.html</url>
+			<comments>The software ("Software") developed and owned by Network Engine for
+			Objects in Lund AB (referred to in this notice as "Neo Technology") is
+			licensed under the GNU AFFERO GENERAL PUBLIC LICENSE Version 3 to all
+			third parties and that license is included below.
+
+			However, if you have executed an End User Software License and Services
+			Agreement or an OEM Software License and Support Services Agreement, or
+			another commercial license agreement with Neo Technology or one of its
+			affiliates (each, a "Commercial Agreement"), the terms of the license in
+			such Commercial Agreement will supersede the GNU AFFERO GENERAL PUBLIC
+			LICENSE Version 3 and you may use the Software solely pursuant to the
+			terms of the relevant Commercial Agreement.
+			</comments>
+		</license>
+	</licenses>
+	<dependencies>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-configuration</artifactId>
+			<version>${release.version}</version>
+			<scope>test</scope>
+		</dependency>	
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-core</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-core</artifactId>
+			<version>${release.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-basic-blocking</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-basic-blocking-hp</artifactId>
+			<version>${release.version}</version>
+		</dependency>		
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-exact-matching</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-probabilistic-matching</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-shallow-matching</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-single-best-record</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-openpixpdq-adapter</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-file-loader-hp</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-file-loader-map</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-webapp-server</artifactId>
+			<version>${release.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openhie.openempi</groupId>
+			<artifactId>openempi-entity-restful-webservices</artifactId>
+			<version>${release.version}</version>
+		</dependency>		
+		<dependency>
+			<groupId>com.google.gwt</groupId>
+			<artifactId>gwt-servlet</artifactId>
+			<version>${gwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>		
+		<dependency>
+			<groupId>com.google.gwt</groupId>
+			<artifactId>gwt-user</artifactId>
+			<version>${gwt.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.extjs</groupId>
+			<artifactId>gxt</artifactId>
+			<version>${gxt.version}</version>
+			<classifier>gwt22</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aop</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aspects</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>${spring.version}</version>
+		</dependency>		
+	</dependencies>
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>2.16</version>
+					<configuration>
+					        <forkCount>1</forkCount>
+					        <reuseForks>false</reuseForks>
+						<argLine>-XX:MaxPermSize=512m</argLine>
+						<forkMode>always</forkMode>
+					</configuration>					
+				</plugin>
+			</plugins>
+	    </pluginManagement>
+	</build>
+</project>

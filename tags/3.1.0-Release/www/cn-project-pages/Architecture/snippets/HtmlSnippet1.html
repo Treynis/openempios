@@ -1,0 +1,41 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<p align="left">
+    <font size="4">
+        <strong>OpenEMPI Architecture - Version 2.0</strong>
+    </font>&nbsp;
+</p>
+<p>
+    &nbsp;
+</p>
+<p> After the redesign and refactoring of OpenEMPI, the architecture of the software is now based on the principles of Service 
+	Oriented Architecture consisting of a number of independent services that are loosely coupled from the rest. Each service
+	is exposed to other services through a well defined interface. Figure 1 illustrates the high level architecture of OpenEMPI
+	bringing out the multi-layered architecture of the software. The diagram of Figure 1 is not an exhaustive list of all the
+	components that comprise the system but only shows a subset of them for the purpose of illustrating the layered architecture
+	of the system and to bring out the loose coupling between the services.
+</p>
+<div style="text-align: center; margin-top: 10px;">
+    <img title="High Level Architecture of OpenEMPI" alt="High Level Architecture of OpenEMPI." src="/cn-project-pages/images/soa-architecture.png" />
+</div>
+<blockquote>
+    <p style="text-align: center; padding: 10px;">
+        Figure 1. High Level Architecture of OpenEMPI and its Layers
+    </p>
+</blockquote>
+<p> Another benefit of the service oriented architecture of OpenEMPI is that since the key components like the matching and blocking 
+algorithms are only exposed to the other services of the system through a well defined interface, alternate implementations of those
+components can be implemented and plugged in independently of the rest of the system. This capability is utilized in the implementation
+of matching algorithms. Currently OpenEMPI provides two distinct implementation of the matching algorithm. A deterministic exact version
+and a probabilistic one based on the Fellegi-Sunter algorithm. Depending of your requirements you can choose which version you prefer
+to use by simple changing the Spring configuration of the system. Figure 2 illustrates the pluggable architecture of the system.
+</p>
+<div style="text-align: center; margin-top: 10px;">
+    <img title="Pluggable architecture of key service components"
+		alt="Pluggable architecture of key service components." 
+		src="/cn-project-pages/images/pluggable-components.png" />
+</div>
+<blockquote>
+    <p style="text-align: center; padding: 10px;">
+        Figure 2. Key Components of the system can be plugged in
+    </p>
+</blockquote>
